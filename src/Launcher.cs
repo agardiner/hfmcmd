@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Text.RegularExpressions;
 
 using log4net;
 using log4net.Appender;
@@ -32,7 +33,7 @@ namespace HFMCmd
         public delegate bool Handler(EInterruptTypes ctrlType);
 
         [DllImport("Kernel32")]
-        public static extern Boolean SetConsoleCtrlHandler(Handler handler, bool Add);
+        public static extern bool SetConsoleCtrlHandler(Handler handler, bool Add);
     }
 
 
@@ -53,13 +54,13 @@ namespace HFMCmd
         /// running command should check this flag periodically and attempt to
         /// abort gracefully.
         /// </summary>
-        public static bool Terminated = false;
+        public static bool Interrupted = false;
 
 
 
         /// <summary>
         /// Main program entry point
-        /// </summary>    
+        /// </summary>
         public static void Main()
         {
             // Hook up CtrlHandler to handle breaks, logoffs, etc
@@ -69,8 +70,20 @@ namespace HFMCmd
             ConfigureLogging();
 
             // TODO: Register commands
-            
+
             // TODO: Process command-line arguments
+            var cmdLine = new CommandLine.Interface(HFMCmd.Resource.Help.Purpose);
+            var arg = cmdLine.AddPositionalArgument("CommandOrFile", "The name of the command to execute, or the path to a file containing commands to execute");
+            arg.Validation = new Regex("foo|bar");
+            arg.OnParse = (key, val) => {
+                cmdLine.AddPositionalArgument("ArgTwo", "This is argument two");
+            };
+            cmdLine.AddKeywordArgument("UserId", "The user id to use to connect to HFM");
+            cmdLine.AddKeywordArgument("Password", "The password to use to connect to HFM");
+            cmdLine.AddKeywordArgument("Host", "The HFM cluster or server to connect to");
+            cmdLine.AddKeywordArgument("App", "The HFM application to connect to");
+            cmdLine.AddFlagArgument("Debug", "Enable debug logging");
+            cmdLine.Parse(Environment.GetCommandLineArgs());
 
             // This line needs to appear at the end of the prgram code as a marker to
             // the GC so that it does not collect our control-key handler
@@ -79,7 +92,7 @@ namespace HFMCmd
 
 
         /// <summary>
-        /// Handler to receive control events, such as Ctrl-C and logoff and 
+        /// Handler to receive control events, such as Ctrl-C and logoff and
         /// shutdown events. As a minimum, this logs the event, so that a record
         /// of why the process exited is maintained.
         /// </summary>
@@ -88,7 +101,7 @@ namespace HFMCmd
         static bool CtrlHandler(EInterruptTypes ctrlType)
         {
             _log.Warn("An interrupt [" + ctrlType + "] has been received");
-            Terminated = true;
+            Interrupted = true;
 
             return true;
         }
@@ -109,7 +122,7 @@ namespace HFMCmd
             Hierarchy logHier = (Hierarchy)LogManager.GetRepository();
 
             // TODO: Configure exception renderers
-            
+
             // Set log level
             logHier.Root.Level = log4net.Core.Level.Info;
         }
