@@ -5,6 +5,7 @@ SET TLBIMP=%~dp0\..\tools\tlbimp
 MKDIR %TARGET%
 
 %TLBIMP% %HFM_HOME%\Client\HFMConstants.dll /out: %OUTPUT_PATH%\Interop.HFMCONSTANTSLib.dll /namespace:HFMCONSTANTSLib
+%TLBIMP% %HFM_HOME%\Client\HFMSliceCOM.dll /out: %OUTPUT_PATH%\Interop.HFMSLICECOMLib.dll /namespace:HFMSLICECOMLib
 %TLBIMP% %HFM_HOME%\Client\HsvcDataLoad.dll /out: %OUTPUT_PATH%\Interop.HSVCDATALOADLib.dll /namespace:HSVCDATALOADLib
 %TLBIMP% %HFM_HOME%\Client\HsvJournalLoadACV.dll /out: %OUTPUT_PATH%\Interop.HSVJOURNALLOADACVLib.dll /namespace:HSVJOURNALLOADACVLib
 %TLBIMP% %HFM_HOME%\Client\HsvMetadataLoadACV.dll /out: %OUTPUT_PATH%\Interop.HSVMETADATALOADACVLib.dll /namespace:HSVMETADATALOADACVLib
