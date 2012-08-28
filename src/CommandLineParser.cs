@@ -9,6 +9,68 @@ using log4net;
 
 namespace CommandLine
 {
+    /// Interface for argument validation.
+    public interface Validator
+    {
+        /// Primary method for argument validation; returns true if the argument
+        /// is valid.
+        bool IsValid(string value, out string errorMsg);
+    }
+
+    /// Validator implementation using a regular expression.
+    public class RegexValidator : Validator
+    {
+        public Regex Expression { get; set; }
+
+        public bool IsValid(string value, out string errorMsg) {
+            errorMsg = null;
+            if(Expression == null) {
+                return true;
+            }
+            else {
+                errorMsg = String.Format("Value must satisfy the regular expression: /{0}/", Expression);
+                return Expression.IsMatch(value);
+            }
+        }
+    }
+
+    /// Validator implementation using a list of values.
+    public class ListValidator : Validator
+    {
+        public List<string> Values { get; set; }
+
+        public bool IsValid(string value, out string errorMsg) {
+            errorMsg = null;
+            if(Values == null) {
+                return true;
+            }
+            else {
+                return Values.Contains(value);
+            }
+        }
+    }
+
+    /// Validator implementation using a range.
+    public class RangeValidator : Validator
+    {
+        int? Min { get; set; }
+        int? Max { get; set; }
+
+        public bool IsValid(string value, out string errorMsg) {
+            int iVal = int.Parse(value);
+            errorMsg = null;
+            if(Min != null && Max != null) {
+                errorMsg = String.Format("Value must be in the range {0} to {1} inclusive", Min, Max);
+            }
+            else if(Min != null) {
+                errorMsg = String.Format("Value must be greater than or equal to {0}", Min);
+            }
+            else if(Max != null) {
+                errorMsg = String.Format("Value must be less than or equal to {0}", Max);
+            }
+            return (Min == null || iVal >= Min) && (Max == null || iVal <= Max);
+        }
+    }
 
     /// Base class for all types of command-line arguments.
     /// Each argument must have a key that will be used to access the value in
@@ -36,7 +98,7 @@ namespace CommandLine
         /// The default value for the argument
         public string DefaultValue { get; set; }
         /// A regular expression the argument must satisfy
-        public Regex Validation { get; set; }
+        public Validator Validation { get; set; }
         /// A flag indicating whether the argument represents a password
         public bool IsPassword { get; set; }
     }
@@ -287,70 +349,24 @@ namespace CommandLine
 
         public Dictionary<string, object> Parse(List<string> args)
         {
-            var result = new Dictionary<string, object>();
+            Dictionary<string, object> result;
 
             // Classify the command-line entries passed to the program
             ClassifyArguments(args);
 
-            // Process flag args
-            foreach(var key in FlagValues) {
-                var arg = Definition[key] as FlagArgument;
-                if(arg != null) {
-                    ProcessArgumentValue(result, arg, true);
+            try {
+                result = ProcessArguments();
+                return result;
+            }
+            catch(ParseException ex) {
+                if(ShowUsage) {
+                    Definition.DisplayUsage(args[0]);
+                    return null;
                 }
                 else {
-                    _log.WarnFormat("Unknown flag argument '--{0}' has been ignored", key);
+                    throw ex;
                 }
             }
-
-            // Process positional args
-            for(var i = 0; i < PositionalValues.Count; ++i) {
-                var val = PositionalValues[i];
-                var arg = Definition[i] as PositionalArgument;
-                if(arg != null) {
-                    ProcessArgumentValue(result, arg, val);
-                }
-                else {
-                    _log.WarnFormat("Unknown positional argument '{0}' has been ignored", val);
-                }
-
-            }
-
-            // Process keyword args
-            foreach(var kv in KeywordValues) {
-                var arg = Definition[kv.Key] as KeywordArgument;
-                if(arg != null) {
-                    ProcessArgumentValue(result, arg, kv.Value);
-                }
-                else {
-                    _log.WarnFormat("Unknown keyword argument '{0}' has been ignored", kv.Key);
-                }
-            }
-
-            // Check for missing arguments, set default values
-            var missingArgs = 0;
-            foreach(var arg in Definition.ValueArguments) {
-                if(!result.ContainsKey(arg.Key)) {
-                    if(arg.DefaultValue != null) {
-                        _log.DebugFormat("Setting argument '{0}' to default value '{1}'", arg.Key, arg.DefaultValue);
-                        result.Add(arg.Key, arg.DefaultValue);
-                    }
-                    else if(arg.IsRequired) {
-                        _log.ErrorFormat("No value was specified for required argument '{0}'", arg.Key);
-                        missingArgs++;
-                    }
-                }
-            }
-            if(missingArgs > 0) {
-                throw new ParseException(string.Format("No value was specified for {0} required argument{1}",
-                                         missingArgs, missingArgs > 1 ? "s" : ""));
-            }
-
-            if(ShowUsage) {
-                Definition.DisplayUsage(args[0]);
-            }
-
-            return result;
         }
 
 
@@ -408,19 +424,83 @@ namespace CommandLine
         }
 
 
+        protected Dictionary<string, object> ProcessArguments() {
+            var result = new Dictionary<string, object>();
+
+            // Process flag args
+            foreach(var key in FlagValues) {
+                var arg = Definition[key] as FlagArgument;
+                if(arg != null) {
+                    ProcessArgumentValue(result, arg, true);
+                }
+                else {
+                    _log.WarnFormat("Unknown flag argument '--{0}' has been ignored", key);
+                }
+            }
+
+            // Process positional args
+            for(var i = 0; i < PositionalValues.Count; ++i) {
+                var val = PositionalValues[i];
+                var arg = Definition[i] as PositionalArgument;
+                if(arg != null) {
+                    ProcessArgumentValue(result, arg, val);
+                }
+                else {
+                    _log.WarnFormat("Unknown positional argument '{0}' has been ignored", val);
+                }
+
+            }
+
+            // Process keyword args
+            foreach(var kv in KeywordValues) {
+                var arg = Definition[kv.Key] as KeywordArgument;
+                if(arg != null) {
+                    ProcessArgumentValue(result, arg, kv.Value);
+                }
+                else {
+                    _log.WarnFormat("Unknown keyword argument '{0}' has been ignored", kv.Key);
+                }
+            }
+
+            // Check for missing arguments, set default values
+            var missingArgs = 0;
+            foreach(var arg in Definition.ValueArguments) {
+                if(!result.ContainsKey(arg.Key)) {
+                    if(arg.DefaultValue != null) {
+                        _log.DebugFormat("Setting argument '{0}' to default value '{1}'", arg.Key, arg.DefaultValue);
+                        result.Add(arg.Key, arg.DefaultValue);
+                    }
+                    else if(arg.IsRequired) {
+                        _log.ErrorFormat("No value was specified for required argument '{0}'", arg.Key);
+                        missingArgs++;
+                    }
+                }
+            }
+            if(missingArgs > 0) {
+                throw new ParseException(string.Format("No value was specified for {0} required argument{1}",
+                                         missingArgs, missingArgs > 1 ? "s" : ""));
+            }
+
+            return result;
+        }
+
+
         /// Processes a single argument value, ensuring it passes validation,
-        /// calling any OnParseHandlers etc.
+        /// calling any OnParse handlers etc.
         protected void ProcessArgumentValue(Dictionary<string, object> result, Argument arg, object val) {
             // Validate value, if argument specifies validation
+            string errorMsg;
             var valArg = arg as ValueArgument;
             var sVal = val as string;
             if(valArg != null && valArg.Validation != null && sVal != null) {
-                if(!valArg.Validation.IsMatch(sVal)) {
-                    throw new ParseException(string.Format("The value '{0}' for argument {1} is not valid", sVal, arg.Key));
+                if(!valArg.Validation.IsValid(sVal, out errorMsg)) {
+                    throw new ParseException(string.Format("The value '{0}' for argument {1} is not valid. {2}.", sVal, arg.Key, errorMsg));
                 }
             }
 
             result.Add(arg.Key, val);
+
+            // Call OnParse event, if handler specified
             if(arg.OnParse != null) {
                 arg.OnParse(arg.Key, val as string);
             }

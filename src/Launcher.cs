@@ -74,7 +74,7 @@ namespace HFMCmd
             // TODO: Process command-line arguments
             var cmdLine = new CommandLine.Interface(HFMCmd.Resource.Help.Purpose);
             var arg = cmdLine.AddPositionalArgument("CommandOrFile", "The name of the command to execute, or the path to a file containing commands to execute");
-            arg.Validation = new Regex("foo|bar");
+            arg.Validation = new CommandLine.RegexValidator() { Expression = new Regex("foo|bar") };
             arg.OnParse = (key, val) => {
                 cmdLine.AddPositionalArgument("ArgTwo", "This is argument two");
             };
