@@ -18,6 +18,10 @@ namespace Command
 
     /// Define an attribute which will be used to specify default values for
     /// optional parameters on a Command.
+    /// A DefaultValue attribute is used instead of default values on the
+    /// actual method, since a) default values are only available from v4 of
+    /// .Net, and b) they have restrictions on where they can appear (e.g. only
+    /// at the end of the list of parameters).
     [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false)]
     class DefaultValueAttribute : Attribute
     {
@@ -26,6 +30,26 @@ namespace Command
         public DefaultValueAttribute(object val)
         {
             this.Value = val;
+        }
+    }
+
+
+    /// Records details of a parameter to a Command.
+    public class CommandParameter
+    {
+        public string Name;
+        public Type ParameterType;
+        public object DefaultValue;
+
+        public CommandParameter(ParameterInfo pi)
+        {
+            this.Name = pi.Name;
+            this.ParameterType = pi.ParameterType;
+        }
+
+        public override string ToString()
+        {
+            return string.Format("{0} ({1})", this.Name, this.ParameterType.Name);
         }
     }
 
@@ -41,26 +65,33 @@ namespace Command
         protected MethodInfo _mi;
 
         public string Name;
+        public List<CommandParameter> Parameters = new List<CommandParameter>();
 
         public Command(Type t, MethodInfo mi)
         {
             _type = t;
             _mi = mi;
-
             this.Name = mi.Name;
 
             _log.DebugFormat("Found command {0}", this.Name);
 
             foreach(var pi in mi.GetParameters()) {
-                _log.DebugFormat("Found parameter {0}", pi.Name);
+                var param = new CommandParameter(pi);
+                _log.DebugFormat("Found parameter {0}", param);
+                foreach(var attr in pi.GetCustomAttributes(typeof(DefaultValueAttribute), false)) {
+                    param.DefaultValue = (attr as DefaultValueAttribute).Value;
+                }
+                this.Parameters.Add(param);
             }
         }
     }
 
 
+    /// Provides a registry of discovered Commands, as well as methods for
+    /// discovering them.
     public class Registry
     {
-        // Dictionary of command instances keyed by command
+        // Dictionary of command instances keyed by command name
         private IDictionary<string, Command> _commands = new Dictionary<string, Command>();
 
 
