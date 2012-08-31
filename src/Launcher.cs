@@ -8,6 +8,8 @@ using log4net;
 using log4net.Appender;
 using log4net.Repository.Hierarchy;
 
+using Command;
+
 
 namespace HFMCmd
 {
@@ -69,7 +71,8 @@ namespace HFMCmd
 
             ConfigureLogging();
 
-            // TODO: Register commands
+            // Register commands
+            Registry commands = Registry.FindCommands("HFM");
 
             // TODO: Process command-line arguments
             var cmdLine = new CommandLine.Interface(HFMCmd.Resource.Help.Purpose);
@@ -124,7 +127,7 @@ namespace HFMCmd
             // TODO: Configure exception renderers
 
             // Set log level
-            logHier.Root.Level = log4net.Core.Level.Info;
+            logHier.Root.Level = log4net.Core.Level.Debug;
         }
 
     }

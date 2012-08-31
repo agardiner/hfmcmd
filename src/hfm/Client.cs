@@ -10,7 +10,7 @@ using Command;
 namespace HFM
 {
 
-    class Client
+    public class Client
     {
         // Reference to class logger
         protected static readonly ILog _log = LogManager.GetLogger(
@@ -39,7 +39,7 @@ namespace HFM
 
         /// Sets the user credentials via an SSO token.
         [Command]
-        public void SetLogonInfo(string token)
+        public void SetLogonToken(string token)
         {
             _client.SetLogonInfoSSO(null, null, token, null);
         }
@@ -59,8 +59,9 @@ namespace HFM
 
         /// Creates a new HFM application.
         [Command]
-        public void CreateApplication(string clusterName, string appName, string appDesc,
-                string profilePath, string sharedServicesProject, string appWebServerUrl)
+        public void CreateApplication(string clusterName, string appName,
+                [DefaultValue("")] string appDesc, string profilePath,
+                string sharedServicesProject, string appWebServerUrl)
         {
             byte[] profile = File.ReadAllBytes(profilePath);
 
