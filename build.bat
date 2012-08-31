@@ -26,11 +26,11 @@ EXIT /B 99
 :DOTNET35
 ECHO Targeting .NET Framework 3.5...
 SET DOTNET=C:\WINDOWS\Microsoft.NET\Framework\v3.5
-SET HFM_LIB=lib\hfm-11.1.2.1
+SET HFM_LIB=lib\hfm-11.1.2.2
 SET LOG4NET_LIB=lib\log4net-1.2.11\bin\net\3.5\release
 
 ECHO Compiling HFMCmd...
-%DOTNET%\csc.exe /nologo /target:exe /main:HFMCmd.Launcher /out:gen\HFMCmd.exe /debug /optimize+ /lib:%LOG4NET_LIB% /reference:log4net.dll /lib:%HFM_LIB% /reference:Interop.HFMCONSTANTSLib.dll /reference:Interop.HSVCALCULATELib.dll /reference:Interop.HSVCDATALOADLib.dll /reference:Interop.HSVDATALib.dll /reference:Interop.HSVJOURNALSLib.dll /reference:Interop.HSVJOURNALLOADACVLib.dll /reference:Interop.HSVMETADATALib.dll /reference:Interop.HSVMETADATALOADACVLib.dll /reference:Interop.HSVRESOURCEMANAGERLib.dll /reference:Interop.HSVRULESLOADACVLib.dll /reference:Interop.HSVSECURITYACCESSLib.dll /reference:Interop.HSVSECURITYLOADACVLib.dll /reference:Interop.HSVSESSIONLib.dll /reference:Interop.HSVSTARSCHEMAACMLib.dll /reference:Interop.HSVSYSTEMINFOLib.dll /reference:Interop.HSXCLIENTLib.dll /reference:Interop.HSXSERVERLib.dll /resource:gen\HFMCmd.Resource.Help.resources /resource:gen\CommandLine.Resource.resources src\*.cs gen\*.cs properties\*.cs
+%DOTNET%\csc.exe /nologo /target:exe /main:HFMCmd.Launcher /out:gen\HFMCmd.exe /debug /optimize+ /lib:%LOG4NET_LIB% /reference:log4net.dll /lib:%HFM_LIB% /reference:Interop.HFMCONSTANTSLib.dll /reference:Interop.HFMSLICECOMLib.dll /reference:Interop.HSVCALCULATELib.dll /reference:Interop.HSVCDATALOADLib.dll /reference:Interop.HSVDATALib.dll /reference:Interop.HSVJOURNALSLib.dll /reference:Interop.HSVJOURNALLOADACVLib.dll /reference:Interop.HSVMETADATALib.dll /reference:Interop.HSVMETADATALOADACVLib.dll /reference:Interop.HSVRESOURCEMANAGERLib.dll /reference:Interop.HSVRULESLOADACVLib.dll /reference:Interop.HSVSECURITYACCESSLib.dll /reference:Interop.HSVSECURITYLOADACVLib.dll /reference:Interop.HSVSESSIONLib.dll /reference:Interop.HSVSTARSCHEMAACMLib.dll /reference:Interop.HSVSYSTEMINFOLib.dll /reference:Interop.HSXCLIENTLib.dll /reference:Interop.HSXSERVERLib.dll /resource:gen\HFMCmd.Resource.Help.resources /resource:gen\CommandLine.Resource.resources src\*.cs src\hfm\*.cs gen\*.cs properties\*.cs
 IF ERRORLEVEL 1 EXIT /B %ERRORLEVEL%
 
 ECHO Bundling HFMCmd and libraries into HFMCmd.exe...
@@ -43,11 +43,11 @@ GOTO END
 :DOTNET40
 ECHO Targeting .NET Framework 4.0...
 SET DOTNET=C:\WINDOWS\Microsoft.NET\Framework\v4.0.30319
-SET HFM_LIB=lib\hfm-11.1.2.1
+SET HFM_LIB=lib\hfm-11.1.2.2
 SET LOG4NET_LIB=lib\log4net-1.2.11\bin\net\4.0\release
 
 ECHO Compiling HFMCmd...
-%DOTNET%\csc.exe /nologo /target:exe /main:HFMCmd.Launcher /out:gen\HFMCmd.exe /debug /optimize+ /lib:%LOG4NET_LIB% /reference:log4net.dll /lib:%HFM_LIB% /link:Interop.HFMCONSTANTSLib.dll /link:Interop.HSVCALCULATELib.dll /link:Interop.HSVCDATALOADLib.dll /link:Interop.HSVDATALib.dll /link:Interop.HSVJOURNALSLib.dll /link:Interop.HSVJOURNALLOADACVLib.dll /link:Interop.HSVMETADATALib.dll /link:Interop.HSVMETADATALOADACVLib.dll /link:Interop.HSVRESOURCEMANAGERLib.dll /link:Interop.HSVRULESLOADACVLib.dll /link:Interop.HSVSECURITYACCESSLib.dll /link:Interop.HSVSECURITYLOADACVLib.dll /link:Interop.HSVSESSIONLib.dll /link:Interop.HSVSTARSCHEMAACMLib.dll /link:Interop.HSVSYSTEMINFOLib.dll /link:Interop.HSXCLIENTLib.dll /link:Interop.HSXSERVERLib.dll /resource:gen\HFMCmd.Resource.Help.resources /resource:gen\CommandLine.Resource.resources src\*.cs gen\*.cs properties\*.cs
+%DOTNET%\csc.exe /nologo /target:exe /main:HFMCmd.Launcher /out:gen\HFMCmd.exe /debug /optimize+ /lib:%LOG4NET_LIB% /reference:log4net.dll /lib:%HFM_LIB% /link:Interop.HFMCONSTANTSLib.dll /link:Interop.HFMSLICECOMLib.dll /link:Interop.HSVCALCULATELib.dll /link:Interop.HSVCDATALOADLib.dll /link:Interop.HSVDATALib.dll /link:Interop.HSVJOURNALSLib.dll /link:Interop.HSVJOURNALLOADACVLib.dll /link:Interop.HSVMETADATALib.dll /link:Interop.HSVMETADATALOADACVLib.dll /link:Interop.HSVRESOURCEMANAGERLib.dll /link:Interop.HSVRULESLOADACVLib.dll /link:Interop.HSVSECURITYACCESSLib.dll /link:Interop.HSVSECURITYLOADACVLib.dll /link:Interop.HSVSESSIONLib.dll /link:Interop.HSVSTARSCHEMAACMLib.dll /link:Interop.HSVSYSTEMINFOLib.dll /link:Interop.HSXCLIENTLib.dll /link:Interop.HSXSERVERLib.dll /resource:gen\HFMCmd.Resource.Help.resources /resource:gen\CommandLine.Resource.resources src\*.cs src\hfm\*.cs gen\*.cs properties\*.cs
 IF ERRORLEVEL 1 EXIT /B %ERRORLEVEL%
 
 ECHO Bundling HFMCmd and libraries into HFMCmd.exe...
