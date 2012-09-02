@@ -3,6 +3,7 @@ using System.IO;
 
 using log4net;
 using HSXCLIENTLib;
+using HSVSESSIONLib;
 
 using Command;
 
@@ -48,12 +49,12 @@ namespace HFM
         /// Opens the named application, and returns a Session object for
         /// interacting with it.
         [Command]
-        public void OpenApplication(string clusterName, string appName)
+        public Session OpenApplication(string clusterName, string appName)
         {
             object hsxServer = null, hsvSession = null;
             _client.OpenApplication(clusterName, "Financial Management", appName,
                     out hsxServer, out hsvSession);
-            // TODO: Return hsvSession as a Session object
+            return new Session((HsvSession)hsvSession);
         }
 
 
