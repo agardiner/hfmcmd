@@ -16,6 +16,7 @@ namespace Command
     }
 
 
+
     /// Define an attribute which will be used to specify default values for
     /// optional parameters on a Command.
     /// A DefaultValue attribute is used instead of default values on the
@@ -32,6 +33,7 @@ namespace Command
             this.Value = val;
         }
     }
+
 
 
     /// Records details of a parameter to a Command.
@@ -54,6 +56,7 @@ namespace Command
     }
 
 
+
     /// Represents a method that can be invoked by some external means.
     public class Command
     {
@@ -61,12 +64,15 @@ namespace Command
         protected static readonly ILog _log = LogManager.GetLogger(
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
+
         protected Type _type;
         protected MethodInfo _mi;
 
         public string Name;
         public List<CommandParameter> Parameters = new List<CommandParameter>();
 
+
+        // Constructor
         public Command(Type t, MethodInfo mi)
         {
             _type = t;
@@ -84,7 +90,9 @@ namespace Command
                 this.Parameters.Add(param);
             }
         }
+
     }
+
 
 
     /// Provides a registry of discovered Commands, as well as methods for
@@ -136,4 +144,44 @@ namespace Command
             _commands.Add(cmd.Name, cmd);
         }
     }
+
+
+
+    /// Records the current context within which Commands are executed. A
+    /// Context is like a session object; it holds the current context within
+    /// which a Command will be executed, and the method to which a Command
+    /// relates will be executed on the object instance of the Command's Type
+    /// which is currently in the Context.
+    public class Context
+    {
+        // Reference to class logger
+        protected static readonly ILog _log = LogManager.GetLogger(
+            System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
+        // Registry of known Commands
+        protected Registry _registry;
+
+        // A map holding object instances keyed by Type, representing the current
+        // context. When a command is invoked, it is invoked on the object that
+        // is in the map for the Type on which the Command was registered.
+        protected Dictionary<Type, object> _context;
+
+
+        // Constructor
+        public Context(Registry registry)
+        {
+            _registry = registry;
+        }
+
+
+        /// Invoke an instance of the named command, using the supplied arguments
+        /// Dictionary to obtain parameter values.
+        public object Invoke(string command, Dictionary<string, object> args)
+        {
+            // TODO: If the method returns an object, set it in the context
+
+            return null;
+        }
+    }
+
 }
