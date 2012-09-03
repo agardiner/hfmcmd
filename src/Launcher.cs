@@ -84,19 +84,20 @@ namespace HFMCmd
                 return commands.Contains(argVal) || File.Exists(argVal);
             };
 
+
             arg.OnParse = (key, val) => {
-                var arg2 = cmdLine.AddPositionalArgument("ArgTwo", "This is argument two");
-                arg2.AddValidator(new ListValidator() {
-                    Values = new System.Collections.Generic.List<string>() { "apple", "orange", "pear" },
-                    PermitMultipleValues = true
-                });
             };
 
-            cmdLine.AddKeywordArgument("UserId", "The user id to use to connect to HFM");
+            cmdLine.AddKeywordArgument("Domain", "The domain to which the user should be validated in");
+            cmdLine.AddKeywordArgument("UserName", "The user id to use to connect to HFM");
             cmdLine.AddKeywordArgument("Password", "The password to use to connect to HFM");
             cmdLine.AddKeywordArgument("Host", "The HFM cluster or server to connect to");
             cmdLine.AddFlagArgument("Debug", "Enable debug logging");
-            cmdLine.Parse(Environment.GetCommandLineArgs());
+            var args = cmdLine.Parse(Environment.GetCommandLineArgs());
+
+            var Context = new Context(commands);
+            Context.Set(new HFM.Client());
+            Context.Invoke("SetLogonInfo", args);
 
             // This line needs to appear at the end of the prgram code as a marker to
             // the GC so that it does not collect our control-key handler

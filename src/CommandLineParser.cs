@@ -536,7 +536,7 @@ namespace CommandLine
         /// argument definitions, then identify missing arguments and set any
         /// default values.
         protected Dictionary<string, object> ProcessArguments() {
-            var result = new Dictionary<string, object>();
+            var result = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 
             // Process flag args
             foreach(var key in FlagValues) {

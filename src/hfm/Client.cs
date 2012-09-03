@@ -32,8 +32,10 @@ namespace HFM
 
         /// Sets the user credentials via userid and password.
         [Command]
-        public void SetLogonInfo(string domain, string userName, string password)
+        public void SetLogonInfo([DefaultValue(null)] string domain,
+                string userName, [SensitiveValue] string password)
         {
+            _log.Debug("Setting logon credentials via username and password");
             _client.SetLogonInfoSSO(domain, userName, null, password);
         }
 
@@ -42,6 +44,7 @@ namespace HFM
         [Command]
         public void SetLogonToken(string token)
         {
+            _log.Debug("Setting logon credentials via SSO token");
             _client.SetLogonInfoSSO(null, null, token, null);
         }
 
