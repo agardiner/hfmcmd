@@ -9,18 +9,40 @@ using log4net;
 
 namespace CommandLine
 {
-    /// Interface for argument validation.
+
+    /// <summary>
+    /// Interface for an argument Validator. Defines the single method a
+    /// Validator must implement: IsValid.
+    /// </summary>
     public interface Validator
     {
+        /// <summary>
         /// Primary method for argument validation; returns true if the argument
         /// is valid.
+        /// </summary>
+        /// <param name="value">The argument string value to be validated. Will
+        /// never be null.</param>
+        /// <param name="errorMsg">An optional out parameter for returning
+        /// additional details on the reason for failure if an argument fails
+        /// validation.</param>
         bool IsValid(string value, out string errorMsg);
     }
 
+    /// <summary>
     /// Validator implementation using a regular expression.
+    /// </summary>
     public class RegexValidator : Validator
     {
         public Regex Expression { get; set; }
+
+        public RegexValidator()
+        {
+        }
+
+        public RegexValidator(Regex re)
+        {
+            Expression = re;
+        }
 
         public bool IsValid(string value, out string errorMsg) {
             errorMsg = null;
@@ -34,27 +56,68 @@ namespace CommandLine
         }
     }
 
-    /// Validator implementation using a list of values.
+    /// <summary>
+    /// Validator implementation using a list of values. Supports validations
+    /// of both single and multiple comma-separated argument values via the
+    /// PermitMultipleValues property.
+    /// </summary>
     public class ListValidator : Validator
     {
         public List<string> Values { get; set; }
+        public bool IgnoreCase { get; set; }
+        public bool PermitMultipleValues { get; set; }
+
+        public ListValidator()
+        {
+            IgnoreCase = true;
+            PermitMultipleValues = false;
+        }
+
+        public ListValidator(List<string> values)
+        {
+            Values = values;
+            IgnoreCase = true;
+            PermitMultipleValues = false;
+        }
 
         public bool IsValid(string value, out string errorMsg) {
+            var ok = true;
             errorMsg = null;
-            if(Values == null) {
-                return true;
+            if(Values != null) {
+                var values = PermitMultipleValues ? value.Split(',') : new string[] { value };
+                foreach(var val in values) {
+                    ok = ok && (IgnoreCase ?
+                            Values.Contains(val, StringComparer.OrdinalIgnoreCase) :
+                            Values.Contains(val));
+                }
             }
-            else {
-                return Values.Contains(value);
+            if(!ok) {
+                errorMsg = String.Format("Value must be {0} of: {1}{2}",
+                                         PermitMultipleValues ? "any" : "one",
+                                         String.Join(", ", Values.ToArray()),
+                                         PermitMultipleValues ? " (Use a comma to separate multiple values)" : "");
             }
+            return ok;
         }
     }
 
+    /// <summary>
     /// Validator implementation using a range.
+    /// </summary>
     public class RangeValidator : Validator
     {
         int? Min { get; set; }
         int? Max { get; set; }
+
+        public RangeValidator()
+        {
+        }
+
+        public RangeValidator(int min, int max)
+        {
+            Min = min;
+            Max = max;
+        }
 
         public bool IsValid(string value, out string errorMsg) {
             int iVal = int.Parse(value);
@@ -72,10 +135,14 @@ namespace CommandLine
         }
     }
 
+
+
+    /// <summary>
     /// Base class for all types of command-line arguments.
     /// Each argument must have a key that will be used to access the value in
     /// the returned Dictionary, and a description that is shown when help is
     /// displayed.
+    /// </summary>
     public abstract class Argument
     {
         /// Delegate definition for callback after parsing this argument
@@ -89,8 +156,10 @@ namespace CommandLine
         public OnParseHandler OnParse { get; set; }
     }
 
+    /// <summary>
     /// ValueArguments are arguments that take a value. This is the parent class
     /// for positional and keyword arguments.
+    /// </summary>
     public abstract class ValueArgument : Argument
     {
         /// Whether the argument is required or optional
@@ -103,8 +172,10 @@ namespace CommandLine
         public bool IsPassword { get; set; }
     }
 
+    /// <summary>
     /// Positional arguments are those where a value is specified without its
     /// key in a certain pos
+    /// </summary>
     public class PositionalArgument : ValueArgument
     {
         public PositionalArgument()
@@ -113,25 +184,32 @@ namespace CommandLine
         }
     }
 
+    /// <summary>
     /// A keyword argument can appear in any position, since its key tells us
     /// which argument it corresponds to. The key may be specified as a prefix
     /// to the value, i.e. key:value, or as a separate argument preceding the
     /// value.
+    /// </summary>
     public class KeywordArgument : ValueArgument {}
 
+    /// <summary>
     /// Flag arguments are booleans that are set if the flag is encountered.
     /// A flag argument is identified by a -- or / prefix.
+    /// </summary>
     public class FlagArgument : Argument {}
 
 
+
+    /// <summary>
     /// Class representing a set of Argument definitions.
+    /// </summary>
     public class Definition
     {
         /// Collection of Argument objects, defining the permitted/expected
         /// arguments this program takes.
         internal Dictionary<string, Argument> Arguments = new Dictionary<string, Argument>();
         /// List identifying the insertion order of positional arguments.
-        protected List<string> PositionalArgumentOrder = new List<string>();
+        private List<string> PositionalArgumentOrder = new List<string>();
 
         /// Purpose of the program whose command-line arguments we are parsing.
         public string Purpose { get; set; }
@@ -195,8 +273,10 @@ namespace CommandLine
         }
 
 
+        /// <summary>
         /// Adds an Argument definition to the list of arguments this command-line
         /// supports.
+        /// </summary>
         public void AddArgument(Argument arg)
         {
             Arguments.Add(arg.Key.ToLower(), arg);
@@ -206,8 +286,10 @@ namespace CommandLine
         }
 
 
+        /// <summary>
         /// Displays a usgae message, based on the allowed arguments and purpose
         /// represented by this class.
+        /// </summary>
         public void DisplayUsage(string arg0)
         {
             Console.Error.WriteLine();
@@ -250,7 +332,7 @@ namespace CommandLine
 
         }
 
-        // Outputs a single argument definition
+        /// Outputs a single argument definition
         protected void OutputArg(ValueArgument arg) {
             Console.Error.Write("    {0,-16}  {1}", arg.Key, arg.Description);
             if(arg.DefaultValue != null) {
@@ -264,24 +346,31 @@ namespace CommandLine
     }
 
 
+    /// <summary>
     /// Main class for interacting via the command-line. Handles the definition
     /// and parsing of command-line arguments, and the display of usage and help
-    // messages.
+    /// messages.
+    /// </summary>
     public class Interface
     {
 
-        Definition Definition;
+        /// The set of possible arguments to be recognised.
+        public Definition Definition;
 
 
+        /// <summary>
         /// Constructor; requires a purpose for the program whose args we are
         /// parsing.
+        /// </summary>
         public Interface(string purpose)
         {
             Definition = new Definition { Purpose = purpose };
         }
 
 
+        /// <summary>
         /// Convenience method for defining a new positional argument.
+        /// </summary>
         public PositionalArgument AddPositionalArgument(string key, string desc)
         {
             var arg = new PositionalArgument { Key = key, Description = desc };
@@ -289,7 +378,9 @@ namespace CommandLine
             return arg;
         }
 
-        /// Convenience method for defining a new keywork argument.
+        /// <summary>
+        /// Convenience method for defining a new keyword argument.
+        /// </summary>
         public KeywordArgument AddKeywordArgument(string key, string desc)
         {
             var arg = new KeywordArgument { Key = key, Description = desc };
@@ -297,7 +388,9 @@ namespace CommandLine
             return arg;
         }
 
-        /// Convenience method for defining a new keywork argument.
+        /// <summary>
+        /// Convenience method for defining a new flag argument.
+        /// </summary>
         public FlagArgument AddFlagArgument(string key, string desc)
         {
             var arg = new FlagArgument { Key = key, Description = desc };
@@ -306,8 +399,10 @@ namespace CommandLine
         }
 
 
+        /// <summary>
         /// Parses the supplied set of arg strings using the list of Argument
-        // definitions maintained by this command-line.
+        // definitions maintained by this command-line Interface instance.
+        /// </summary>
         public Dictionary<string, object> Parse(string[] args)
         {
             return new Parser(Definition).Parse(new List<string>(args));
@@ -316,8 +411,10 @@ namespace CommandLine
     }
 
 
+    /// <summary>
     /// Exception thrown when there is an error parsing the command-line
-    class ParseException : Exception
+    /// </summary>
+    public class ParseException : Exception
     {
         public ParseException(string msg)
             : base(msg)
@@ -335,18 +432,22 @@ namespace CommandLine
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
         protected Definition Definition;
-
         protected List<string> PositionalValues;
         protected Dictionary<string, string> KeywordValues;
         protected List<string> FlagValues;
         protected bool ShowUsage = false;
 
 
+        /// Constructor
         public Parser(Definition argDefs) {
             Definition = argDefs;
         }
 
 
+        /// <summary>
+        /// Parse the supplied list of arguments, using the argument definitions
+        /// given at construction.
+        /// </summary>
         public Dictionary<string, object> Parse(List<string> args)
         {
             Dictionary<string, object> result;
@@ -424,6 +525,9 @@ namespace CommandLine
         }
 
 
+        /// Using the now classified argument values, match them to corresponding
+        /// argument definitions, then identify missing arguments and set any
+        /// default values.
         protected Dictionary<string, object> ProcessArguments() {
             var result = new Dictionary<string, object>();
 
@@ -494,7 +598,8 @@ namespace CommandLine
             var sVal = val as string;
             if(valArg != null && valArg.Validation != null && sVal != null) {
                 if(!valArg.Validation.IsValid(sVal, out errorMsg)) {
-                    throw new ParseException(string.Format("The value '{0}' for argument {1} is not valid. {2}.", sVal, arg.Key, errorMsg));
+                    throw new ParseException(string.Format("The value '{0}' for argument {1} is not valid. {2}.",
+                                             sVal, arg.Key, errorMsg));
                 }
             }
 
