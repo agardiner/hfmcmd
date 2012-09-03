@@ -64,7 +64,6 @@ namespace Command
         protected static readonly ILog _log = LogManager.GetLogger(
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-
         protected Type _type;
         protected MethodInfo _mi;
 
@@ -99,8 +98,12 @@ namespace Command
     /// discovering them.
     public class Registry
     {
+        // Reference to class logger
+        protected static readonly ILog _log = LogManager.GetLogger(
+            System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
         // Dictionary of command instances keyed by command name
-        private IDictionary<string, Command> _commands = new Dictionary<string, Command>();
+        private IDictionary<string, Command> _commands;
 
 
         /// Registers commands (i.e. methods tagged with the Command attribute)
@@ -119,6 +122,7 @@ namespace Command
                 registry  = new Registry();
             }
 
+            _log.DebugFormat("Searching for commands under namespace '{0}'...", ns);
             foreach(var t in asm.GetExportedTypes()) {
                 if(t.IsClass && t.Namespace == ns) {
                     foreach(var mi in t.GetMethods()) {
@@ -136,12 +140,18 @@ namespace Command
 
         public Registry()
         {
+            _commands = new Dictionary<string, Command>(StringComparer.OrdinalIgnoreCase);
         }
 
 
         public void Add(Command cmd)
         {
             _commands.Add(cmd.Name, cmd);
+        }
+
+        public bool Contains(string key)
+        {
+            return _commands.ContainsKey(key);
         }
     }
 
