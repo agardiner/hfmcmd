@@ -9,6 +9,7 @@ using log4net.Appender;
 using log4net.Repository.Hierarchy;
 
 using Command;
+using CommandLine;
 
 
 namespace HFMCmd
@@ -75,16 +76,25 @@ namespace HFMCmd
             Registry commands = Registry.FindCommands("HFM");
 
             // TODO: Process command-line arguments
-            var cmdLine = new CommandLine.Interface(HFMCmd.Resource.Help.Purpose);
-            var arg = cmdLine.AddPositionalArgument("CommandOrFile", "The name of the command to execute, or the path to a file containing commands to execute");
-            arg.Validation = new CommandLine.RegexValidator() { Expression = new Regex("foo|bar") };
-            arg.OnParse = (key, val) => {
-                cmdLine.AddPositionalArgument("ArgTwo", "This is argument two");
+            var cmdLine = new UI(HFMCmd.Resource.Help.Purpose);
+            var arg = cmdLine.AddPositionalArgument("CommandOrFile",
+                    "The name of the command to execute, or the path to a file containing commands to execute");
+            arg.Validate = (string argVal, out string errorMsg) => {
+                errorMsg = String.Format("File not found: {0}", argVal);
+                return commands.Contains(argVal) || File.Exists(argVal);
             };
+
+            arg.OnParse = (key, val) => {
+                var arg2 = cmdLine.AddPositionalArgument("ArgTwo", "This is argument two");
+                arg2.AddValidator(new ListValidator() {
+                    Values = new System.Collections.Generic.List<string>() { "apple", "orange", "pear" },
+                    PermitMultipleValues = true
+                });
+            };
+
             cmdLine.AddKeywordArgument("UserId", "The user id to use to connect to HFM");
             cmdLine.AddKeywordArgument("Password", "The password to use to connect to HFM");
             cmdLine.AddKeywordArgument("Host", "The HFM cluster or server to connect to");
-            cmdLine.AddKeywordArgument("App", "The HFM application to connect to");
             cmdLine.AddFlagArgument("Debug", "Enable debug logging");
             cmdLine.Parse(Environment.GetCommandLineArgs());
 

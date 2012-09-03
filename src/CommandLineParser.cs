@@ -11,10 +11,10 @@ namespace CommandLine
 {
 
     /// <summary>
-    /// Interface for an argument Validator. Defines the single method a
-    /// Validator must implement: IsValid.
+    /// Interface for an argument validator. Defines a single method IsValid
+    /// that implementations must implement.
     /// </summary>
-    public interface Validator
+    public interface ArgumentValidator
     {
         /// <summary>
         /// Primary method for argument validation; returns true if the argument
@@ -26,113 +26,6 @@ namespace CommandLine
         /// additional details on the reason for failure if an argument fails
         /// validation.</param>
         bool IsValid(string value, out string errorMsg);
-    }
-
-    /// <summary>
-    /// Validator implementation using a regular expression.
-    /// </summary>
-    public class RegexValidator : Validator
-    {
-        public Regex Expression { get; set; }
-
-        public RegexValidator()
-        {
-        }
-
-        public RegexValidator(Regex re)
-        {
-            Expression = re;
-        }
-
-        public bool IsValid(string value, out string errorMsg) {
-            errorMsg = null;
-            if(Expression == null) {
-                return true;
-            }
-            else {
-                errorMsg = String.Format("Value must satisfy the regular expression: /{0}/", Expression);
-                return Expression.IsMatch(value);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Validator implementation using a list of values. Supports validations
-    /// of both single and multiple comma-separated argument values via the
-    /// PermitMultipleValues property.
-    /// </summary>
-    public class ListValidator : Validator
-    {
-        public List<string> Values { get; set; }
-        public bool IgnoreCase { get; set; }
-        public bool PermitMultipleValues { get; set; }
-
-        public ListValidator()
-        {
-            IgnoreCase = true;
-            PermitMultipleValues = false;
-        }
-
-        public ListValidator(List<string> values)
-        {
-            Values = values;
-            IgnoreCase = true;
-            PermitMultipleValues = false;
-        }
-
-        public bool IsValid(string value, out string errorMsg) {
-            var ok = true;
-            errorMsg = null;
-            if(Values != null) {
-                var values = PermitMultipleValues ? value.Split(',') : new string[] { value };
-                foreach(var val in values) {
-                    ok = ok && (IgnoreCase ?
-                            Values.Contains(val, StringComparer.OrdinalIgnoreCase) :
-                            Values.Contains(val));
-                }
-            }
-            if(!ok) {
-                errorMsg = String.Format("Value must be {0} of: {1}{2}",
-                                         PermitMultipleValues ? "any" : "one",
-                                         String.Join(", ", Values.ToArray()),
-                                         PermitMultipleValues ? " (Use a comma to separate multiple values)" : "");
-            }
-            return ok;
-        }
-    }
-
-    /// <summary>
-    /// Validator implementation using a range.
-    /// </summary>
-    public class RangeValidator : Validator
-    {
-        int? Min { get; set; }
-        int? Max { get; set; }
-
-        public RangeValidator()
-        {
-        }
-
-        public RangeValidator(int min, int max)
-        {
-            Min = min;
-            Max = max;
-        }
-
-        public bool IsValid(string value, out string errorMsg) {
-            int iVal = int.Parse(value);
-            errorMsg = null;
-            if(Min != null && Max != null) {
-                errorMsg = String.Format("Value must be in the range {0} to {1} inclusive", Min, Max);
-            }
-            else if(Min != null) {
-                errorMsg = String.Format("Value must be greater than or equal to {0}", Min);
-            }
-            else if(Max != null) {
-                errorMsg = String.Format("Value must be less than or equal to {0}", Max);
-            }
-            return (Min == null || iVal >= Min) && (Max == null || iVal <= Max);
-        }
     }
 
 
@@ -166,10 +59,17 @@ namespace CommandLine
         public bool IsRequired { get; set; }
         /// The default value for the argument
         public string DefaultValue { get; set; }
-        /// A regular expression the argument must satisfy
-        public Validator Validation { get; set; }
+        /// Define the signature for the Validate event
+        public delegate bool ValidateHandler(string val, out string errorMsg);
+        /// An optional validation callback for validating argument values
+        public ValidateHandler Validate;
         /// A flag indicating whether the argument represents a password
         public bool IsPassword { get; set; }
+
+        public void AddValidator(ArgumentValidator validator)
+        {
+            Validate += new ValidateHandler(validator.IsValid);
+        }
     }
 
     /// <summary>
@@ -198,6 +98,114 @@ namespace CommandLine
     /// </summary>
     public class FlagArgument : Argument {}
 
+
+    /// <summary>
+    /// Validator implementation using a regular expression.
+    /// </summary>
+    public class RegexValidator : ArgumentValidator
+    {
+        public Regex Expression { get; set; }
+
+        public RegexValidator()
+        {
+        }
+
+        public RegexValidator(string re)
+        {
+            Expression = new Regex(re);
+        }
+
+        public RegexValidator(Regex re)
+        {
+            Expression = re;
+        }
+
+        public bool IsValid(string value, out string errorMsg) {
+            errorMsg = null;
+            if(Expression == null) {
+                return true;
+            }
+            else {
+                errorMsg = String.Format("Value must satisfy the regular expression: /{0}/", Expression);
+                return Expression.IsMatch(value);
+            }
+        }
+    }
+
+    /// <summary>
+    /// ArgumentValidator implementation using a list of values.
+    /// Supports validations of both single and multiple comma-separated argument
+    /// values via the PermitMultipleValues property. Argument validation is not
+    /// case-sensitive, unless the CaseSensitive property is set to true.
+    /// </summary>
+    public class ListValidator : ArgumentValidator
+    {
+        public List<string> Values { get; set; }
+        public bool CaseSensitive { get; set; }
+        public bool PermitMultipleValues { get; set; }
+
+        public ListValidator()
+        {
+        }
+
+        public ListValidator(List<string> values)
+        {
+            Values = values;
+        }
+
+        public bool IsValid(string value, out string errorMsg) {
+            var ok = true;
+            errorMsg = null;
+            if(Values != null) {
+                var values = PermitMultipleValues ? value.Split(',') : new string[] { value };
+                foreach(var val in values) {
+                    ok = ok && (CaseSensitive ? Values.Contains(val) :
+                            Values.Contains(val, StringComparer.OrdinalIgnoreCase));
+                }
+            }
+            if(!ok) {
+                errorMsg = String.Format("Value must be {0} of: {1}{2}",
+                                         PermitMultipleValues ? "any" : "one",
+                                         String.Join(", ", Values.ToArray()),
+                                         PermitMultipleValues ? " (Use a comma to separate multiple values)" : "");
+            }
+            return ok;
+        }
+    }
+
+    /// <summary>
+    /// ArgumentValidator implementation using a range.
+    /// </summary>
+    public class RangeValidator : ArgumentValidator
+    {
+        int? Min { get; set; }
+        int? Max { get; set; }
+
+        public RangeValidator()
+        {
+        }
+
+        public RangeValidator(int min, int max)
+        {
+            Min = min;
+            Max = max;
+        }
+
+        public bool IsValid(string value, out string errorMsg) {
+            int iVal = int.Parse(value);
+            errorMsg = null;
+            if(Min != null && Max != null) {
+                errorMsg = String.Format("Value must be in the range {0} to {1} inclusive", Min, Max);
+            }
+            else if(Min != null) {
+                errorMsg = String.Format("Value must be greater than or equal to {0}", Min);
+            }
+            else if(Max != null) {
+                errorMsg = String.Format("Value must be less than or equal to {0}", Max);
+            }
+            return (Min == null || iVal >= Min) && (Max == null || iVal <= Max);
+        }
+    }
 
 
     /// <summary>
@@ -351,7 +359,7 @@ namespace CommandLine
     /// and parsing of command-line arguments, and the display of usage and help
     /// messages.
     /// </summary>
-    public class Interface
+    public class UI
     {
 
         /// The set of possible arguments to be recognised.
@@ -362,7 +370,7 @@ namespace CommandLine
         /// Constructor; requires a purpose for the program whose args we are
         /// parsing.
         /// </summary>
-        public Interface(string purpose)
+        public UI(string purpose)
         {
             Definition = new Definition { Purpose = purpose };
         }
@@ -401,7 +409,7 @@ namespace CommandLine
 
         /// <summary>
         /// Parses the supplied set of arg strings using the list of Argument
-        // definitions maintained by this command-line Interface instance.
+        // definitions maintained by this command-line UI instance.
         /// </summary>
         public Dictionary<string, object> Parse(string[] args)
         {
@@ -450,14 +458,13 @@ namespace CommandLine
         /// </summary>
         public Dictionary<string, object> Parse(List<string> args)
         {
-            Dictionary<string, object> result;
+            _log.Debug("Parsing command-line arguments...");
 
             // Classify the command-line entries passed to the program
             ClassifyArguments(args);
 
             try {
-                result = ProcessArguments();
-                return result;
+                return ProcessArguments();
             }
             catch(ParseException ex) {
                 if(ShowUsage) {
@@ -596,11 +603,15 @@ namespace CommandLine
             string errorMsg;
             var valArg = arg as ValueArgument;
             var sVal = val as string;
-            if(valArg != null && valArg.Validation != null && sVal != null) {
-                if(!valArg.Validation.IsValid(sVal, out errorMsg)) {
-                    throw new ParseException(string.Format("The value '{0}' for argument {1} is not valid. {2}.",
-                                             sVal, arg.Key, errorMsg));
+            if(valArg != null && valArg.Validate != null && sVal != null) {
+                _log.DebugFormat("Validating argument {0}", valArg.Key);
+                foreach(ValueArgument.ValidateHandler validate in valArg.Validate.GetInvocationList()) {
+                    if(!validate(sVal, out errorMsg)) {
+                        throw new ParseException(string.Format("The value '{0}' for argument {1} is not valid. {2}.",
+                                                 sVal, arg.Key, errorMsg));
+                    }
                 }
+                _log.DebugFormat("Argument {0} validated", valArg.Key);
             }
 
             result.Add(arg.Key, val);
