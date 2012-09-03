@@ -16,7 +16,6 @@ namespace Command
     }
 
 
-
     /// Define an attribute which will be used to specify default values for
     /// optional parameters on a Command.
     /// A DefaultValue attribute is used instead of default values on the
@@ -35,12 +34,21 @@ namespace Command
     }
 
 
+    /// Define an attribute which will be used to tag methods that can be
+    /// invoked from a script or command file.
+    [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false)]
+    class SensitiveValueAttribute : Attribute
+    {
+    }
+
+
 
     /// Records details of a parameter to a Command.
     public class CommandParameter
     {
         public string Name;
         public Type ParameterType;
+        public bool HasDefaultValue;
         public object DefaultValue;
 
         public CommandParameter(ParameterInfo pi)
@@ -64,8 +72,8 @@ namespace Command
         protected static readonly ILog _log = LogManager.GetLogger(
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-        protected Type _type;
-        protected MethodInfo _mi;
+        public Type Type { get; set; }
+        public MethodInfo MethodInfo { get; set; }
 
         public string Name;
         public List<CommandParameter> Parameters = new List<CommandParameter>();
@@ -74,8 +82,8 @@ namespace Command
         // Constructor
         public Command(Type t, MethodInfo mi)
         {
-            _type = t;
-            _mi = mi;
+            this.Type = t;
+            this.MethodInfo = mi;
             this.Name = mi.Name;
 
             _log.DebugFormat("Found command {0}", this.Name);
@@ -85,11 +93,11 @@ namespace Command
                 _log.DebugFormat("Found parameter {0}", param);
                 foreach(var attr in pi.GetCustomAttributes(typeof(DefaultValueAttribute), false)) {
                     param.DefaultValue = (attr as DefaultValueAttribute).Value;
+                    param.HasDefaultValue = true;
                 }
                 this.Parameters.Add(param);
             }
         }
-
     }
 
 
@@ -105,6 +113,11 @@ namespace Command
         // Dictionary of command instances keyed by command name
         private IDictionary<string, Command> _commands;
 
+        public Command this[string name] {
+            get {
+                return _commands[name];
+            }
+        }
 
         /// Registers commands (i.e. methods tagged with the Command attribute)
         /// in the current assembly.
@@ -181,6 +194,14 @@ namespace Command
         public Context(Registry registry)
         {
             _registry = registry;
+            _context = new Dictionary<Type, object>();
+        }
+
+
+        public void Set(object val) {
+            if(val != null) {
+                _context[val.GetType()] = val;
+            }
         }
 
 
@@ -188,9 +209,36 @@ namespace Command
         /// Dictionary to obtain parameter values.
         public object Invoke(string command, Dictionary<string, object> args)
         {
-            // TODO: If the method returns an object, set it in the context
+            Command cmd = _registry[command];
+            object ctxt = _context[cmd.Type];
 
-            return null;
+            // Create an array of parameters in the order expected
+            var parms = new object[cmd.Parameters.Count];
+            var i = 0;
+            foreach(var param in cmd.Parameters) {
+                _log.DebugFormat("Setting parameter {0}", param.Name);
+                if(args.ContainsKey(param.Name)) {
+                    parms[i++] = args[param.Name];
+                }
+                else if(param.HasDefaultValue) {
+                    // TODO: Deal with missing arg values, default values, etc
+                    _log.DebugFormat("No value supplied for argument {0}; using default value", param.Name);
+                    parms[i++] = param.DefaultValue;
+                }
+                else {
+                    throw new ArgumentNullException(param.Name,
+                            String.Format("No value was specified for a required argument to command '{0}'", cmd.Name));
+                }
+            }
+
+            var result = cmd.MethodInfo.Invoke(ctxt, parms);
+
+            // If the method returns an object, set it in the context
+            if(result != null) {
+                this.Set(result);
+            }
+
+            return result;
         }
     }
 
