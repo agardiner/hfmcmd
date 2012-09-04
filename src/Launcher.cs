@@ -130,10 +130,12 @@ namespace HFMCmd
             _cmdLine.AddFlagArgument("Debug", "Enable debug logging");
             var args = _cmdLine.Parse(Environment.GetCommandLineArgs());
 
-            _context = new Context(_commands);
-            _context.Set(this);
-            //_context.Set(new HFM.Client());
-            _context.Invoke(args["CommandOrFile"] as string, args);
+            if(args != null) {
+                _context = new Context(_commands);
+                _context.Set(this);
+                //_context.Set(new HFM.Client());
+                _context.Invoke(args["CommandOrFile"] as string, args);
+            }
         }
 
 

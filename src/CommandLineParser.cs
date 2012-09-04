@@ -456,25 +456,36 @@ namespace CommandLine
         /// Parse the supplied list of arguments, using the argument definitions
         /// given at construction.
         /// </summary>
+        /// <returns>Null if we displayed usage instructions, otherwise a
+        /// Dictionary of keys matching each argument found or defaulted,
+        /// whose values are the string value of the argument for non-flag
+        /// args, or a boolean value for flag args.
+        /// </returns>
         public Dictionary<string, object> Parse(List<string> args)
         {
+            Dictionary<string, object> result = null;
+            ParseException pe = null;
+
             _log.Debug("Parsing command-line arguments...");
 
             // Classify the command-line entries passed to the program
             ClassifyArguments(args);
 
             try {
-                return ProcessArguments();
+                result = ProcessArguments();
             }
             catch(ParseException ex) {
-                if(ShowUsage) {
-                    Definition.DisplayUsage(args[0]);
-                    return null;
-                }
-                else {
-                    throw ex;
-                }
+                pe = ex;
             }
+
+            if(ShowUsage) {
+                Definition.DisplayUsage(args[0]);
+                result = null;  // Don't act on what we parsed
+            }
+            else if(pe != null) {
+                throw pe;
+            }
+            return result;
         }
 
 
