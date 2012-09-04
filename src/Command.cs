@@ -34,8 +34,8 @@ namespace Command
     }
 
 
-    /// Define an attribute which will be used to tag methods that can be
-    /// invoked from a script or command file.
+    /// Define an attribute which will be used to tag parameters that contain
+    /// sensitive information such as passwords. These will be masked if logged.
     [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false)]
     class SensitiveValueAttribute : Attribute
     {
@@ -46,11 +46,13 @@ namespace Command
     /// Records details of a parameter to a Command.
     public class CommandParameter
     {
-        public string Name;
-        public Type ParameterType;
+        public readonly string Name;
+        public readonly Type ParameterType;
         public bool HasDefaultValue;
+        public bool IsSensitive;
         public object DefaultValue;
 
+        /// Constructor
         public CommandParameter(ParameterInfo pi)
         {
             this.Name = pi.Name;
@@ -65,23 +67,26 @@ namespace Command
 
 
 
+    /// <summary>
     /// Represents a method that can be invoked by some external means.
+    /// </summary>
     public class Command
     {
         // Reference to class logger
         protected static readonly ILog _log = LogManager.GetLogger(
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-        public Type Type { get; set; }
-        public MethodInfo MethodInfo { get; set; }
-
-        public string Name;
-        public List<CommandParameter> Parameters = new List<CommandParameter>();
+        public readonly string Namespace;
+        public readonly string Name;
+        public readonly Type Type;
+        public readonly MethodInfo MethodInfo;
+        public readonly List<CommandParameter> Parameters = new List<CommandParameter>();
 
 
         // Constructor
-        public Command(Type t, MethodInfo mi)
+        public Command(string ns, Type t, MethodInfo mi)
         {
+            this.Namespace = ns;
             this.Type = t;
             this.MethodInfo = mi;
             this.Name = mi.Name;
@@ -95,6 +100,9 @@ namespace Command
                     param.DefaultValue = (attr as DefaultValueAttribute).Value;
                     param.HasDefaultValue = true;
                 }
+                foreach(var attr in pi.GetCustomAttributes(typeof(SensitiveValueAttribute), false)) {
+                    param.IsSensitive = true;
+                }
                 this.Parameters.Add(param);
             }
         }
@@ -102,8 +110,10 @@ namespace Command
 
 
 
+    /// <summary>
     /// Provides a registry of discovered Commands, as well as methods for
     /// discovering them.
+    /// </summary>
     public class Registry
     {
         // Reference to class logger
@@ -119,16 +129,29 @@ namespace Command
             }
         }
 
+        /// <summary>
         /// Registers commands (i.e. methods tagged with the Command attribute)
         /// in the current assembly.
+        /// </summary>
         public static Registry FindCommands(string ns)
         {
             return FindCommands(Assembly.GetExecutingAssembly(), ns, null);
         }
 
+        /// <summary>
+        /// Registers commands (i.e. methods tagged with the Command attribute)
+        /// in the current assembly.
+        /// </summary>
+        public static Registry FindCommands(string ns, Registry registry)
+        {
+            return FindCommands(Assembly.GetExecutingAssembly(), ns, registry);
+        }
 
+
+        /// <summary>
         /// Registers commands from the supplied assembly. Commands methods must
         /// be tagged with the attribute Command to be locatable.
+        /// </summary>
         public static Registry FindCommands(Assembly asm, string ns, Registry registry)
         {
             if(registry == null) {
@@ -140,7 +163,7 @@ namespace Command
                 if(t.IsClass && t.Namespace == ns) {
                     foreach(var mi in t.GetMethods()) {
                         foreach(var attr in mi.GetCustomAttributes(typeof(CommandAttribute), false)) {
-                            Command cmd = new Command(t, mi);
+                            Command cmd = new Command(ns, t, mi);
                             registry.Add(cmd);
                         }
                     }
@@ -151,17 +174,24 @@ namespace Command
         }
 
 
+        /// Constructor
         public Registry()
         {
             _commands = new Dictionary<string, Command>(StringComparer.OrdinalIgnoreCase);
         }
 
 
+        /// <summary>
+        /// Registers the specified Command instance.
+        /// </summary>
         public void Add(Command cmd)
         {
             _commands.Add(cmd.Name, cmd);
         }
 
+        /// <summary>
+        /// Checks to see if a command with the given name is available.
+        /// </summary>
         public bool Contains(string key)
         {
             return _commands.ContainsKey(key);
@@ -169,12 +199,27 @@ namespace Command
     }
 
 
+    /// <summary>
+    /// Context exception, thrown when no object of the necessary type is
+    /// available in the current context.
+    /// </summary>
+    public class ContextException : Exception
+    {
+        public ContextException(string msg) :
+            base(msg)
+        {
+        }
+    }
 
+
+
+    /// <summary>
     /// Records the current context within which Commands are executed. A
     /// Context is like a session object; it holds the current context within
     /// which a Command will be executed, and the method to which a Command
     /// relates will be executed on the object instance of the Command's Type
     /// which is currently in the Context.
+    /// </summary>
     public class Context
     {
         // Reference to class logger
@@ -198,6 +243,9 @@ namespace Command
         }
 
 
+        /// <summary>
+        /// Adds an object to the current context.
+        /// </summary>
         public void Set(object val) {
             if(val != null) {
                 _context[val.GetType()] = val;
@@ -205,29 +253,39 @@ namespace Command
         }
 
 
+        /// <summary>
         /// Invoke an instance of the named command, using the supplied arguments
         /// Dictionary to obtain parameter values.
+        /// </summary>
         public object Invoke(string command, Dictionary<string, object> args)
         {
             Command cmd = _registry[command];
+            if(!_context.ContainsKey(cmd.Type)) {
+                throw new ContextException(String.Format("No object of type {0} is available in the current context", cmd.Type.Name));
+            }
             object ctxt = _context[cmd.Type];
+
+            _log.InfoFormat("Executing {0} command {1}...", cmd.Type.Name, cmd.Name);
 
             // Create an array of parameters in the order expected
             var parms = new object[cmd.Parameters.Count];
             var i = 0;
             foreach(var param in cmd.Parameters) {
-                _log.DebugFormat("Setting parameter {0}", param.Name);
                 if(args.ContainsKey(param.Name)) {
+                    _log.DebugFormat("Setting {0} to '{1}'", param.Name,
+                            param.IsSensitive ? "******" : args[param.Name]);
                     parms[i++] = args[param.Name];
                 }
                 else if(param.HasDefaultValue) {
-                    // TODO: Deal with missing arg values, default values, etc
-                    _log.DebugFormat("No value supplied for argument {0}; using default value", param.Name);
+                    // Deal with missing arg values, default values, etc
+                    _log.DebugFormat("No value supplied for {0}; using default value '{1}'",
+                            param.Name, param.DefaultValue);
                     parms[i++] = param.DefaultValue;
                 }
                 else {
-                    throw new ArgumentNullException(param.Name,
-                            String.Format("No value was specified for a required argument to command '{0}'", cmd.Name));
+                    throw new ArgumentException(
+                            String.Format("No value was specified for the required argument '{0}' to command '{1}'",
+                            param.Name, cmd.Name));
                 }
             }
 
