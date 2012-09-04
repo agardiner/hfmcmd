@@ -42,12 +42,41 @@ namespace Command
     }
 
 
+    /// Define an attribute which will be used to set descriptions for command
+    /// parameters.
+    [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false)]
+    class DescriptionAttribute : Attribute
+    {
+        public string Description;
+
+        public DescriptionAttribute(string desc)
+        {
+            this.Description = desc;
+        }
+    }
+
+
+    /// Define an attribute which will be used to set descriptions for command
+    /// parameters.
+    [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false)]
+    class ValidationAttribute : Attribute
+    {
+        public object Validation;
+
+        public ValidationAttribute(object validator)
+        {
+            this.Validation = validator;
+        }
+    }
+
+
 
     /// Records details of a parameter to a Command.
     public class CommandParameter
     {
         public readonly string Name;
         public readonly Type ParameterType;
+        public string Description;
         public bool HasDefaultValue;
         public bool IsSensitive;
         public object DefaultValue;
@@ -96,12 +125,17 @@ namespace Command
             foreach(var pi in mi.GetParameters()) {
                 var param = new CommandParameter(pi);
                 _log.DebugFormat("Found parameter {0}", param);
-                foreach(var attr in pi.GetCustomAttributes(typeof(DefaultValueAttribute), false)) {
-                    param.DefaultValue = (attr as DefaultValueAttribute).Value;
-                    param.HasDefaultValue = true;
-                }
-                foreach(var attr in pi.GetCustomAttributes(typeof(SensitiveValueAttribute), false)) {
-                    param.IsSensitive = true;
+                foreach(var attr in pi.GetCustomAttributes(false)) {
+                    if(attr is DefaultValueAttribute) {
+                        param.DefaultValue = (attr as DefaultValueAttribute).Value;
+                        param.HasDefaultValue = true;
+                    }
+                    if(attr is SensitiveValueAttribute) {
+                        param.IsSensitive = true;
+                    }
+                    if(attr is DescriptionAttribute) {
+                        param.Description = (attr as DescriptionAttribute).Description;
+                    }
                 }
                 this.Parameters.Add(param);
             }

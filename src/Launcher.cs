@@ -182,7 +182,7 @@ namespace HFMCmd
                 // Add additional arguments needed by the command
                 foreach(var param in cmd.Parameters) {
                     _log.DebugFormat("Adding keyword arg {0}", param.Name);
-                    _cmdLine.AddKeywordArgument(param.Name, "");
+                    _cmdLine.AddKeywordArgument(param.Name, param.Description);
                 }
             }
             else {
@@ -194,8 +194,8 @@ namespace HFMCmd
 
 
         [Command]
-        public void Log([DefaultValue("INFO")] string level,
-                        [DefaultValue(null)]   string logFile)
+        public void Log([Description("Level at which to log"), DefaultValue("INFO"), Validation("INFO|WARN|ERROR|DEBUG")] string level,
+                        [Description("Path to log file"), DefaultValue(null)] string logFile)
         {
             log4net.Repository.ILoggerRepository repo = LogManager.GetRepository();
             Hierarchy logHier = (Hierarchy)repo;
