@@ -1,6 +1,7 @@
 using System;
 using System.Reflection;
 using System.Collections.Generic;
+using System.Linq;
 
 using log4net;
 
@@ -56,22 +57,9 @@ namespace Command
     }
 
 
-    /// Define an attribute which will be used to set descriptions for command
-    /// parameters.
-    [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false)]
-    class ValidationAttribute : Attribute
-    {
-        public object Validation;
-
-        public ValidationAttribute(object validator)
-        {
-            this.Validation = validator;
-        }
-    }
-
-
-
+    /// <summary>
     /// Records details of a parameter to a Command.
+    /// </summary>
     public class CommandParameter
     {
         public readonly string Name;
@@ -111,6 +99,11 @@ namespace Command
         public readonly MethodInfo MethodInfo;
         public readonly List<CommandParameter> Parameters = new List<CommandParameter>();
 
+        public Type ReturnType {
+            get {
+                return MethodInfo.ReturnType;
+            }
+        }
 
         // Constructor
         public Command(string ns, Type t, MethodInfo mi)
@@ -229,6 +222,26 @@ namespace Command
         public bool Contains(string key)
         {
             return _commands.ContainsKey(key);
+        }
+
+
+        /// <summary>
+        /// Identifies the first Command that returns an object of the specified
+        /// type.
+        /// </summary>
+        public Command FindCommandByReturnType(Type returnType)
+        {
+            return _commands.Values.First(cmd => cmd.ReturnType == returnType);
+        }
+
+
+        /// Returns the Type(s) that must be instantiated before the specified
+        /// command can be invoked.
+        public void FindCommandPrerequisiteObjects(string key)
+        {
+            var cmd = this[key];
+            FindCommandPrerequisiteObjects(cmd.Type);
+            // TODO: Follow chain until no further pre-requisite types exist
         }
     }
 

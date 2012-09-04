@@ -55,6 +55,27 @@ namespace HFM
         }
 
 
+        [Command]
+        public void GetClusters()
+        {
+            object clusters;
+            object servers;
+
+            _client.GetClustersAndServers(out clusters, out servers);
+            if(clusters != null) {
+                _log.Info("Clusters:");
+                foreach(var cluster in clusters as string[]) {
+                    _log.InfoFormat("  {0}", cluster);
+                }
+            }
+            if(servers != null) {
+                _log.Info("Servers:");
+                foreach(var server in servers as string[]) {
+                    _log.InfoFormat("  {0}", server);
+                }
+            }
+        }
+
         /// Opens the named application, and returns a Session object for
         /// interacting with it.
         [Command]

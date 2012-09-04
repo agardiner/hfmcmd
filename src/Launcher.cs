@@ -133,7 +133,7 @@ namespace HFMCmd
             if(args != null) {
                 _context = new Context(_commands);
                 _context.Set(this);
-                //_context.Set(new HFM.Client());
+                _context.Set(new HFM.Client());
                 _context.Invoke(args["CommandOrFile"] as string, args);
             }
         }
@@ -168,21 +168,27 @@ namespace HFMCmd
                 ok = true;
 
                 // TODO: Add command arguments as keyword args
-                _log.DebugFormat("Adding keyword args for {0} command", argVal);
                 Command.Command cmd = _commands[argVal];
+                _log.DebugFormat("Adding keyword args for {0} command", cmd.Name);
 
-                if(cmd.Namespace == "HFM") {
+                if(cmd.Namespace == "HFM" && cmd.Name != "SetLogonInfo") {
                     // Add standard arguments for logging in
                     _cmdLine.AddKeywordArgument("Domain", "The domain to which the user should be validated in");
                     _cmdLine.AddKeywordArgument("UserName", "The user id to use to connect to HFM");
                     _cmdLine.AddKeywordArgument("Password", "The password to use to connect to HFM");
-                    _cmdLine.AddKeywordArgument("Host", "The HFM cluster or server to connect to");
                 }
 
                 // Add additional arguments needed by the command
+                string key;
+                KeywordArgument arg;
                 foreach(var param in cmd.Parameters) {
-                    _log.DebugFormat("Adding keyword arg {0}", param.Name);
-                    _cmdLine.AddKeywordArgument(param.Name, param.Description);
+                    key = char.ToUpper(param.Name[0]) + param.Name.Substring(1);
+                    _log.DebugFormat("Adding keyword arg {0}", key);
+                    arg = _cmdLine.AddKeywordArgument(key, param.Description);
+                    arg.IsRequired = !param.HasDefaultValue;
+                    if(param.HasDefaultValue) {
+                        arg.DefaultValue = param.DefaultValue.ToString();
+                    }
                 }
             }
             else {
@@ -194,7 +200,7 @@ namespace HFMCmd
 
 
         [Command]
-        public void Log([Description("Level at which to log"), DefaultValue("INFO"), Validation("INFO|WARN|ERROR|DEBUG")] string level,
+        public void Log([Description("Level at which to log"), DefaultValue("INFO")] string level,
                         [Description("Path to log file"), DefaultValue(null)] string logFile)
         {
             log4net.Repository.ILoggerRepository repo = LogManager.GetRepository();

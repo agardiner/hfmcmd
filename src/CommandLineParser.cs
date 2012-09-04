@@ -74,10 +74,11 @@ namespace CommandLine
 
     /// <summary>
     /// Positional arguments are those where a value is specified without its
-    /// key in a certain pos
+    /// key; the order of argument values identify the positional argument.
     /// </summary>
     public class PositionalArgument : ValueArgument
     {
+        /// Positional arguments default to required.
         public PositionalArgument()
         {
             IsRequired = true;
