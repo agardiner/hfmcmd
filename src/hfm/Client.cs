@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Runtime.InteropServices;
 
 using log4net;
 using HSXCLIENTLib;
@@ -26,7 +27,12 @@ namespace HFM
         public Client()
         {
             _log.Debug("Creating HsxClient instance");
-            _client = new HsxClient();
+            try {
+                _client = new HsxClient();
+            }
+            catch(COMException ex) {
+                _log.Error("Unable to instantiate an HsxClient COM object; is HFM installed?", ex);
+            }
         }
 
 
