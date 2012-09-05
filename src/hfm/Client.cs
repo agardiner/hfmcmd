@@ -24,6 +24,7 @@ namespace HFM
 
 
         // Constructor
+        [Factory]
         public Client()
         {
             _log.Debug("Creating HsxClient instance");
@@ -78,7 +79,7 @@ namespace HFM
 
         /// Opens the named application, and returns a Session object for
         /// interacting with it.
-        [Command]
+        [Command, Factory, PreRequisite("SetLogonInfo")]
         public Session OpenApplication(string clusterName, string appName)
         {
             object hsxServer = null, hsvSession = null;
@@ -89,7 +90,7 @@ namespace HFM
 
 
         /// Creates a new HFM application.
-        [Command]
+        [Command, PreRequisite("SetLogonInfo")]
         public void CreateApplication(string clusterName, string appName,
                 [DefaultValue("")] string appDesc, string profilePath,
                 string sharedServicesProject, string appWebServerUrl)
@@ -103,7 +104,7 @@ namespace HFM
 
 
         /// Deletes a classic (but not an EPMA) HFM application.
-        [Command]
+        [Command, PreRequisite("SetLogonInfo")]
         public void DeleteApplication(string clusterName, string appName)
         {
             _client.DeleteApplication(clusterName, "Financial Management", appName);

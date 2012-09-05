@@ -2,6 +2,9 @@ using System;
 
 using log4net;
 using HSVSESSIONLib;
+using HSVCALCULATELib;
+
+using Command;
 
 
 namespace HFM
@@ -16,10 +19,25 @@ namespace HFM
         // Reference to HFM HsvSession object
         protected readonly HsvSession _session;
 
+        private Calculate _calculate;
+
 
         public Session(HsvSession session)
         {
             _session = session;
         }
+
+
+        [Factory]
+        public Calculate Calculate
+        {
+            get {
+                if(_calculate == null) {
+                    _calculate = new Calculate((HsvCalculate)_session.Calculate);
+                }
+                return _calculate;
+            }
+        }
+
     }
 }

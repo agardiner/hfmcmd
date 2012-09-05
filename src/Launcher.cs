@@ -116,8 +116,9 @@ namespace HFMCmd
             ConfigureLogging();
 
             // Register commands
-            _commands = Registry.FindCommands("HFMCmd");
-            _commands = Registry.FindCommands("HFM", _commands);
+            _commands = new Registry();
+            _commands.FindCommands("HFMCmd");
+            _commands.FindCommands("HFM");
 
             // TODO: Process command-line arguments
             _cmdLine = new UI(HFMCmd.Resource.Help.Purpose);
@@ -166,6 +167,8 @@ namespace HFMCmd
             errorMsg = String.Format("Command file '{0}' not found", argVal);
             if(_commands.Contains(argVal)) {
                 ok = true;
+
+                _commands.FindCommandPrerequisiteTypes(argVal);
 
                 // TODO: Add command arguments as keyword args
                 Command.Command cmd = _commands[argVal];

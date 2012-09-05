@@ -8,12 +8,29 @@ using log4net;
 
 namespace Command
 {
+    class FactoryAttribute : Attribute
+    {
+    }
 
     /// Define an attribute which will be used to tag methods that can be
     /// invoked from a script or command file.
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
     class CommandAttribute : Attribute
     {
+    }
+
+
+    /// Define an attribute which will be used to tag pre-requisite methods that
+    /// must be called before the target method can be ivoked.
+    [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
+    class PreRequisiteAttribute : Attribute
+    {
+        public string Method;
+
+        public PreRequisiteAttribute(string method)
+        {
+            Method = method;
+        }
     }
 
 
@@ -150,54 +167,14 @@ namespace Command
         // Dictionary of command instances keyed by command name
         private IDictionary<string, Command> _commands;
 
-        public Command this[string name] {
+        // Dictionary of types to factory methods/properties
+        private IDictionary<Type, MemberInfo> _factories;
+
+        /// Return the Command object corresponding to the requested name.
+        public Command this[string cmdName] {
             get {
-                return _commands[name];
+                return _commands[cmdName];
             }
-        }
-
-        /// <summary>
-        /// Registers commands (i.e. methods tagged with the Command attribute)
-        /// in the current assembly.
-        /// </summary>
-        public static Registry FindCommands(string ns)
-        {
-            return FindCommands(Assembly.GetExecutingAssembly(), ns, null);
-        }
-
-        /// <summary>
-        /// Registers commands (i.e. methods tagged with the Command attribute)
-        /// in the current assembly.
-        /// </summary>
-        public static Registry FindCommands(string ns, Registry registry)
-        {
-            return FindCommands(Assembly.GetExecutingAssembly(), ns, registry);
-        }
-
-
-        /// <summary>
-        /// Registers commands from the supplied assembly. Commands methods must
-        /// be tagged with the attribute Command to be locatable.
-        /// </summary>
-        public static Registry FindCommands(Assembly asm, string ns, Registry registry)
-        {
-            if(registry == null) {
-                registry  = new Registry();
-            }
-
-            _log.DebugFormat("Searching for commands under namespace '{0}'...", ns);
-            foreach(var t in asm.GetExportedTypes()) {
-                if(t.IsClass && t.Namespace == ns) {
-                    foreach(var mi in t.GetMethods()) {
-                        foreach(var attr in mi.GetCustomAttributes(typeof(CommandAttribute), false)) {
-                            Command cmd = new Command(ns, t, mi);
-                            registry.Add(cmd);
-                        }
-                    }
-                }
-            }
-
-            return registry;
         }
 
 
@@ -205,6 +182,42 @@ namespace Command
         public Registry()
         {
             _commands = new Dictionary<string, Command>(StringComparer.OrdinalIgnoreCase);
+            _factories = new Dictionary<Type, MemberInfo>();
+        }
+
+
+        /// <summary>
+        /// Registers commands (i.e. methods tagged with the Command attribute)
+        /// in the current assembly.
+        /// </summary>
+        public void FindCommands(string ns)
+        {
+            FindCommands(Assembly.GetExecutingAssembly(), ns);
+        }
+
+
+        /// <summary>
+        /// Registers commands from the supplied assembly. Commands methods must
+        /// be tagged with the attribute Command to be locatable.
+        /// </summary>
+        public void FindCommands(Assembly asm, string ns)
+        {
+            _log.DebugFormat("Searching for commands under namespace '{0}'...", ns);
+            foreach(var t in asm.GetExportedTypes()) {
+                if(t.IsClass && t.Namespace == ns) {
+                    foreach(var mi in t.GetMethods()) {
+                        foreach(var attr in mi.GetCustomAttributes(typeof(CommandAttribute), false)) {
+                            Command cmd = new Command(ns, t, mi);
+                            Add(cmd);
+                        }
+                    }
+                }
+            }
+        }
+
+
+        public void FindFactories(string ns)
+        {
         }
 
 
@@ -219,9 +232,9 @@ namespace Command
         /// <summary>
         /// Checks to see if a command with the given name is available.
         /// </summary>
-        public bool Contains(string key)
+        public bool Contains(string cmdName)
         {
-            return _commands.ContainsKey(key);
+            return _commands.ContainsKey(cmdName);
         }
 
 
@@ -231,17 +244,25 @@ namespace Command
         /// </summary>
         public Command FindCommandByReturnType(Type returnType)
         {
-            return _commands.Values.First(cmd => cmd.ReturnType == returnType);
+            return _commands.Values.FirstOrDefault(cmd => cmd.ReturnType == returnType);
         }
 
 
         /// Returns the Type(s) that must be instantiated before the specified
         /// command can be invoked.
-        public void FindCommandPrerequisiteObjects(string key)
+        public void FindCommandPrerequisiteTypes(string cmdName)
         {
-            var cmd = this[key];
-            FindCommandPrerequisiteObjects(cmd.Type);
-            // TODO: Follow chain until no further pre-requisite types exist
+            Type t;
+            HashSet<Type> types = new HashSet<Type>();
+
+            var cmd = this[cmdName];
+
+            while(cmd != null) {
+                t = cmd.Type;
+                _log.DebugFormat("Found pre-requisite type {0}", t.Name);
+                types.Add(t);
+                cmd = FindCommandByReturnType(t);
+            }
         }
     }
 
