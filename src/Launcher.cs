@@ -117,8 +117,12 @@ namespace HFMCmd
 
             // Register commands
             _commands = new Registry();
-            _commands.FindCommands("HFMCmd");
-            _commands.FindCommands("HFM");
+            _commands.RegisterNamespace("HFMCmd");
+            _commands.RegisterNamespace("HFM");
+
+            // Create a Context for invoking Commands
+            _context = new Context(_commands);
+            _context.Set(this);
 
             // TODO: Process command-line arguments
             _cmdLine = new UI(HFMCmd.Resource.Help.Purpose);
@@ -132,9 +136,6 @@ namespace HFMCmd
             var args = _cmdLine.Parse(Environment.GetCommandLineArgs());
 
             if(args != null) {
-                _context = new Context(_commands);
-                _context.Set(this);
-                _context.Set(new HFM.Client());
                 _context.Invoke(args["CommandOrFile"] as string, args);
             }
         }
@@ -168,31 +169,18 @@ namespace HFMCmd
             if(_commands.Contains(argVal)) {
                 ok = true;
 
-                _commands.FindCommandPrerequisiteTypes(argVal);
-
                 // TODO: Add command arguments as keyword args
                 Command.Command cmd = _commands[argVal];
-                _log.DebugFormat("Adding keyword args for {0} command", cmd.Name);
 
-                if(cmd.Namespace == "HFM" && cmd.Name != "SetLogonInfo") {
-                    // Add standard arguments for logging in
-                    _cmdLine.AddKeywordArgument("Domain", "The domain to which the user should be validated in");
-                    _cmdLine.AddKeywordArgument("UserName", "The user id to use to connect to HFM");
-                    _cmdLine.AddKeywordArgument("Password", "The password to use to connect to HFM");
-                }
-
-                // Add additional arguments needed by the command
-                string key;
-                KeywordArgument arg;
-                foreach(var param in cmd.Parameters) {
-                    key = char.ToUpper(param.Name[0]) + param.Name.Substring(1);
-                    _log.DebugFormat("Adding keyword arg {0}", key);
-                    arg = _cmdLine.AddKeywordArgument(key, param.Description);
-                    arg.IsRequired = !param.HasDefaultValue;
-                    if(param.HasDefaultValue) {
-                        arg.DefaultValue = param.DefaultValue.ToString();
+                // Add any args for commands that must be invoked before the requested command
+                foreach(var i in _context.FindPathToType(cmd.Type)) {
+                    if(i.IsCommand) {
+                        AddCommandParamsAsArgs(i.Command);
                     }
                 }
+
+                // Now add arguments for the command requested
+                AddCommandParamsAsArgs(cmd);
             }
             else {
                 ok = File.Exists(argVal);
@@ -200,6 +188,24 @@ namespace HFMCmd
             return ok;
         }
 
+
+        // Add additional arguments needed by the command
+        protected void AddCommandParamsAsArgs(Command.Command cmd)
+        {
+            string key;
+            KeywordArgument arg;
+
+            _log.DebugFormat("Adding keyword args for {0} command", cmd.Name);
+            foreach(var param in cmd.Parameters) {
+                key = char.ToUpper(param.Name[0]) + param.Name.Substring(1);
+                _log.DebugFormat("Adding keyword arg {0}", key);
+                arg = _cmdLine.AddKeywordArgument(key, param.Description);
+                arg.IsRequired = !param.HasDefaultValue;
+                if(param.HasDefaultValue && param.DefaultValue != null) {
+                    arg.DefaultValue = param.DefaultValue.ToString();
+                }
+            }
+        }
 
 
         [Command]
