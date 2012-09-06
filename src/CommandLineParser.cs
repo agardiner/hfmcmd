@@ -345,7 +345,7 @@ namespace CommandLine
         protected void OutputArg(ValueArgument arg) {
             Console.Error.Write("    {0,-16}  {1}", arg.Key, arg.Description);
             if(arg.DefaultValue != null) {
-                Console.Error.Write(" (Default: {0})");
+                Console.Error.Write(" (Default: {0})", arg.DefaultValue);
             }
             else if(arg.IsRequired) {
                 Console.Error.Write(" (Required)");

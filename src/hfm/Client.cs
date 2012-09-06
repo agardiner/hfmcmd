@@ -115,35 +115,42 @@ namespace HFM
 
         /// Opens the named application, and returns a Session object for
         /// interacting with it.
-        [Command, Factory]
+        [Command, Factory,
+         Description("Open an HFM application and establish a session.")]
         public Session OpenApplication(string clusterName, string appName)
         {
             object hsxServer = null, hsvSession = null;
-            _client.OpenApplication(clusterName, "Financial Management", appName,
-                    out hsxServer, out hsvSession);
+            HFM.Try(string.Format("Opening application {0} on {1}", appName, clusterName),
+                    () => _client.OpenApplication(clusterName, "Financial Management", appName,
+                            out hsxServer, out hsvSession));
             return new Session((HsvSession)hsvSession);
         }
 
 
-        /// Creates a new HFM application.
-        [Command]
+        [Command, Description("Creates a new HFM classic application.")]
         public void CreateApplication(string clusterName, string appName,
-                [DefaultValue("")] string appDesc, string profilePath,
-                string sharedServicesProject, string appWebServerUrl)
+                string appDesc, string profilePath,
+                [DefaultValue("Default Application Group")] string sharedServicesProject,
+                [Description("The URL of the virtual directory for Financial Management. " +
+                 "The URL should include the protocol, Web server name and port, and virtual " +
+                 "directory name.")] string appWebServerUrl)
         {
             byte[] profile = File.ReadAllBytes(profilePath);
 
-            _client.CreateApplicationCAS(clusterName, "Financial Management",
-                    appName, appDesc, "", profile, null, null, null, null,
-                    sharedServicesProject, appWebServerUrl);
+            HFM.Try(string.Format("Creating application {0} on {1}", appName, clusterName),
+                    () => _client.CreateApplicationCAS(clusterName, "Financial Management",
+                            appName, appDesc, "", profile, null, null, null, null,
+                            sharedServicesProject, appWebServerUrl));
         }
 
 
-        /// Deletes a classic (but not an EPMA) HFM application.
-        [Command]
+        [Command,
+         Description("Deletes the specified HFM (classic) application. Note: HFM applications " +
+                     "created via or migrated to EPMA cannot be deleted via this command.")]
         public void DeleteApplication(string clusterName, string appName)
         {
-            _client.DeleteApplication(clusterName, "Financial Management", appName);
+            HFM.Try(string.Format("Deleting application {0} on {1}", appName, clusterName),
+                    () => _client.DeleteApplication(clusterName, "Financial Management", appName));
         }
     }
 
