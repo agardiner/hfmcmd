@@ -100,6 +100,7 @@ namespace CommandLine
     public class FlagArgument : Argument {}
 
 
+
     /// <summary>
     /// Validator implementation using a regular expression.
     /// </summary>
@@ -133,6 +134,7 @@ namespace CommandLine
         }
     }
 
+
     /// <summary>
     /// ArgumentValidator implementation using a list of values.
     /// Supports validations of both single and multiple comma-separated argument
@@ -154,6 +156,11 @@ namespace CommandLine
             Values = values;
         }
 
+        public ListValidator(params string[] values)
+        {
+            Values = new List<string>(values);
+        }
+
         public bool IsValid(string value, out string errorMsg) {
             var ok = true;
             errorMsg = null;
@@ -173,6 +180,7 @@ namespace CommandLine
             return ok;
         }
     }
+
 
     /// <summary>
     /// ArgumentValidator implementation using a range.
@@ -207,6 +215,7 @@ namespace CommandLine
             return (Min == null || iVal >= Min) && (Max == null || iVal <= Max);
         }
     }
+
 
 
     /// <summary>
@@ -286,12 +295,13 @@ namespace CommandLine
         /// Adds an Argument definition to the list of arguments this command-line
         /// supports.
         /// </summary>
-        public void AddArgument(Argument arg)
+        public Argument AddArgument(Argument arg)
         {
             Arguments.Add(arg.Key.ToLower(), arg);
             if(arg is PositionalArgument) {
                 PositionalArgumentOrder.Add(arg.Key.ToLower());
             }
+            return arg;
         }
 
 
@@ -355,6 +365,7 @@ namespace CommandLine
     }
 
 
+
     /// <summary>
     /// Main class for interacting via the command-line. Handles the definition
     /// and parsing of command-line arguments, and the display of usage and help
@@ -382,9 +393,18 @@ namespace CommandLine
         /// </summary>
         public PositionalArgument AddPositionalArgument(string key, string desc)
         {
+            return AddPositionalArgument(key, desc, null);
+        }
+
+        /// <summary>
+        /// Convenience method for defining a new positional argument.
+        /// </summary>
+        public PositionalArgument AddPositionalArgument(string key, string desc,
+                Argument.OnParseHandler onParse)
+        {
             var arg = new PositionalArgument { Key = key, Description = desc };
-            Definition.AddArgument(arg);
-            return arg;
+            arg.OnParse += onParse;
+            return (PositionalArgument)Definition.AddArgument(arg);
         }
 
         /// <summary>
@@ -392,9 +412,18 @@ namespace CommandLine
         /// </summary>
         public KeywordArgument AddKeywordArgument(string key, string desc)
         {
+            return AddKeywordArgument(key, desc, null);
+        }
+
+        /// <summary>
+        /// Convenience method for defining a new keyword argument.
+        /// </summary>
+        public KeywordArgument AddKeywordArgument(string key, string desc,
+                Argument.OnParseHandler onParse)
+        {
             var arg = new KeywordArgument { Key = key, Description = desc };
-            Definition.AddArgument(arg);
-            return arg;
+            arg.OnParse += onParse;
+            return (KeywordArgument)Definition.AddArgument(arg);
         }
 
         /// <summary>
@@ -402,9 +431,19 @@ namespace CommandLine
         /// </summary>
         public FlagArgument AddFlagArgument(string key, string desc)
         {
+            return AddFlagArgument(key, desc, null);
+        }
+
+
+        /// <summary>
+        /// Convenience method for defining a new flag argument.
+        /// </summary>
+        public FlagArgument AddFlagArgument(string key, string desc,
+                Argument.OnParseHandler onParse)
+        {
             var arg = new FlagArgument { Key = key, Description = desc };
-            Definition.AddArgument(arg);
-            return arg;
+            arg.OnParse += onParse;
+            return (FlagArgument)Definition.AddArgument(arg);
         }
 
 
@@ -420,6 +459,7 @@ namespace CommandLine
     }
 
 
+
     /// <summary>
     /// Exception thrown when there is an error parsing the command-line
     /// </summary>
@@ -429,6 +469,7 @@ namespace CommandLine
             : base(msg)
         { }
     }
+
 
 
     /// <summary>
