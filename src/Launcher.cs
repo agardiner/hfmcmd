@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 
 using log4net;
 using log4net.Appender;
+using log4net.Repository;
 using log4net.Repository.Hierarchy;
 
 using Command;
@@ -97,6 +98,9 @@ namespace HFMCmd
     }
 
 
+    /// <summary>
+    /// Main application class.
+    /// </summary>
     public class Application
     {
         // Reference to class logger
@@ -105,7 +109,18 @@ namespace HFMCmd
 
         private Registry _commands;
         private Context _context;
+        /// Reference to the command-line interface/parser
         private UI _cmdLine;
+        /// Reference to the log4net repository
+        private ILoggerRepository _logRepository;
+        /// Reference to the logger hierarchy
+        private Hierarchy _logHierarchy;
+
+
+        /// Constructor
+        public Application()
+        {
+        }
 
 
         /// <summary>
@@ -116,6 +131,7 @@ namespace HFMCmd
             ConfigureLogging();
 
             // Register commands
+            _log.Fine("Loading available commands...");
             _commands = new Registry();
             _commands.RegisterNamespace("HFMCmd");
             _commands.RegisterNamespace("HFM");
@@ -124,19 +140,29 @@ namespace HFMCmd
             _context = new Context(_commands);
             _context.Set(this);
 
-            // TODO: Process command-line arguments
+            // Process command-line arguments
             _cmdLine = new UI(HFMCmd.Resource.Help.Purpose);
-            var arg = _cmdLine.AddPositionalArgument("CommandOrFile",
+            ValueArgument arg = _cmdLine.AddPositionalArgument("CommandOrFile",
                     "The name of the command to execute, or the path to a file containing commands to execute");
             arg.Validate = ValidateCommand;
 
 
             // Standard command-line arguments
-            _cmdLine.AddFlagArgument("Debug", "Enable debug logging");
-            var args = _cmdLine.Parse(Environment.GetCommandLineArgs());
+            arg = _cmdLine.AddKeywordArgument("LogLevel", "Set logging to the specified level",
+                    (key, val) => Log(val, null));
+            arg.AddValidator(new ListValidator("NONE", "SEVERE", "ERROR", "WARN",
+                    "INFO", "FINE", "TRACE", "DEBUG"));
+            _cmdLine.AddFlagArgument("Debug", "Enable debug logging",
+                    (key, val) => Log("DEBUG", null));
 
-            if(args != null) {
-                _context.Invoke(args["CommandOrFile"] as string, args);
+            try {
+                var args = _cmdLine.Parse(Environment.GetCommandLineArgs());
+                if(args != null) {
+                    _context.Invoke(args["CommandOrFile"] as string, args);
+                }
+            }
+            catch(ParseException ex) {
+                _log.Error(ex);
             }
         }
 
@@ -146,22 +172,37 @@ namespace HFMCmd
         /// </summary>
         protected void ConfigureLogging()
         {
+            // Get repository, define custom levels
+            _logRepository = LogManager.GetRepository();
+            _logHierarchy = _logRepository as Hierarchy;
+            _logRepository.LevelMap.Add(new log4net.Core.Level(30000, "FINE"));
+            _logRepository.LevelMap.Add(new log4net.Core.Level(20000, "TRACE"));
+            _logRepository.LevelMap.Add(new log4net.Core.Level(10000, "DEBUG"));
+
             // Create a console logger
             ConsoleAppender ca = new ConsoleAppender();
             ca.Layout = new log4net.Layout.PatternLayout(
                 "%date{HH:mm:ss} %-5level  %message%newline");
             ca.ActivateOptions();
+
+            // Configure exception renderers
+            _logHierarchy.RendererMap.Put(typeof(Exception), new ExceptionMessageRenderer());
+            //logHier.RendererMap.Put(typeof(HFM.HFMException), new ExceptionMessageRenderer());
+
+            // Configure log4net to use this, with other default settings
             log4net.Config.BasicConfigurator.Configure(ca);
 
-            Hierarchy logHier = (Hierarchy)LogManager.GetRepository();
-
-            // TODO: Configure exception renderers
-
-            // Set log level
-            logHier.Root.Level = log4net.Core.Level.Debug;
+            // Set default log level
+            _logHierarchy.Root.Level = _logRepository.LevelMap["INFO"];
         }
 
 
+        /// <summary>
+        /// Validates the first positional parameter, verifying it is either
+        /// the path to a command file, or one of the registered commands.
+        /// If it is a command, we dynamically update our command-line definition
+        /// to include any additional parameters needed by the specified command.
+        /// </summary>
         protected bool ValidateCommand(string argVal, out string errorMsg)
         {
             bool ok;
@@ -169,10 +210,11 @@ namespace HFMCmd
             if(_commands.Contains(argVal)) {
                 ok = true;
 
-                // TODO: Add command arguments as keyword args
+                // Add command arguments as keyword args
                 Command.Command cmd = _commands[argVal];
 
-                // Add any args for commands that must be invoked before the requested command
+                // First, add any args for commands that must be invoked before the
+                // requested command, such as SetLogonInfo, OpenApplication, etc
                 foreach(var i in _context.FindPathToType(cmd.Type)) {
                     if(i.IsCommand) {
                         AddCommandParamsAsArgs(i.Command);
@@ -195,7 +237,7 @@ namespace HFMCmd
             string key;
             KeywordArgument arg;
 
-            _log.DebugFormat("Adding keyword args for {0} command", cmd.Name);
+            _log.TraceFormat("Adding keyword args for {0} command", cmd.Name);
             foreach(var param in cmd.Parameters) {
                 key = char.ToUpper(param.Name[0]) + param.Name.Substring(1);
                 _log.DebugFormat("Adding keyword arg {0}", key);
@@ -208,13 +250,38 @@ namespace HFMCmd
         }
 
 
-        [Command]
-        public void Log([Description("Level at which to log"), DefaultValue("INFO")] string level,
+        [Command, Description("Set the log level and/or log file")]
+        public void Log([Description("Level at which to log"), DefaultValue(null)] string level,
                         [Description("Path to log file"), DefaultValue(null)] string logFile)
         {
-            log4net.Repository.ILoggerRepository repo = LogManager.GetRepository();
-            Hierarchy logHier = (Hierarchy)repo;
-            logHier.Root.Level = repo.LevelMap[level];
+            // Set the log level
+            if(level != null) {
+                _log.FineFormat("Setting log level to {0}", level.ToUpper());
+                _logHierarchy.Root.Level = _logRepository.LevelMap[level.ToUpper()];
+            }
+
+            // Set the log file
+            if (logFile != null) {
+                // Logging needs to respect working directory
+                if (Path.IsPathRooted(logFile)) {
+                    _log.Debug("Converting log file to respect working directory");
+                    logFile = Environment.CurrentDirectory + @"\" + logFile;
+                }
+
+                // Determine if there is already a FileAppender active
+                FileAppender fa = (FileAppender)Array.Find<IAppender>(_logRepository.GetAppenders(),
+                    (appender) => appender is FileAppender);
+                if (fa == null) {
+                    fa = new log4net.Appender.FileAppender();
+                }
+
+                _log.Info("Logging to file " + logFile);
+                fa.Layout = new log4net.Layout.PatternLayout(
+                    "%date{yyyy-MM-dd HH:mm:ss} %-5level %logger - %message%newline%exception");
+                fa.File = logFile;
+                fa.ActivateOptions();
+                log4net.Config.BasicConfigurator.Configure(fa);
+            }
         }
 
 
