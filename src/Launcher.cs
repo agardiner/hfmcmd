@@ -144,6 +144,7 @@ namespace HFMCmd
             _cmdLine = new UI(HFMCmd.Resource.Help.Purpose);
             ValueArgument arg = _cmdLine.AddPositionalArgument("CommandOrFile",
                     "The name of the command to execute, or the path to a file containing commands to execute");
+            arg.IsRequired = true;
             arg.Validate = ValidateCommand;
 
 
@@ -243,6 +244,7 @@ namespace HFMCmd
                 _log.DebugFormat("Adding keyword arg {0}", key);
                 arg = _cmdLine.AddKeywordArgument(key, param.Description);
                 arg.IsRequired = !param.HasDefaultValue;
+                arg.IsSensitive = !param.IsSensitive;
                 if(param.HasDefaultValue && param.DefaultValue != null) {
                     arg.DefaultValue = param.DefaultValue.ToString();
                 }

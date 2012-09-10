@@ -45,6 +45,8 @@ namespace CommandLine
         public string Key { get; set; }
         /// The argument description
         public string Description { get; set; }
+        /// The name of the argument set this argument belongs to (if any)
+        public string Set { get; set; }
         /// A callback to be called when the argument has been parsed successfully
         public OnParseHandler OnParse { get; set; }
     }
@@ -63,8 +65,9 @@ namespace CommandLine
         public delegate bool ValidateHandler(string val, out string errorMsg);
         /// An optional validation callback for validating argument values
         public ValidateHandler Validate;
-        /// A flag indicating whether the argument represents a password
-        public bool IsPassword { get; set; }
+        /// A flag indicating whether the argument represents a sensitive value
+        /// such as a password
+        public bool IsSensitive { get; set; }
 
         public void AddValidator(ArgumentValidator validator)
         {
@@ -508,7 +511,7 @@ namespace CommandLine
             Dictionary<string, object> result = null;
             ParseException pe = null;
 
-            _log.Debug("Parsing command-line arguments...");
+            _log.Fine("Parsing command-line arguments...");
 
             // Classify the command-line entries passed to the program
             ClassifyArguments(args);
@@ -532,7 +535,7 @@ namespace CommandLine
 
 
         /// Determine the kind of each argument value that has been supplied on
-        /// the command line.
+        /// the command line, based on whether it has a flag prefix, keyword etc.
         protected void ClassifyArguments(List<string> args)
         {
             string key = null;
@@ -590,12 +593,13 @@ namespace CommandLine
         /// default values.
         protected Dictionary<string, object> ProcessArguments() {
             var result = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+            string set = null;
 
             // Process flag args
             foreach(var key in FlagValues) {
                 var arg = Definition[key] as FlagArgument;
                 if(arg != null) {
-                    ProcessArgumentValue(result, arg, true);
+                    set = ProcessArgumentValue(result, arg, true, set);
                 }
                 else {
                     _log.WarnFormat("Unknown flag argument '--{0}' has been ignored", key);
@@ -607,7 +611,7 @@ namespace CommandLine
                 var val = PositionalValues[i];
                 var arg = Definition[i] as PositionalArgument;
                 if(arg != null) {
-                    ProcessArgumentValue(result, arg, val);
+                    set = ProcessArgumentValue(result, arg, val, set);
                 }
                 else {
                     _log.WarnFormat("Unknown positional argument '{0}' has been ignored", val);
@@ -619,7 +623,7 @@ namespace CommandLine
             foreach(var kv in KeywordValues) {
                 var arg = Definition[kv.Key] as KeywordArgument;
                 if(arg != null) {
-                    ProcessArgumentValue(result, arg, kv.Value);
+                    set = ProcessArgumentValue(result, arg, kv.Value, set);
                 }
                 else {
                     _log.WarnFormat("Unknown keyword argument '{0}' has been ignored", kv.Key);
@@ -629,9 +633,10 @@ namespace CommandLine
             // Check for missing arguments, set default values
             var missingArgs = 0;
             foreach(var arg in Definition.ValueArguments) {
-                if(!result.ContainsKey(arg.Key)) {
+                if(!result.ContainsKey(arg.Key) && (set == null || arg.Set == null || arg.Set == set)) {
+                    _log.DebugFormat("No value was specified for argument {0}", arg.Key);
                     if(arg.DefaultValue != null) {
-                        _log.DebugFormat("Setting argument '{0}' to default value '{1}'", arg.Key, arg.DefaultValue);
+                        _log.TraceFormat("Setting argument {0} to default value '{1}'", arg.Key, arg.DefaultValue);
                         result.Add(arg.Key, arg.DefaultValue);
                     }
                     else if(arg.IsRequired) {
@@ -651,20 +656,40 @@ namespace CommandLine
 
         /// Processes a single argument value, ensuring it passes validation,
         /// calling any OnParse handlers etc.
-        protected void ProcessArgumentValue(Dictionary<string, object> result, Argument arg, object val) {
+        protected string ProcessArgumentValue(Dictionary<string, object> result, Argument arg, object val, string set) {
             // Validate value, if argument specifies validation
             string errorMsg;
             var valArg = arg as ValueArgument;
             var sVal = val as string;
-            if(valArg != null && valArg.Validate != null && sVal != null) {
-                _log.DebugFormat("Validating argument {0}", valArg.Key);
-                foreach(ValueArgument.ValidateHandler validate in valArg.Validate.GetInvocationList()) {
-                    if(!validate(sVal, out errorMsg)) {
-                        throw new ParseException(string.Format("The value '{0}' for argument {1} is not valid. {2}.",
-                                                 sVal, arg.Key, errorMsg));
-                    }
+
+            if(set != null) {
+                // Argument must be a member of the same set, or a member of no set
+                _log.DebugFormat("Checking argument {0} is valid for argument set {1}", arg.Key, set);
+                if(arg.Set != null && arg.Set != set) {
+                   throw new ParseException(string.Format("Cannot mix arguments from sets {0} and {1}",
+                                arg.Set, set));
                 }
-                _log.DebugFormat("Argument {0} validated", valArg.Key);
+            }
+            else {
+                set = arg.Set;
+                _log.DebugFormat("Argument set is {0}", set);
+            }
+
+            if(valArg != null) {
+                if(valArg.Validate != null && sVal != null) {
+                    _log.DebugFormat("Validating argument {0}", valArg.Key);
+                    foreach(ValueArgument.ValidateHandler validate in valArg.Validate.GetInvocationList()) {
+                        if(!validate(sVal, out errorMsg)) {
+                            throw new ParseException(string.Format("The value '{0}' for argument {1} is not valid. {2}.",
+                                                     sVal, arg.Key, errorMsg));
+                        }
+                    }
+                    _log.TraceFormat("Argument {0} validated", valArg.Key);
+                }
+                _log.TraceFormat("Setting {0} to '{1}'", arg.Key, valArg.IsSensitive ? "******" : val);
+            }
+            else {
+                _log.TraceFormat("Setting flag {0} to true", arg.Key);
             }
 
             result.Add(arg.Key, val);
@@ -673,6 +698,7 @@ namespace CommandLine
             if(arg.OnParse != null) {
                 arg.OnParse(arg.Key, val as string);
             }
+            return set;
         }
     }
 

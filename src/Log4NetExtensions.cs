@@ -10,7 +10,7 @@ using log4net.Repository.Hierarchy;
 
 
 
-namespace HFMCmd
+namespace log4net
 {
 
     /// <summary>
