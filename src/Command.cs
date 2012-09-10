@@ -50,6 +50,20 @@ namespace Command
     }
 
 
+    /// </summary>
+    /// Define an attribute that can be used to tag a method, property, or
+    /// constructor as an alternate source of new instances of the class returned
+    /// by the member. This information will be used by Context objects to
+    /// determine how to obtain objects of the required type when invoking a
+    /// Command.
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Constructor | AttributeTargets.Method | AttributeTargets.Property,
+     AllowMultiple = false)]
+    class AlternateFactoryAttribute : Attribute
+    {
+    }
+
+
     /// <summary>
     /// Define an attribute which will be used to specify default values for
     /// optional parameters on a Command.
@@ -246,16 +260,14 @@ namespace Command
 
         // Dictionary of command instances keyed by command name
         private IDictionary<string, Command> _commands;
-
         // Dictionary of types to factory constructors/methods/properties
         private IDictionary<Type, Factory> _factories;
+        // Dictionary of types to alternate factories
+        protected List<Factory> _alternates;
+
 
         /// Return the Command object corresponding to the requested name.
-        public Command this[string cmdName] {
-            get {
-                return _commands[cmdName];
-            }
-        }
+        public Command this[string cmdName] { get { return _commands[cmdName]; } }
 
 
         /// Constructor
@@ -263,6 +275,7 @@ namespace Command
         {
             _commands = new Dictionary<string, Command>(StringComparer.OrdinalIgnoreCase);
             _factories = new Dictionary<Type, Factory>();
+            _alternates = new List<Factory>();
         }
 
 
@@ -318,6 +331,11 @@ namespace Command
                             factory = new Factory(mi);
                             Add(factory);
                         }
+                        // Add support for alternate factories
+                        if(attr is AlternateFactoryAttribute) {
+                            factory = new Factory(mi);
+                            Add(factory, true);
+                        }
                     }
                     if(cmd != null) {
                         cmd.Description = desc;
@@ -340,12 +358,30 @@ namespace Command
         }
 
 
+
         /// <summary>
         /// Registers the specified Factory instance.
         /// </summary>
         public void Add(Factory factory)
         {
-            _factories.Add(factory.ReturnType, factory);
+            Add(factory, false);
+        }
+
+
+        /// <summary>
+        /// Registers the specified Factory instance as an alternate mechanism
+        /// for obtaining objects of the Factory return type. An alternate means
+        /// will be tried when no other non-alternate path to create an object
+        /// can be found from the current context state.
+        /// </summary>
+        public void Add(Factory factory, bool isAlternate)
+        {
+            if(isAlternate) {
+                _alternates.Add(factory);
+            }
+            else {
+                _factories.Add(factory.ReturnType, factory);
+            }
         }
 
 
@@ -375,7 +411,17 @@ namespace Command
             return _factories[type];
         }
 
+
+        /// <summary>
+        /// Returns an IEnumerable of the alternate Factory objects registered
+        /// for the specified type.
+        /// </summary>
+        public IEnumerable<Factory> GetAlternates(Type type)
+        {
+            return _alternates.Where(f => f.ReturnType == type);
+        }
     }
+
 
 
     /// <summary>
@@ -388,6 +434,31 @@ namespace Command
             base(msg)
         {
         }
+    }
+
+
+
+    /// <summary>
+    /// Extension methods for working with the argument values supplied in a
+    /// Dictionary.
+    /// </summary>
+    public static class DictionaryExtensions
+    {
+
+        /// <summary>
+        /// Checks if the supplied Dictionary contains all the required arguments
+        /// to invoke the specified command.
+        /// </summary>
+        public static bool ContainsRequiredValuesForCommand(this Dictionary<string, object> args, Command cmd)
+        {
+            foreach(var param in cmd.Parameters) {
+                if(!(args.ContainsKey(param.Name) || param.HasDefaultValue)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
     }
 
 
@@ -527,32 +598,61 @@ namespace Command
             Command cmd = _registry[command];
 
             foreach(var step in FindPathToType(cmd.Type)) {
-                _log.DebugFormat("Attempting to create an instance of {0}", step.ReturnType);
-                object ctxt;
-                if(step.IsConstructor) {
-                    ctxt = step.Constructor.Invoke(new object[] {});
-                }
-                else if(step.IsProperty) {
-                    ctxt = step.Property.GetValue(_context[step.DeclaringType], new object[] {});
-                }
-                else if(step.IsCommand) {
-                    ctxt = InvokeCommand(step.Command, args);
-                }
-                else {
-                    throw new Exception("Unrecognised factory type");
-                }
-                Set(ctxt);
+                Instantiate(step, args);
             }
             return InvokeCommand(cmd, args);
         }
 
 
-        /// <summary>
+        /// Instantiate an instance of a Factory return type from the current
+        /// context. If the Factory is a Command, attempts to invoke the command
+        /// using the supplied arguments, provided the arguments contain the
+        /// necessary parameter values the command needs. If not, we then look
+        /// to see if any alternate Factories have been registered, looking to
+        /// see which of these might succeed from the current context.
+        protected object Instantiate(Factory step, Dictionary<string, object> args)
+        {
+            object ctxt = null;
+
+            _log.TraceFormat("Attempting to create an instance of {0} via {1}", step.ReturnType, step);
+            if(step.IsConstructor) {
+                ctxt = step.Constructor.Invoke(new object[] {});
+            }
+            else if(step.IsProperty) {
+                ctxt = step.Property.GetValue(_context[step.DeclaringType], new object[] {});
+            }
+            else if(step.IsCommand) {
+                if(args.ContainsRequiredValuesForCommand(step.Command)) {
+                    ctxt = InvokeCommand(step.Command, args);
+                }
+                else {
+                    // Check for alternate factories
+                    foreach(var factory in _registry.GetAlternates(step.ReturnType)) {
+                        if(!factory.IsCommand || args.ContainsRequiredValuesForCommand(factory.Command)) {
+                            ctxt = Instantiate(factory, args);
+                            break;
+                        }
+                    }
+                }
+            }
+            else {
+                throw new Exception(string.Format("Unrecognised factory type: {0}", step));
+            }
+
+            if(ctxt != null) {
+                Set(ctxt);
+            }
+            else {
+                throw new ContextException("No object of type {0} can be constructed from the current context, using the supplied arguments");
+            }
+            return ctxt;
+        }
+
+
         /// Invoke an instance of the supplied Command object, using the supplied
         /// arguments dictionary to obtain parameter values. An instance of the
         /// host object must already be available in the context.
-        /// </summary>
-        public object InvokeCommand(Command cmd, Dictionary<string, object> args)
+        protected object InvokeCommand(Command cmd, Dictionary<string, object> args)
         {
             if(!HasObject(cmd.Type)) {
                 throw new ContextException(String.Format("No object of type {0} is available in the current context", cmd.Type.Name));
@@ -592,6 +692,7 @@ namespace Command
 
             return result;
         }
+
     }
 
 }

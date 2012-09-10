@@ -12,6 +12,36 @@ using Command;
 namespace HFM
 {
 
+    // TODO: Add following commands:
+    // - CreateObjectOnCluster
+    // - DeleteSystemErrors
+    // - DetermineWindowsLoggedOnUser
+    // - DisableNewConnections
+    // - DoesUserHaveCreateApplicationRights
+    // - DoesUserHaveSystemAdminRights
+    // - EnableNewConnections
+    // - EnumProhibitConnections
+    // - EnumProvisioningProjects
+    // - EnumRegisteredClusterNames
+    // - EnumUsersOnSystem
+    // - EnumUsersOnSystemEx
+    // - EnumUsersOnSystemEx2
+    // - GetApplicationFolder
+    // - GetClusterInfo
+    // - GetServerOnCluster
+    // - IsValidApplication
+    // - KillUsers
+    // - RegisterApplicationCAS
+    // - RegisterCluster
+    // - SetApplicationFolder
+    // - UnregisterAllClusters
+    // - UnregisterCluster
+
+    // TODO: Determine if the following ought to be exposed:
+    // - EnumUserAppPreferences
+    // - UpdateUserAppPreferences
+    // - WarnUsersForShutDown
+
     /// <summary>
     /// The main entry point to the HFM object model. Represents the HFM
     /// functionality available on a machine with the HFM client installed.
@@ -63,7 +93,10 @@ namespace HFM
 
 
         /// Sets the user credentials via an SSO token.
-        [Command /*, Factory*/]
+        [Command, AlternateFactory,
+         Description("Sets the connection details using an SSO token. An SSO token represents " +
+                     "an existing authenticated session, and may been obtained from the GetLogonToken " +
+                     "command, or from another Hyperion session.")]
         public Connection SetLogonToken(
                 [Description("An SSO token obtained from an existing Shared Services connection")] string token)
         {
@@ -74,6 +107,7 @@ namespace HFM
 
 
         [Command]
+        // TODO: Determine how to handle methods that return info in a flexible manner.
         public void GetClusters()
         {
             object clusters;
@@ -86,14 +120,7 @@ namespace HFM
                     _log.InfoFormat("  {0}", cluster);
                 }
             }
-            if(servers != null) {
-                _log.Info("Servers:");
-                foreach(var server in servers as string[]) {
-                    _log.InfoFormat("  {0}", server);
-                }
-            }
         }
-
     }
 
 
@@ -105,11 +132,23 @@ namespace HFM
     {
 
         protected HsxClient _client;
+        protected string _app;
 
 
         internal Connection(HsxClient client)
         {
             _client = client;
+        }
+
+
+        // Gets the domain, username, and external authentication token for the connected user
+        // TODO: Check if this only works after OpenApplication is called.
+        [Command]
+        public void GetLogonToken()
+        {
+            string domain, user;
+
+            var token = _client.GetLogonInfoSSO(out domain, out user);
         }
 
 
@@ -123,6 +162,7 @@ namespace HFM
             HFM.Try(string.Format("Opening application {0} on {1}", appName, clusterName),
                     () => _client.OpenApplication(clusterName, "Financial Management", appName,
                             out hsxServer, out hsvSession));
+            _app = appName;
             return new Session((HsvSession)hsvSession);
         }
 
