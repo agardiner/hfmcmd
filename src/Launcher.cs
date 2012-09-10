@@ -240,6 +240,9 @@ namespace HFMCmd
 
             _log.TraceFormat("Adding keyword args for {0} command", cmd.Name);
             foreach(var param in cmd.Parameters) {
+                if(param.ParameterType == typeof(IOutput)) {
+                    continue;
+                }
                 key = char.ToUpper(param.Name[0]) + param.Name.Substring(1);
                 _log.DebugFormat("Adding keyword arg {0}", key);
                 arg = _cmdLine.AddKeywordArgument(key, param.Description);

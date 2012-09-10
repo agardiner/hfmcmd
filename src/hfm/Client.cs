@@ -15,10 +15,7 @@ namespace HFM
     // TODO: Add following commands:
     // - CreateObjectOnCluster
     // - DeleteSystemErrors
-    // - DetermineWindowsLoggedOnUser
     // - DisableNewConnections
-    // - DoesUserHaveCreateApplicationRights
-    // - DoesUserHaveSystemAdminRights
     // - EnableNewConnections
     // - EnumProhibitConnections
     // - EnumProvisioningProjects
@@ -86,8 +83,8 @@ namespace HFM
                 [Description("The user name to login with") ] string userName,
                 [Description("The password to login with"), SensitiveValue] string password)
         {
-            _log.Debug("Setting logon credentials via username and password");
-            _client.SetLogonInfoSSO(domain, userName, null, password);
+            HFM.Try("Setting logon credentials via username and password",
+                    () => _client.SetLogonInfoSSO(domain, userName, null, password));
             return new Connection(_client);
         }
 
@@ -100,27 +97,49 @@ namespace HFM
         public Connection SetLogonToken(
                 [Description("An SSO token obtained from an existing Shared Services connection")] string token)
         {
-            _log.Debug("Setting logon credentials via SSO token");
-            _client.SetLogonInfoSSO(null, null, token, null);
+            HFM.Try("Setting logon credentials via SSO token",
+                    () => _client.SetLogonInfoSSO(null, null, token, null));
             return new Connection(_client);
         }
 
 
-        [Command]
-        // TODO: Determine how to handle methods that return info in a flexible manner.
-        public void GetClusters()
+        [Command, Description("Returns the names of the HFM clusters and/or servers registered on this machine")]
+        public void GetClusters(IOutput output)
         {
-            object clusters;
-            object servers;
+            object clusters = null;
+            object servers = null;
 
-            _client.GetClustersAndServers(out clusters, out servers);
+            HFM.Try("Retrieving names of registered clusters / servers",
+                    () => _client.GetClustersAndServers(out clusters, out servers));
             if(clusters != null) {
-                _log.Info("Clusters:");
+                output.SetFields("Cluster");
                 foreach(var cluster in clusters as string[]) {
-                    _log.InfoFormat("  {0}", cluster);
+                    output.WriteRecord(cluster);
                 }
             }
         }
+
+
+        [Command]
+        public string GetWindowsLoggedOnUser(IOutput output)
+        {
+            string domain = null, userid = null;
+            HFM.Try("Determining current logged in Windows user",
+                    () => _client.DetermineWindowsLoggedOnUser(out domain, out userid));
+            output.SetFields("Domain", "User Name");
+            output.WriteRecord(domain, userid);
+            return string.Format(@"{0}\{1}", domain, userid);
+        }
+
+
+        public void DeleteSystemErrors(string clusterName,
+                [DefaultValue(true)] bool deleteAll,
+                [DefaultValue(null)] string[] errorReferences)
+        {
+
+        }
+
+
     }
 
 
@@ -141,14 +160,19 @@ namespace HFM
         }
 
 
-        // Gets the domain, username, and external authentication token for the connected user
-        // TODO: Check if this only works after OpenApplication is called.
-        [Command]
-        public void GetLogonToken()
+        [Command, Description("Returns the domain, user name, and Single Sign-On (SSO) token " +
+                              "for the currently authenticated user. Note that an SSO token is " +
+                              "only returned however, once an application has been opened. " +
+                              "If called with no application open, the domain and user id will " +
+                              "be returned, but not an SSO token.")]
+        public string GetLogonToken(IOutput output)
         {
             string domain, user;
 
             var token = _client.GetLogonInfoSSO(out domain, out user);
+            output.SetFields("Domain", "UserName", "SSO Token");
+            output.WriteRecord(domain, user, token);
+            return token;
         }
 
 
@@ -191,6 +215,30 @@ namespace HFM
         {
             HFM.Try(string.Format("Deleting application {0} on {1}", appName, clusterName),
                     () => _client.DeleteApplication(clusterName, "Financial Management", appName));
+        }
+
+
+        [Command]
+        public bool CanCreateApplications(string clusterName, IOutput output)
+        {
+            bool hasAccess = false;
+            HFM.Try("Checking if user has CreateApplication rights",
+                    () => _client.DoesUserHaveCreateApplicationRights(clusterName, out hasAccess));
+            output.SetFields("Cluster", "CreateApplication");
+            output.WriteRecord(clusterName, hasAccess ? "true" : "false");
+            return hasAccess;
+        }
+
+
+        [Command]
+        public bool UserHasSystemAdminRights(string clusterName, IOutput output)
+        {
+            bool hasAdmin = false;
+            HFM.Try("Checking if user has SystemAdmin rights",
+                    () => _client.DoesUserHaveSystemAdminRights(clusterName, out hasAdmin));
+            output.SetFields("Cluster", "SystemAdmin");
+            output.WriteRecord(clusterName, hasAdmin ? "true" : "false");
+            return hasAdmin;
         }
     }
 

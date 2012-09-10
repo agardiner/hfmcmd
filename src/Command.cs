@@ -664,7 +664,10 @@ namespace Command
             var parms = new object[cmd.Parameters.Count];
             var i = 0;
             foreach(var param in cmd.Parameters) {
-                if(args.ContainsKey(param.Name)) {
+                if(param.ParameterType == typeof(IOutput)) {
+                    parms[i++] = new LogOutput();
+                }
+                else if(args.ContainsKey(param.Name)) {
                     _log.DebugFormat("Setting {0} to '{1}'", param.Name,
                             param.IsSensitive ? "******" : args[param.Name]);
                     parms[i++] = args[param.Name];
