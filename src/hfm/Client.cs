@@ -220,7 +220,7 @@ namespace HFM
 
 
         [Command]
-        public bool CanCreateApplications(string clusterName, IOutput output)
+        public bool UserHasCreateApplicationRights(string clusterName, IOutput output)
         {
             bool hasAccess = false;
             HFM.Try("Checking if user has CreateApplication rights",
