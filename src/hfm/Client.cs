@@ -7,6 +7,7 @@ using HSXCLIENTLib;
 using HSVSESSIONLib;
 
 using Command;
+using HFMCmd;
 
 
 namespace HFM
