@@ -139,6 +139,7 @@ namespace HFMCmd
             // Create a Context for invoking Commands
             _context = new Context(_commands);
             _context.Set(this);
+            _context.Set(new LogOutput());
 
             // Process command-line arguments
             _cmdLine = new UI(HFMCmd.Resource.Help.Purpose);
