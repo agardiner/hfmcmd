@@ -68,7 +68,12 @@ namespace HFM
                 _client = new HsxClient();
             }
             catch(COMException ex) {
-                _log.Error("Unable to instantiate an HsxClient COM object; is HFM installed?", ex);
+                unchecked {
+                    if(ex.ErrorCode == (int)0x80040154) {
+                        _log.Error("Unable to instantiate an HsxClient COM object; is HFM installed?", ex);
+                    }
+                }
+                throw ex;
             }
         }
 
@@ -150,6 +155,10 @@ namespace HFM
     /// </summary>
     public class Connection
     {
+        // Reference to class logger
+        protected static readonly ILog _log = LogManager.GetLogger(
+            System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
 
         protected HsxClient _client;
         protected string _app;
@@ -168,9 +177,13 @@ namespace HFM
                               "be returned, but not an SSO token.")]
         public string GetLogonToken(IOutput output)
         {
-            string domain, user;
+            string domain = null, user = null, token = null;
 
-            var token = _client.GetLogonInfoSSO(out domain, out user);
+            HFM.Try("Retrieving logon info",
+                () => token = _client.GetLogonInfoSSO(out domain, out user));
+            if(_app == null) {
+                _log.Warn("SSO token cannot be retrieved until an application has been opened");
+            }
             output.SetFields("Domain", "UserName", "SSO Token");
             output.WriteRecord(domain, user, token);
             return token;
