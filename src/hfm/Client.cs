@@ -70,7 +70,7 @@ namespace HFM
             catch(COMException ex) {
                 unchecked {
                     if(ex.ErrorCode == (int)0x80040154) {
-                        _log.Error("Unable to instantiate an HsxClient COM object; is HFM installed?", ex);
+                        _log.Error("Unable to instantiate an HsxClient COM object; is HFM installed on this machine?", ex);
                     }
                 }
                 throw ex;

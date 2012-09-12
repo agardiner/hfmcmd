@@ -480,60 +480,46 @@ namespace Command
         // Registry of known Commands and Factories
         protected Registry _registry;
 
-        // A map holding object instances keyed by Type, representing the current
-        // context. When a command is invoked, it is invoked on the object that
-        // is in the map for the Type on which the Command was registered.
-        protected Dictionary<Type, object> _context;
+        // A list of object instances representing the current context.
+        // When a command is invoked, it is invoked on an object that is in this
+        // list.
+        protected List<object> _context;
+
+
+        public object this[Type type] {
+            get {
+                var result = _context.FirstOrDefault(o => type.IsInstanceOfType(o));
+                _log.DebugFormat("Lookup of context object of type {0} {1} successful", type,
+                        result != null ? "was" : "was not");
+                return result;
+            }
+        }
 
 
         // Constructor
         public Context(Registry registry)
         {
             _registry = registry;
-            _context = new Dictionary<Type, object>();
+            _context = new List<object>();
         }
 
 
-        /// <summary>
-        /// Adds an object to the current context.
-        /// </summary>
-        public void Set(object val)
+        public void Set(object value)
         {
-            if(val != null) {
-                _context[val.GetType()] = val;
-            }
-        }
-
-
-        /// <summary>
-        /// Returns an object of the requested Type, if possible. This may
-        // involve the construction of one or more intermediate objects.
-        /// </summary>
-        public object Get(Type t)
-        {
-            object result = null;
-            if(HasObject(t)) {
-                result = _context[t];
-            }
-            else {
-                foreach(var step in FindPathToType(t)) {
-                    _log.DebugFormat("Attempting to create an instance of {0}", step.ReturnType);
-                    if(step.IsConstructor) {
-                        result = step.Constructor.Invoke(new object[] {});
-                    }
-                    else if(step.IsProperty) {
-                        result = step.Property.GetValue(_context[step.DeclaringType], new object[] {});
-                    }
-                    else if(step.IsCommand) {
-                        throw new ContextException(string.Format("The command {0} must be run first", step.Command.Name));
-                    }
-                    else {
-                        throw new Exception("Unrecognised factory type");
-                    }
-                    Set(result);
+            var valType = value.GetType();
+            for(var i = 0; i < _context.Count; ++i) {
+                var type = _context[i].GetType();
+                if(type.IsAssignableFrom(valType)) {
+                    _log.TraceFormat("Replacing object of type {0} in context", type);
+                    _context[i] = value;
+                    value = null;
+                    break;
                 }
             }
-            return result;
+            if(value != null) {
+                _log.TraceFormat("Adding object of type {0} to context", valType);
+                _context.Add(value);
+            }
         }
 
 
@@ -543,7 +529,10 @@ namespace Command
         /// </summary>
         public bool HasObject(Type type)
         {
-            return _context.ContainsKey(type);
+            var result = _context.Any(o => type.IsInstanceOfType(o));
+            _log.DebugFormat("Context {1} contain an object of type {0}", type,
+                    result ? "does" : "does not");
+            return result;
         }
 
 
@@ -562,7 +551,7 @@ namespace Command
         public Stack<Factory> FindPathToType(Type t)
         {
             var steps = new Stack<Factory>();
-            _log.DebugFormat("Determining steps needed to create an instance of {0}", t);
+            _log.TraceFormat("Determining steps needed to create an instance of {0}", t);
 
             // Create a lambda for recursion
             Action<Type> scan = null;
@@ -619,7 +608,7 @@ namespace Command
                 ctxt = step.Constructor.Invoke(new object[] {});
             }
             else if(step.IsProperty) {
-                ctxt = step.Property.GetValue(_context[step.DeclaringType], new object[] {});
+                ctxt = step.Property.GetValue(this[step.DeclaringType], new object[] {});
             }
             else if(step.IsCommand) {
                 if(args.ContainsRequiredValuesForCommand(step.Command)) {
@@ -655,7 +644,7 @@ namespace Command
         protected object InvokeCommand(Command cmd, Dictionary<string, object> args)
         {
             if(!HasObject(cmd.Type)) {
-                throw new ContextException(String.Format("No object of type {0} is available in the current context", cmd.Type.Name));
+                throw new ContextException(String.Format("No object of type {0} is available in the current context", cmd.Type));
             }
 
             _log.InfoFormat("Executing {0} command {1}...", cmd.Type.Name, cmd.Name);
@@ -676,7 +665,7 @@ namespace Command
                     parms[i++] = param.DefaultValue;
                 }
                 else if(HasObject(param.ParameterType)) {
-                    parms[i++] = _context[param.ParameterType];
+                    parms[i++] = this[param.ParameterType];
                 }
                 else {
                     throw new ArgumentException(
@@ -685,12 +674,12 @@ namespace Command
                 }
             }
 
-            var ctxt = _context[cmd.Type];
+            var ctxt = this[cmd.Type];
             var result = cmd.MethodInfo.Invoke(ctxt, parms);
 
             // If the method is a factory method, set the returned object in the context
             if(result != null && cmd.IsFactory) {
-                this.Set(result);
+                Set(result);
             }
 
             return result;
