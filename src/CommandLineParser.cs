@@ -45,6 +45,12 @@ namespace CommandLine
         public string Key { get; set; }
         /// The argument description
         public string Description { get; set; }
+        /// The type the argument should be converted to after parsing. Default
+        /// behaviour is to leave argument values as strings. To change this,
+        /// argument definitions should specify the desired Type values should
+        /// be converted to, and register an ArgumentMapper instance that can
+        /// handle the conversion from strings to objects of this Type.
+        public Type Type { get; set; }
         /// The name of the argument set this argument belongs to (if any)
         public string Set { get; set; }
         /// A callback to be called when the argument has been parsed successfully
@@ -222,18 +228,133 @@ namespace CommandLine
 
 
     /// <summary>
+    /// Command-line argument parsing can optionally convert values read from
+    /// the command-line into objects of different types. To enable this
+    /// functionality, a command-line definition can register an implementation
+    /// of this interface. The implementing object will then be called upon to
+    /// perform conversions of any non-string parameter types (i.e. those whose
+    /// Type property is a non-string Type).
+    /// </summary>
+    public interface IArgumentMapper
+    {
+        bool CanConvert(Type type);
+        object ConvertArgument(Argument arg, string val);
+    }
+
+
+
+    /// <summary>
+    /// Provides a general purpose and extensible ArgumentMapper implementation.
+    /// String-to-object type conversions can be registered in an instance of
+    /// this class via lambda functions. Additionally, default mappings for
+    /// int, bool, and string[] are provided.
+    /// </summary>
+    public class PluggableArgumentMapper : IArgumentMapper
+    {
+        private Dictionary<Type, Func<string, object>> _maps;
+
+        public Func<string, object> this[Type type] {
+            get { return _maps[type]; }
+            set { _maps[type] = value; }
+        }
+
+
+        /// Default constructor, which registers default conversions
+        public PluggableArgumentMapper() : this(true) { }
+
+
+        /// Construct a new instance, and registers default conversions if
+        /// includeDefaults is true.
+        public PluggableArgumentMapper(bool includeDefaults) {
+            _maps = new Dictionary<Type, Func<string, object>>();
+            if(includeDefaults) {
+                this[typeof(int)] = val => int.Parse(val);
+                this[typeof(bool)] = val =>
+                    new Regex("^t(rue)?|y(es)?$", RegexOptions.IgnoreCase).IsMatch(val);
+                this[typeof(string[])] = val => val.Split(',');
+            }
+        }
+
+
+        /// Remove the map expression for type.
+        public void Remove(Type type)
+        {
+            _maps.Remove(type);
+        }
+
+        public bool CanConvert(Type type)
+        {
+            return _maps.ContainsKey(type);
+        }
+
+        public object ConvertArgument(Argument arg, string value)
+        {
+            if(!_maps.ContainsKey(arg.Type)) {
+                throw new ArgumentException(
+                        string.Format("No conversion is registered for type {0}", arg.Type));
+            }
+            return _maps[arg.Type](value);
+        }
+
+    }
+
+
+
+    /// <summary>
     /// Class representing a set of Argument definitions.
     /// </summary>
     public class Definition
     {
+        // Reference to class logger
+        protected static readonly ILog _log = LogManager.GetLogger(
+            System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
         /// Collection of Argument objects, defining the permitted/expected
         /// arguments this program takes.
         internal Dictionary<string, Argument> Arguments = new Dictionary<string, Argument>();
         /// List identifying the insertion order of positional arguments.
-        private List<string> PositionalArgumentOrder = new List<string>();
+        private List<string> _positionalArgumentOrder = new List<string>();
+        /// Reference to IArgumentMapper used to convert arguments to required types
+        private IArgumentMapper _argumentMapper;
 
         /// Purpose of the program whose command-line arguments we are parsing.
         public string Purpose { get; set; }
+
+        /// An IArgumentMapper implementation to handle conversion of parsed
+        /// string values to Argument.Type instances.
+        public IArgumentMapper ArgumentMapper
+        {
+            get {
+                return _argumentMapper;
+            }
+            set {
+                _argumentMapper = value;
+                foreach(var arg in ValueArguments) {
+                    ValidateArgType(arg);
+                }
+            }
+        }
+
+
+        /// Validates argument type conversion is possible.
+        private void ValidateArgType(Argument arg)
+        {
+            if(arg is ValueArgument && arg.Type != typeof(string)) {
+                if(_argumentMapper != null) {
+                    if(!_argumentMapper.CanConvert(arg.Type)) {
+                        throw new ArgumentException(string.Format(
+                                "ArgumentMapper cannot handle conversion of strings to {0}",
+                                arg.Type));
+                    }
+                }
+                else {
+                    throw new ArgumentException(string.Format(
+                            "No ArgumentMapper is registered, and argument {0} specifies a Type of {1}",
+                            arg.Key, arg.Type));
+                }
+            }
+        }
+
 
         /// Returns a list of the positional arguments
         public List<PositionalArgument> PositionalArguments {
@@ -285,7 +406,7 @@ namespace CommandLine
                 }
                 else if(key is int) {
                     var iKey = (int)key;
-                    return iKey < PositionalArgumentOrder.Count ? Arguments[PositionalArgumentOrder[iKey]] : null;
+                    return iKey < _positionalArgumentOrder.Count ? Arguments[_positionalArgumentOrder[iKey]] : null;
                 }
                 else {
                     throw new ArgumentException("Arguments can be accessed by name or index only");
@@ -302,8 +423,9 @@ namespace CommandLine
         {
             Arguments.Add(arg.Key.ToLower(), arg);
             if(arg is PositionalArgument) {
-                PositionalArgumentOrder.Add(arg.Key.ToLower());
+                _positionalArgumentOrder.Add(arg.Key.ToLower());
             }
+            ValidateArgType(arg);
             return arg;
         }
 
@@ -385,9 +507,16 @@ namespace CommandLine
         /// Constructor; requires a purpose for the program whose args we are
         /// parsing.
         /// </summary>
-        public UI(string purpose)
+        public UI(string purpose) : this(purpose, null) {}
+
+
+        /// <summary>
+        /// Constructor; requires a purpose for the program whose args we are
+        /// parsing.
+        /// </summary>
+        public UI(string purpose, IArgumentMapper argMap)
         {
-            Definition = new Definition { Purpose = purpose };
+            Definition = new Definition { Purpose = purpose, ArgumentMapper = argMap };
         }
 
 
@@ -396,16 +525,32 @@ namespace CommandLine
         /// </summary>
         public PositionalArgument AddPositionalArgument(string key, string desc)
         {
-            return AddPositionalArgument(key, desc, null);
+            return AddPositionalArgument(key, desc, typeof(string), null);
         }
 
         /// <summary>
         /// Convenience method for defining a new positional argument.
         /// </summary>
-        public PositionalArgument AddPositionalArgument(string key, string desc,
+        public PositionalArgument AddPositionalArgument(string key, string desc, Type type)
+        {
+            return AddPositionalArgument(key, desc, type, null);
+        }
+
+        /// <summary>
+        /// Convenience method for defining a new positional argument.
+        /// </summary>
+        public PositionalArgument AddPositionalArgument(string key, string desc, Argument.OnParseHandler onParse)
+        {
+            return AddPositionalArgument(key, desc, typeof(string), onParse);
+        }
+
+        /// <summary>
+        /// Convenience method for defining a new positional argument.
+        /// </summary>
+        public PositionalArgument AddPositionalArgument(string key, string desc, Type type,
                 Argument.OnParseHandler onParse)
         {
-            var arg = new PositionalArgument { Key = key, Description = desc };
+            var arg = new PositionalArgument { Key = key, Description = desc, Type = type };
             arg.OnParse += onParse;
             return (PositionalArgument)Definition.AddArgument(arg);
         }
@@ -415,16 +560,32 @@ namespace CommandLine
         /// </summary>
         public KeywordArgument AddKeywordArgument(string key, string desc)
         {
-            return AddKeywordArgument(key, desc, null);
+            return AddKeywordArgument(key, desc, typeof(string), null);
         }
 
         /// <summary>
         /// Convenience method for defining a new keyword argument.
         /// </summary>
-        public KeywordArgument AddKeywordArgument(string key, string desc,
+        public KeywordArgument AddKeywordArgument(string key, string desc, Type type)
+        {
+            return AddKeywordArgument(key, desc, type, null);
+        }
+
+        /// <summary>
+        /// Convenience method for defining a new keyword argument.
+        /// </summary>
+        public KeywordArgument AddKeywordArgument(string key, string desc, Argument.OnParseHandler onParse)
+        {
+            return AddKeywordArgument(key, desc, typeof(string), onParse);
+        }
+
+        /// <summary>
+        /// Convenience method for defining a new keyword argument.
+        /// </summary>
+        public KeywordArgument AddKeywordArgument(string key, string desc, Type type,
                 Argument.OnParseHandler onParse)
         {
-            var arg = new KeywordArgument { Key = key, Description = desc };
+            var arg = new KeywordArgument { Key = key, Description = desc, Type = type };
             arg.OnParse += onParse;
             return (KeywordArgument)Definition.AddArgument(arg);
         }
@@ -444,7 +605,7 @@ namespace CommandLine
         public FlagArgument AddFlagArgument(string key, string desc,
                 Argument.OnParseHandler onParse)
         {
-            var arg = new FlagArgument { Key = key, Description = desc };
+            var arg = new FlagArgument { Key = key, Description = desc, Type = typeof(bool) };
             arg.OnParse += onParse;
             return (FlagArgument)Definition.AddArgument(arg);
         }
@@ -670,7 +831,7 @@ namespace CommandLine
                                 arg.Set, set));
                 }
             }
-            else {
+            else if(arg.Set != null) {
                 set = arg.Set;
                 _log.DebugFormat("Argument set is {0}", set);
             }
@@ -687,6 +848,11 @@ namespace CommandLine
                     _log.TraceFormat("Argument {0} validated", valArg.Key);
                 }
                 _log.TraceFormat("Setting {0} to '{1}'", arg.Key, valArg.IsSensitive ? "******" : val);
+
+                if(Definition.ArgumentMapper != null && arg.Type != typeof(string)) {
+                    // Convert argument value to required type
+                    val = Definition.ArgumentMapper.ConvertArgument(arg, sVal);
+                }
             }
             else {
                 _log.TraceFormat("Setting flag {0} to true", arg.Key);

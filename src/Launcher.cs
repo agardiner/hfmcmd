@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Text.RegularExpressions;
@@ -142,7 +143,7 @@ namespace HFMCmd
             _context.Set(new LogOutput());
 
             // Process command-line arguments
-            _cmdLine = new UI(HFMCmd.Resource.Help.Purpose);
+            _cmdLine = new UI(HFMCmd.Resource.Help.Purpose, new PluggableArgumentMapper());
             ValueArgument arg = _cmdLine.AddPositionalArgument("CommandOrFile",
                     "The name of the command to execute, or the path to a file containing commands to execute");
             arg.IsRequired = true;
@@ -160,7 +161,7 @@ namespace HFMCmd
             try {
                 var args = _cmdLine.Parse(Environment.GetCommandLineArgs());
                 if(args != null) {
-                    _context.Invoke(args["CommandOrFile"] as string, args);
+                    InvokeCommand(args["CommandOrFile"] as string, args);
                 }
             }
             catch(ParseException ex) {
@@ -233,7 +234,7 @@ namespace HFMCmd
         }
 
 
-        // Add additional arguments needed by the command
+        /// Add additional arguments needed by the command
         protected void AddCommandParamsAsArgs(Command.Command cmd)
         {
             string key;
@@ -246,13 +247,20 @@ namespace HFMCmd
                 }
                 key = char.ToUpper(param.Name[0]) + param.Name.Substring(1);
                 _log.DebugFormat("Adding keyword arg {0}", key);
-                arg = _cmdLine.AddKeywordArgument(key, param.Description);
+                arg = _cmdLine.AddKeywordArgument(key, param.Description, param.ParameterType);
                 arg.IsRequired = !param.HasDefaultValue;
                 arg.IsSensitive = !param.IsSensitive;
                 if(param.HasDefaultValue && param.DefaultValue != null) {
                     arg.DefaultValue = param.DefaultValue.ToString();
                 }
             }
+        }
+
+
+        /// Invokes the specified command, passing in the supplied argument values.
+        protected void InvokeCommand(string command, Dictionary<string, object> args)
+        {
+            _context.Invoke(command, args);
         }
 
 
