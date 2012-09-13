@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 
 using log4net;
 using HSXCLIENTLib;
+using HSXSERVERLib;
 using HSVSESSIONLib;
 
 using Command;
@@ -19,13 +20,10 @@ namespace HFM
     // - DisableNewConnections
     // - EnableNewConnections
     // - EnumProhibitConnections
-    // - EnumProvisioningProjects
-    // - EnumRegisteredClusterNames
     // - EnumUsersOnSystem
     // - EnumUsersOnSystemEx
     // - EnumUsersOnSystemEx2
     // - GetApplicationFolder
-    // - GetClusterInfo
     // - GetServerOnCluster
     // - IsValidApplication
     // - KillUsers
@@ -109,28 +107,53 @@ namespace HFM
         }
 
 
-        [Command, Description("Returns the names of the HFM clusters and/or servers registered on this machine")]
-        public void GetClusters(IOutput output)
+        [Command, Factory]
+        public Server GetServer(string clusterName)
+        {
+            object server = null;
+            HFM.Try("Retrieving HsxServer instance", () => server = _client.GetServerOnCluster(clusterName));
+            return new Server((HsxServer)server);
+        }
+
+
+        [Command,
+         Description("Returns the names of the HFM clusters and/or servers registered on this machine")]
+        public string[] GetClusters(IOutput output)
         {
             object clusters = null;
-            object servers = null;
 
             HFM.Try("Retrieving names of registered clusters / servers",
-                    () => _client.GetClustersAndServers(out clusters, out servers));
+                    () => clusters = _client.EnumRegisteredClusterNames());
             if(clusters != null) {
                 output.SetFields("Cluster");
                 foreach(var cluster in clusters as string[]) {
                     output.WriteRecord(cluster);
                 }
             }
+            return clusters as string[];
         }
 
 
         [Command]
+        public void GetClusterInfo(string serverName, bool loadBalanced, IOutput output)
+        {
+            string clusterName = null;
+            // TODO: This seems to always throw an exception!?
+            HFM.Try("Obtaining cluster information for server",
+                    () => _client.GetClusterInfo(serverName, loadBalanced, out clusterName));
+            if(clusterName != null) {
+                output.SetFields("Cluster Name");
+                output.WriteRecord(clusterName as string);
+            }
+        }
+
+
+        [Command,
+         Description("Returns the domain and user name of the currently logged in Windows user")]
         public string GetWindowsLoggedOnUser(IOutput output)
         {
             string domain = null, userid = null;
-            HFM.Try("Determining current logged in Windows user",
+            HFM.Try("Determining current logged on Windows user",
                     () => _client.DetermineWindowsLoggedOnUser(out domain, out userid));
             output.SetFields("Domain", "User Name");
             output.WriteRecord(domain, userid);
@@ -170,11 +193,12 @@ namespace HFM
         }
 
 
-        [Command, Description("Returns the domain, user name, and Single Sign-On (SSO) token " +
-                              "for the currently authenticated user. Note that an SSO token is " +
-                              "only returned however, once an application has been opened. " +
-                              "If called with no application open, the domain and user id will " +
-                              "be returned, but not an SSO token.")]
+        [Command,
+         Description("Returns the domain, user name, and Single Sign-On (SSO) token " +
+                      "for the currently authenticated user. Note that an SSO token is " +
+                      "only returned however, once an application has been opened. " +
+                      "If called with no application open, the domain and user id will " +
+                      "be returned, but not an SSO token.")]
         public string GetLogonToken(IOutput output)
         {
             string domain = null, user = null, token = null;
@@ -205,7 +229,25 @@ namespace HFM
         }
 
 
-        [Command, Description("Creates a new HFM classic application.")]
+        [Command,
+         Description("Returns the names of the available provisioning projects in Shared Services.")]
+        public string[] GetProvisioningProjects(string clusterName, IOutput output)
+        {
+            object projects = null;
+            HFM.Try("Retrieving names of provisioning projects",
+                    () => projects = _client.EnumProvisioningProjects(clusterName));
+            if(projects != null) {
+                output.SetFields("Project");
+                foreach(var project in projects as string[]) {
+                    output.WriteRecord(project);
+                }
+            }
+            return projects as string[];
+        }
+
+
+        [Command,
+         Description("Creates a new HFM classic application.")]
         public void CreateApplication(string clusterName, string appName,
                 string appDesc, string profilePath,
                 [DefaultValue("Default Application Group")] string sharedServicesProject,
@@ -232,7 +274,8 @@ namespace HFM
         }
 
 
-        [Command]
+        [Command,
+         Description("Returns true if the connected user has CreateApplication rights on the HFM cluster")]
         public bool UserHasCreateApplicationRights(string clusterName, IOutput output)
         {
             bool hasAccess = false;
@@ -244,7 +287,8 @@ namespace HFM
         }
 
 
-        [Command]
+        [Command,
+         Description("Returns true if the connected user has SystemAdmin rights on the HFM cluster")]
         public bool UserHasSystemAdminRights(string clusterName, IOutput output)
         {
             bool hasAdmin = false;

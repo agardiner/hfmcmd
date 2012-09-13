@@ -249,7 +249,7 @@ namespace HFMCmd
                 _log.DebugFormat("Adding keyword arg {0}", key);
                 arg = _cmdLine.AddKeywordArgument(key, param.Description, param.ParameterType);
                 arg.IsRequired = !param.HasDefaultValue;
-                arg.IsSensitive = !param.IsSensitive;
+                arg.IsSensitive = param.IsSensitive;
                 if(param.HasDefaultValue && param.DefaultValue != null) {
                     arg.DefaultValue = param.DefaultValue.ToString();
                 }
