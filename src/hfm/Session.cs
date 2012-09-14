@@ -17,14 +17,14 @@ namespace HFM
 
 
         // Reference to HFM HsvSession object
-        protected readonly HsvSession _session;
+        internal readonly HsvSession HsvSession;
 
         private Calculate _calculate;
 
 
         public Session(HsvSession session)
         {
-            _session = session;
+            HsvSession = session;
         }
 
 
@@ -33,7 +33,7 @@ namespace HFM
         {
             get {
                 if(_calculate == null) {
-                    _calculate = new Calculate((HsvCalculate)_session.Calculate);
+                    _calculate = new Calculate((HsvCalculate)HsvSession.Calculate);
                 }
                 return _calculate;
             }
