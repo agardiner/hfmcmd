@@ -16,7 +16,8 @@ namespace HFM
         {
             [Factory]
             public LoadOptions(MetadataLoad mdl) :
-                base(mdl.HsvMetadataLoad, typeof(HSV_METADATALOAD_OPTION)) { }
+                base(typeof(IHsvLoadExtractOptions), typeof(IHsvLoadExtractOption),
+                     typeof(HSV_METADATALOAD_OPTION), mdl.HsvMetadataLoad.LoadOptions) { }
         }
 
 
@@ -24,7 +25,8 @@ namespace HFM
         {
             [Factory]
             public ExtractOptions(MetadataLoad mdl) :
-                base(mdl.HsvMetadataLoad, typeof(HSV_METADATAEXTRACT_OPTION)) { }
+                base(typeof(IHsvLoadExtractOptions), typeof(IHsvLoadExtractOption),
+                     typeof(HSV_METADATAEXTRACT_OPTION), mdl.HsvMetadataLoad.ExtractOptions) { }
         }
 
 
@@ -42,6 +44,9 @@ namespace HFM
             HsvMetadataLoad = new HsvMetadataLoadACVClass();
             HsvMetadataLoad.SetSession(session.HsvSession);
         }
+
+        [Command]
+        public void Test() { new LoadOptions(this); new ExtractOptions(this); }
 
 
         [Command,

@@ -37,35 +37,53 @@ namespace HFM
         protected static readonly ILog _log = LogManager.GetLogger(
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-
+        protected Type _optionsType;
+        protected Type _optionType;
+        protected Type _enumType;
         protected object _options;
         protected Dictionary<string, object> _settings;
-        protected Type _optionEnum;
+
 
         public object this[string key]
         {
             get {
-                var option = _options.GetType().GetMethod("get_Item").Invoke(_options, new object[] { key });
-                return option.GetType().GetProperty("CurrentValue").GetValue(option, new object[] {});
+                return GetOptionProperty(_settings[key], "CurrentValue");
             }
             set {
             }
         }
 
 
-        public LoadExtractOptions(object options, Type optionEnum)
+        public LoadExtractOptions(Type optionsType, Type optionType, Type enumType, object options)
         {
+            _optionsType = optionsType;
+            _optionType = optionType;
+            _enumType = enumType;
             _options = options;
-            _optionEnum = optionEnum;
             _settings = new Dictionary<string, object>();
-            foreach(var mbr in Enum.GetValues(_optionEnum)) {
-                // TODO: Filter out _MIN and _MAX enum members
-                var option = _options.GetType().GetMethod("get_Item").Invoke(_options, new object[] { mbr });
-                string name = (string)option.GetType().GetProperty("Name").GetValue(option, new object[] {});
-                    //_log.InfoFormat("Option {0}: {1}", mbr, option.Name);
+
+            foreach(var mbr in Enum.GetNames(_enumType)) {
+                // Filter out _MIN and _MAX enum members if present
+                if(mbr.EndsWith("_MIN") || mbr.EndsWith("_MAX")) {
+                    continue;
+                }
+
+                // Obtain the option object corresponding to the enum member
+                var option = optionsType.GetMethod("get_Item").Invoke(_options,
+                        new object[] { Enum.Parse(_enumType, mbr )});
+
+                // Finally, get the name of the option
+                string name = (string)GetOptionProperty(option, "Name");
                 _settings[name] = option;
             }
         }
+
+
+        protected object GetOptionProperty(object option, string prop)
+        {
+            return _optionType.GetProperty(prop).GetValue(option, new object[] {});
+        }
+
 
         public List<string> ValidKeys()
         {
