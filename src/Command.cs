@@ -204,6 +204,7 @@ namespace Command
 
         /// Public properties
 
+        public string          Name { get { return _memberInfo.Name; } }
         public bool            IsCommand { get { return _command != null; } }
         public Command         Command { get { return _command; } }
         public bool            IsConstructor { get { return _memberInfo is ConstructorInfo; } }
@@ -234,10 +235,10 @@ namespace Command
         public override string ToString()
         {
             if(_memberInfo is MethodInfo) {
-                return string.Format("Factory method for {0}", ReturnType);
+                return string.Format("Factory method {0} for {1}", Name, ReturnType);
             }
             else if(_memberInfo is PropertyInfo) {
-                return string.Format("Factory property for {0}", ReturnType);
+                return string.Format("Factory property {0} for {1}", Name, ReturnType);
             }
             else if(_memberInfo is ConstructorInfo) {
                 return string.Format("Factory constructor for {0}", ReturnType);
@@ -562,12 +563,22 @@ namespace Command
                         Factory factory = _registry.GetFactory(type);
                         _log.DebugFormat("Found {0} on {1}", factory, factory.DeclaringType);
                         steps.Push(factory);
-                        if(!factory.IsConstructor) {
+                        if(factory.IsConstructor) {
+                            // Determine steps needed to obtain instances of
+                            // constructor arguments (if any)
+                            foreach(var param in factory.Constructor.GetParameters()) {
+                                scan(param.ParameterType);
+                            }
+                        }
+                        else {
+                            // Determine how to obtain an instance of the item
+                            // holding the factory method/property
                             scan(factory.DeclaringType);
                         }
                     }
                     else {
-                        throw new ContextException(string.Format("No Factory method, property, or constructor is registered for {0}", type));
+                        throw new ContextException(string.Format("No method, property, or constructor " +
+                                    "is registered as a Factory for {0} objects", type));
                     }
                 }
             };
@@ -605,7 +616,7 @@ namespace Command
 
             _log.TraceFormat("Attempting to create an instance of {0} via {1}", step.ReturnType, step);
             if(step.IsConstructor) {
-                ctxt = step.Constructor.Invoke(new object[] {});
+                ctxt = InvokeConstructor(step.Constructor);
             }
             else if(step.IsProperty) {
                 ctxt = step.Property.GetValue(this[step.DeclaringType], new object[] {});
@@ -632,9 +643,29 @@ namespace Command
                 Set(ctxt);
             }
             else {
-                throw new ContextException("No object of type {0} can be constructed from the current context, using the supplied arguments");
+                throw new ContextException(string.Format("No object of type {0} can be constructed " +
+                            "from the current context, using the supplied arguments", step.ReturnType));
             }
             return ctxt;
+        }
+
+
+        /// Invoke a Factory constructor, supplying any arguments needed by the
+        /// constructor from the current context.
+        protected object InvokeConstructor(ConstructorInfo ctor)
+        {
+            ParameterInfo[] pi = ctor.GetParameters();
+            object[] parms = new object[pi.Length];
+            var i = 0;
+            foreach(var param in pi) {
+                if(HasObject(param.ParameterType)) {
+                    parms[i++] = this[param.ParameterType];
+                }
+                else {
+                    throw new ContextException(string.Format("No object of type {0} can be obtained from the current context", param.ParameterType));
+                }
+            }
+            return ctor.Invoke(parms);
         }
 
 
