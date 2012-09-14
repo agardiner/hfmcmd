@@ -424,6 +424,55 @@ namespace Command
     }
 
 
+    public interface ISettingsCollection
+    {
+        object this[string key]
+        {
+            get;
+            set;
+        }
+
+        List<string> ValidKeys();
+        object DefaultValue(string key);
+    }
+
+
+    /// <summary>
+    /// A class used to hold a collection of settings for a command. Used for
+    /// commands that take an impractically large set of parameters, many of
+    /// which have default values.
+    /// </summary>
+    // TODO: Flesh out required behavior of a collection class that
+    // can be used to hold values for a fixed group of settings.
+    public abstract class SettingsCollection : ISettingsCollection
+    {
+        protected Dictionary<string, object> _settings =
+            new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
+        public object this[string key]
+        {
+            get {
+                if(_settings.ContainsKey(key)) {
+                    return _settings[key];
+                }
+                else {
+                    return DefaultValue(key);
+                }
+            }
+            set {
+                _settings[key] = value;
+            }
+        }
+
+
+        public abstract List<string> ValidKeys();
+
+        public abstract object DefaultValue(string key);
+
+
+    }
+
+
 
     /// <summary>
     /// Context exception, thrown when no object of the necessary type is
@@ -688,6 +737,9 @@ namespace Command
                     _log.DebugFormat("Setting {0} to '{1}'", param.Name,
                             param.IsSensitive ? "******" : args[param.Name]);
                     parms[i++] = args[param.Name];
+                }
+                else if(typeof(ISettingsCollection).IsAssignableFrom(param.ParameterType)) {
+                    // TODO: Add support for ISettingsCollection parameters
                 }
                 else if(param.HasDefaultValue) {
                     // Deal with missing arg values, default values, etc
