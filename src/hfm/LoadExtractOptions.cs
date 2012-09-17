@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using log4net;
 
 using Command;
+using CommandLine;
 
 
 
@@ -50,7 +51,14 @@ namespace HFM
                 return GetOptionProperty(_settings[key], "CurrentValue");
             }
             set {
+                _optionType.GetProperty("CurrentValue").SetValue(_settings[key], value, null);
             }
+        }
+
+
+        public static void RegisterWithArgumentMapper(PluggableArgumentMapper argMap)
+        {
+            argMap[typeof(LoadExtractOptions)] = (val, args) => null;
         }
 
 
@@ -81,7 +89,7 @@ namespace HFM
 
         protected object GetOptionProperty(object option, string prop)
         {
-            return _optionType.GetProperty(prop).GetValue(option, new object[] {});
+            return _optionType.GetProperty(prop).GetValue(option, null);
         }
 
 

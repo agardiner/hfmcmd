@@ -17,7 +17,10 @@ namespace HFM
             [Factory]
             public LoadOptions(MetadataLoad mdl) :
                 base(typeof(IHsvLoadExtractOptions), typeof(IHsvLoadExtractOption),
-                     typeof(HSV_METADATALOAD_OPTION), mdl.HsvMetadataLoad.LoadOptions) { }
+                     typeof(HSV_METADATALOAD_OPTION), mdl.HsvMetadataLoad.LoadOptions)
+            {
+                // TODO: Tell base class about enum on FileFormat
+            }
         }
 
 
@@ -26,7 +29,10 @@ namespace HFM
             [Factory]
             public ExtractOptions(MetadataLoad mdl) :
                 base(typeof(IHsvLoadExtractOptions), typeof(IHsvLoadExtractOption),
-                     typeof(HSV_METADATAEXTRACT_OPTION), mdl.HsvMetadataLoad.ExtractOptions) { }
+                     typeof(HSV_METADATAEXTRACT_OPTION), mdl.HsvMetadataLoad.ExtractOptions)
+            {
+                // TODO: Tell base class about enum on FileFormat
+            }
         }
 
 
@@ -53,7 +59,8 @@ namespace HFM
          Description("Loads an HFM application's metadata from a native ASCII or XML file")]
         public void LoadMetadata(
                 [Description("Path to the source metadata extract file")] string extractFile,
-                [Description("Path to the log file containing details of the load process")] string logFile,
+                [Description("Path to the load log file; if not specified, defaults to same path " +
+                             "and name as the source metadata file."), DefaultValue(null)] string logFile,
                 LoadOptions options)
         {
         }
@@ -63,7 +70,8 @@ namespace HFM
          Description("Extracts an HFM application's metadata to a native ASCII or XML file")]
         public void ExtractMetadata(
                 [Description("Path to the generated metadata extract file")] string extractFile,
-                [Description("Path to the extract log file")] string logFile,
+                [Description("Path to the extract log file; if not specified, defaults to same path " +
+                             "and name as extract file."), DefaultValue(null)] string logFile,
                 ExtractOptions options)
         {
         }

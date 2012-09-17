@@ -238,7 +238,7 @@ namespace CommandLine
     public interface IArgumentMapper
     {
         bool CanConvert(Type type);
-        object ConvertArgument(Argument arg, string val);
+        object ConvertArgument(Argument arg, string val, Dictionary<string, object> argVals);
     }
 
 
@@ -251,9 +251,9 @@ namespace CommandLine
     /// </summary>
     public class PluggableArgumentMapper : IArgumentMapper
     {
-        private Dictionary<Type, Func<string, object>> _maps;
+        private Dictionary<Type, Func<string, Dictionary<string, object>, object>> _maps;
 
-        public Func<string, object> this[Type type] {
+        public Func<string, Dictionary<string, object>, object> this[Type type] {
             get { return _maps[type]; }
             set { _maps[type] = value; }
         }
@@ -266,12 +266,12 @@ namespace CommandLine
         /// Construct a new instance, and registers default conversions if
         /// includeDefaults is true.
         public PluggableArgumentMapper(bool includeDefaults) {
-            _maps = new Dictionary<Type, Func<string, object>>();
+            _maps = new Dictionary<Type, Func<string, Dictionary<string, object>, object>>();
             if(includeDefaults) {
-                this[typeof(int)] = val => int.Parse(val);
-                this[typeof(bool)] = val =>
+                this[typeof(int)] = (val, args) => int.Parse(val);
+                this[typeof(bool)] = (val, args) =>
                     new Regex("^t(rue)?|y(es)?$", RegexOptions.IgnoreCase).IsMatch(val);
-                this[typeof(string[])] = val => val.Split(',');
+                this[typeof(string[])] = (val, args) => val.Split(',');
             }
         }
 
@@ -287,13 +287,13 @@ namespace CommandLine
             return _maps.ContainsKey(type);
         }
 
-        public object ConvertArgument(Argument arg, string value)
+        public object ConvertArgument(Argument arg, string value, Dictionary<string, object> argVals)
         {
             if(!_maps.ContainsKey(arg.Type)) {
                 throw new ArgumentException(
                         string.Format("No conversion is registered for type {0}", arg.Type));
             }
-            return _maps[arg.Type](value);
+            return _maps[arg.Type](value, argVals);
         }
 
     }
@@ -851,7 +851,7 @@ namespace CommandLine
 
                 if(Definition.ArgumentMapper != null && arg.Type != typeof(string)) {
                     // Convert argument value to required type
-                    val = Definition.ArgumentMapper.ConvertArgument(arg, sVal);
+                    val = Definition.ArgumentMapper.ConvertArgument(arg, sVal, result);
                 }
             }
             else {

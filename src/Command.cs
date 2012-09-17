@@ -424,17 +424,36 @@ namespace Command
     }
 
 
+
+    /// <summary>
+    /// Defines the methods and properties required of a command argument used to
+    /// set many command settings with a single collection object.
+    /// </summary>
     public interface ISettingsCollection
     {
+
+        /// <summary>
+        /// Gets or sets a single setting in the settings collection.
+        /// </summary>
         object this[string key]
         {
             get;
             set;
         }
 
+        /// <summary>
+        /// Returns a list of the valid keys that can be used with the settings
+        /// collection.
+        /// </summary>
         List<string> ValidKeys();
+
+        /// <summary>
+        /// Returns the default value for a single setting in the collection.
+        /// </summary>
         object DefaultValue(string key);
+
     }
+
 
 
     /// <summary>
@@ -468,7 +487,6 @@ namespace Command
         public abstract List<string> ValidKeys();
 
         public abstract object DefaultValue(string key);
-
 
     }
 

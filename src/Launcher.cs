@@ -143,7 +143,10 @@ namespace HFMCmd
             _context.Set(new LogOutput());
 
             // Process command-line arguments
-            _cmdLine = new UI(HFMCmd.Resource.Help.Purpose, new PluggableArgumentMapper());
+            var argMap = new PluggableArgumentMapper();
+            // TODO: Work out a way to have this happen automagically
+            HFM.LoadExtractOptions.RegisterWithArgumentMapper(argMap);
+            _cmdLine = new UI(HFMCmd.Resource.Help.Purpose, argMap);
             ValueArgument arg = _cmdLine.AddPositionalArgument("CommandOrFile",
                     "The name of the command to execute, or the path to a file containing commands to execute");
             arg.IsRequired = true;
@@ -245,13 +248,21 @@ namespace HFMCmd
                 if(param.ParameterType == typeof(IOutput)) {
                     continue;
                 }
-                key = char.ToUpper(param.Name[0]) + param.Name.Substring(1);
-                _log.DebugFormat("Adding keyword arg {0}", key);
-                arg = _cmdLine.AddKeywordArgument(key, param.Description, param.ParameterType);
-                arg.IsRequired = !param.HasDefaultValue;
-                arg.IsSensitive = param.IsSensitive;
-                if(param.HasDefaultValue && param.DefaultValue != null) {
-                    arg.DefaultValue = param.DefaultValue.ToString();
+                else if(typeof(ISettingsCollection).IsAssignableFrom(param.ParameterType)) {
+                    // TODO: Get members of setting collection and add them
+                    foreach(var key in (param.ParameterType as ISettingsCollection).ValidKeys) {
+                        
+                    }
+                }
+                else {
+                    key = char.ToUpper(param.Name[0]) + param.Name.Substring(1);
+                    _log.DebugFormat("Adding keyword arg {0}", key);
+                    arg = _cmdLine.AddKeywordArgument(key, param.Description, param.ParameterType);
+                    arg.IsRequired = !param.HasDefaultValue;
+                    arg.IsSensitive = param.IsSensitive;
+                    if(param.HasDefaultValue && param.DefaultValue != null) {
+                        arg.DefaultValue = param.DefaultValue.ToString();
+                    }
                 }
             }
         }
