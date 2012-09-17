@@ -244,7 +244,7 @@ namespace CommandLine
 
 
     /// <summary>
-    /// Provides a general purpose and extensible ArgumentMapper implementation.
+    /// Provides a general purpose and extensible IArgumentMapper implementation.
     /// String-to-object type conversions can be registered in an instance of
     /// this class via lambda functions. Additionally, default mappings for
     /// int, bool, and string[] are provided.
@@ -317,6 +317,9 @@ namespace CommandLine
         /// Reference to IArgumentMapper used to convert arguments to required types
         private IArgumentMapper _argumentMapper;
 
+
+        // Properties
+
         /// Purpose of the program whose command-line arguments we are parsing.
         public string Purpose { get; set; }
 
@@ -331,26 +334,6 @@ namespace CommandLine
                 _argumentMapper = value;
                 foreach(var arg in ValueArguments) {
                     ValidateArgType(arg);
-                }
-            }
-        }
-
-
-        /// Validates argument type conversion is possible.
-        private void ValidateArgType(Argument arg)
-        {
-            if(arg is ValueArgument && arg.Type != typeof(string)) {
-                if(_argumentMapper != null) {
-                    if(!_argumentMapper.CanConvert(arg.Type)) {
-                        throw new ArgumentException(string.Format(
-                                "ArgumentMapper cannot handle conversion of strings to {0}",
-                                arg.Type));
-                    }
-                }
-                else {
-                    throw new ArgumentException(string.Format(
-                            "No ArgumentMapper is registered, and argument {0} specifies a Type of {1}",
-                            arg.Key, arg.Type));
                 }
             }
         }
@@ -410,6 +393,26 @@ namespace CommandLine
                 }
                 else {
                     throw new ArgumentException("Arguments can be accessed by name or index only");
+                }
+            }
+        }
+
+
+        /// Validates argument type conversion is possible.
+        private void ValidateArgType(Argument arg)
+        {
+            if(arg is ValueArgument && arg.Type != typeof(string)) {
+                if(_argumentMapper != null) {
+                    if(!_argumentMapper.CanConvert(arg.Type)) {
+                        throw new ArgumentException(string.Format(
+                                "ArgumentMapper cannot handle conversion of strings to {0}",
+                                arg.Type));
+                    }
+                }
+                else {
+                    throw new ArgumentException(string.Format(
+                            "No ArgumentMapper is registered, and argument {0} specifies a Type of {1}",
+                            arg.Key, arg.Type));
                 }
             }
         }

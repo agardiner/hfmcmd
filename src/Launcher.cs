@@ -131,6 +131,9 @@ namespace HFMCmd
         {
             ConfigureLogging();
 
+            // TODO: Add means to get/process flag args from command-line before doing anything else
+            //_logHierarchy.Root.Level = _logRepository.LevelMap["DEBUG"];
+
             // Register commands
             _log.Fine("Loading available commands...");
             _commands = new Registry();
@@ -144,8 +147,10 @@ namespace HFMCmd
 
             // Process command-line arguments
             var argMap = new PluggableArgumentMapper();
+
             // TODO: Work out a way to have this happen automagically
-            HFM.LoadExtractOptions.RegisterWithArgumentMapper(argMap);
+            //HFM.LoadExtractOptions.RegisterWithArgumentMapper(argMap);
+
             _cmdLine = new UI(HFMCmd.Resource.Help.Purpose, argMap);
             ValueArgument arg = _cmdLine.AddPositionalArgument("CommandOrFile",
                     "The name of the command to execute, or the path to a file containing commands to execute");
@@ -240,30 +245,37 @@ namespace HFMCmd
         /// Add additional arguments needed by the command
         protected void AddCommandParamsAsArgs(Command.Command cmd)
         {
-            string key;
-            KeywordArgument arg;
-
             _log.TraceFormat("Adding keyword args for {0} command", cmd.Name);
             foreach(var param in cmd.Parameters) {
+                _log.DebugFormat("Processing param {0}", param);
                 if(param.ParameterType == typeof(IOutput)) {
+                    // We don't need to add anything for IOutput params
                     continue;
                 }
-                else if(typeof(ISettingsCollection).IsAssignableFrom(param.ParameterType)) {
-                    // TODO: Get members of setting collection and add them
-                    foreach(var key in (param.ParameterType as ISettingsCollection).ValidKeys) {
-                        
-                    }
+                else if(param.IsCollection) {
+                    // TODO: How do we determine what settings are valid at this point?
+                    _log.Debug("Processing collection");
+                    // TODO: Get individual settings from collection and add them
+                    //foreach(var settingKey in settings.ValidKeys()) {
+                        //AddSettingAsArg();
+                    //}
                 }
                 else {
-                    key = char.ToUpper(param.Name[0]) + param.Name.Substring(1);
-                    _log.DebugFormat("Adding keyword arg {0}", key);
-                    arg = _cmdLine.AddKeywordArgument(key, param.Description, param.ParameterType);
-                    arg.IsRequired = !param.HasDefaultValue;
-                    arg.IsSensitive = param.IsSensitive;
-                    if(param.HasDefaultValue && param.DefaultValue != null) {
-                        arg.DefaultValue = param.DefaultValue.ToString();
-                    }
+                    AddSettingAsArg(param);
                 }
+            }
+        }
+
+
+        protected void AddSettingAsArg(ISetting setting)
+        {
+            var key = char.ToUpper(setting.Name[0]) + setting.Name.Substring(1);
+            _log.DebugFormat("Adding keyword arg {0}", key);
+            var arg = _cmdLine.AddKeywordArgument(key, setting.Description, setting.ParameterType);
+            arg.IsRequired = !setting.HasDefaultValue;
+            arg.IsSensitive = setting.IsSensitive;
+            if(setting.HasDefaultValue && setting.DefaultValue != null) {
+                arg.DefaultValue = setting.DefaultValue.ToString();
             }
         }
 
