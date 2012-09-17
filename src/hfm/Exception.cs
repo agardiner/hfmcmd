@@ -20,29 +20,11 @@ namespace HFM
         protected static readonly ILog _log = LogManager.GetLogger(
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-        // Reference to HsvResourceManager used to obtain error message details.
-        protected static readonly HsvResourceManager _resourceManager;
-
         // Holds the formatted error message returned from HFM
         protected readonly String _formattedMessage;
 
         // Holds the error code returned by HFM
         protected readonly int _errorCode;
-
-        // Static initializer - initializes HsvResourceManager
-        static HFMException()
-        {
-            try
-            {
-                _resourceManager = new HsvResourceManager();
-                _resourceManager.Initialize((short)tagHFM_TIERS.HFM_TIER1);
-            }
-            catch (System.Runtime.InteropServices.COMException ex)
-            {
-                _log.Fatal("Unable to initialise HFM Resource Manager; error message strings will not be available");
-                _log.Fatal(ex);
-            }
-        }
 
 
         /// <summary>
@@ -66,16 +48,8 @@ namespace HFM
         public HFMException(COMException inner)
             : base("An exception occurred while interacting with HFM", inner)
         {
-            if (_resourceManager != null)
-            {
-                object formattedError, techError;
-                _resourceManager.GetFormattedError(
-                    (int)tagHFM_LANGUAGES.HFM_LANGUAGE_ENGLISH, inner.ErrorCode, inner.Message,
-                    "Unknown error", out formattedError, out techError);
-                _formattedMessage = (string)formattedError;
-                _errorCode = inner.ErrorCode;
-                LogException(techError as string);
-            }
+            _formattedMessage = ResourceManager.GetErrorMessage(inner.ErrorCode, inner.Message);
+            LogException();
         }
 
 
@@ -84,16 +58,8 @@ namespace HFM
         /// </summary>
         public HFMException(int errorCode)
         {
-            if (_resourceManager != null)
-            {
-                object formattedError, techError;
-                _resourceManager.GetFormattedError(
-                    (int)tagHFM_LANGUAGES.HFM_LANGUAGE_ENGLISH, errorCode, "",
-                    "Unknown error", out formattedError, out techError);
-                _formattedMessage = formattedError as string;
-                _errorCode = errorCode;
-                LogException(techError as string);
-            }
+            _formattedMessage = ResourceManager.GetErrorMessage(errorCode, "Unknown Error");
+            LogException();
         }
 
 
@@ -103,7 +69,7 @@ namespace HFM
         public HFMException(string errorMsg)
         {
             _formattedMessage = errorMsg;
-            LogException(null);
+            LogException();
         }
 
 
@@ -119,15 +85,11 @@ namespace HFM
 
 
         /// Logs the exception details for debug purposes.
-        protected void LogException(string techError)
+        protected void LogException()
         {
-            if (_log.IsDebugEnabled)
-            {
+            if (_log.IsDebugEnabled) {
                 _log.Error("An exception occurred while interacting with HFM:");
                 _log.Error(_formattedMessage, this);
-                if(techError != null) {
-                    _log.Debug(techError);
-                }
             }
         }
     }
@@ -189,20 +151,16 @@ namespace HFM
         /// </param>
         public static void Try(string action, Action op, Action<HFMException> handler)
         {
-            if (action != null)
-            {
+            if (action != null) {
                 _log.Info(action);
             }
-            try
-            {
+            try {
                 op();
             }
-            catch (COMException ex)
-            {
+            catch (COMException ex) {
                 handler(new HFMException(ex));
             }
-            catch (HFMException ex)
-            {
+            catch (HFMException ex) {
                 handler(ex);
             }
         }
