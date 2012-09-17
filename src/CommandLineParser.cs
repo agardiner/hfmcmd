@@ -238,22 +238,22 @@ namespace CommandLine
     public interface IArgumentMapper
     {
         bool CanConvert(Type type);
-        object ConvertArgument(Argument arg, string val);
+        object ConvertArgument(Argument arg, string val, Dictionary<string, object> argVals);
     }
 
 
 
     /// <summary>
-    /// Provides a general purpose and extensible ArgumentMapper implementation.
+    /// Provides a general purpose and extensible IArgumentMapper implementation.
     /// String-to-object type conversions can be registered in an instance of
     /// this class via lambda functions. Additionally, default mappings for
     /// int, bool, and string[] are provided.
     /// </summary>
     public class PluggableArgumentMapper : IArgumentMapper
     {
-        private Dictionary<Type, Func<string, object>> _maps;
+        private Dictionary<Type, Func<string, Dictionary<string, object>, object>> _maps;
 
-        public Func<string, object> this[Type type] {
+        public Func<string, Dictionary<string, object>, object> this[Type type] {
             get { return _maps[type]; }
             set { _maps[type] = value; }
         }
@@ -266,12 +266,12 @@ namespace CommandLine
         /// Construct a new instance, and registers default conversions if
         /// includeDefaults is true.
         public PluggableArgumentMapper(bool includeDefaults) {
-            _maps = new Dictionary<Type, Func<string, object>>();
+            _maps = new Dictionary<Type, Func<string, Dictionary<string, object>, object>>();
             if(includeDefaults) {
-                this[typeof(int)] = val => int.Parse(val);
-                this[typeof(bool)] = val =>
+                this[typeof(int)] = (val, args) => int.Parse(val);
+                this[typeof(bool)] = (val, args) =>
                     new Regex("^t(rue)?|y(es)?$", RegexOptions.IgnoreCase).IsMatch(val);
-                this[typeof(string[])] = val => val.Split(',');
+                this[typeof(string[])] = (val, args) => val.Split(',');
             }
         }
 
@@ -287,13 +287,13 @@ namespace CommandLine
             return _maps.ContainsKey(type);
         }
 
-        public object ConvertArgument(Argument arg, string value)
+        public object ConvertArgument(Argument arg, string value, Dictionary<string, object> argVals)
         {
             if(!_maps.ContainsKey(arg.Type)) {
                 throw new ArgumentException(
                         string.Format("No conversion is registered for type {0}", arg.Type));
             }
-            return _maps[arg.Type](value);
+            return _maps[arg.Type](value, argVals);
         }
 
     }
@@ -317,6 +317,9 @@ namespace CommandLine
         /// Reference to IArgumentMapper used to convert arguments to required types
         private IArgumentMapper _argumentMapper;
 
+
+        // Properties
+
         /// Purpose of the program whose command-line arguments we are parsing.
         public string Purpose { get; set; }
 
@@ -331,26 +334,6 @@ namespace CommandLine
                 _argumentMapper = value;
                 foreach(var arg in ValueArguments) {
                     ValidateArgType(arg);
-                }
-            }
-        }
-
-
-        /// Validates argument type conversion is possible.
-        private void ValidateArgType(Argument arg)
-        {
-            if(arg is ValueArgument && arg.Type != typeof(string)) {
-                if(_argumentMapper != null) {
-                    if(!_argumentMapper.CanConvert(arg.Type)) {
-                        throw new ArgumentException(string.Format(
-                                "ArgumentMapper cannot handle conversion of strings to {0}",
-                                arg.Type));
-                    }
-                }
-                else {
-                    throw new ArgumentException(string.Format(
-                            "No ArgumentMapper is registered, and argument {0} specifies a Type of {1}",
-                            arg.Key, arg.Type));
                 }
             }
         }
@@ -410,6 +393,26 @@ namespace CommandLine
                 }
                 else {
                     throw new ArgumentException("Arguments can be accessed by name or index only");
+                }
+            }
+        }
+
+
+        /// Validates argument type conversion is possible.
+        private void ValidateArgType(Argument arg)
+        {
+            if(arg is ValueArgument && arg.Type != typeof(string)) {
+                if(_argumentMapper != null) {
+                    if(!_argumentMapper.CanConvert(arg.Type)) {
+                        throw new ArgumentException(string.Format(
+                                "ArgumentMapper cannot handle conversion of strings to {0}",
+                                arg.Type));
+                    }
+                }
+                else {
+                    throw new ArgumentException(string.Format(
+                            "No ArgumentMapper is registered, and argument {0} specifies a Type of {1}",
+                            arg.Key, arg.Type));
                 }
             }
         }
@@ -851,7 +854,7 @@ namespace CommandLine
 
                 if(Definition.ArgumentMapper != null && arg.Type != typeof(string)) {
                     // Convert argument value to required type
-                    val = Definition.ArgumentMapper.ConvertArgument(arg, sVal);
+                    val = Definition.ArgumentMapper.ConvertArgument(arg, sVal, result);
                 }
             }
             else {
