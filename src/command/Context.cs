@@ -172,6 +172,15 @@ namespace Command
 
 
         /// <summary>
+        /// Returns the SettingAttributes for the specified type.
+        /// </summary>
+        public List<SettingAttribute> GetSettings(Type type)
+        {
+            return _registry.GetSettings(type);
+        }
+
+
+        /// <summary>
         /// Invoke an instance of the named command, using the supplied arguments
         /// dictionary to obtain parameter values. If necessary, this will execute
         /// Factory constructors, properties, and commands to obtain the necessary
@@ -276,7 +285,7 @@ namespace Command
                 else if(param.IsCollection) {
                     // TODO: Add support for ISettingsCollection parameters
                     var coll = this[param.ParameterType] as ISettingsCollection;
-                    foreach(var setting in coll.Each()) {
+                    foreach(var setting in GetSettings(param.ParameterType)) {
                         if(args.ContainsKey(setting.Name)) {
                             coll[setting.Name] = args[setting.Name];
                         }
@@ -299,6 +308,8 @@ namespace Command
                 }
             }
 
+            // Execute the method corresponding to this command
+            // TODO: This needs to be wrapped in a try-catch
             var ctxt = this[cmd.Type];
             var result = cmd.MethodInfo.Invoke(ctxt, parms);
 

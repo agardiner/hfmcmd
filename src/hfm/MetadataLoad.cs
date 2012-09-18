@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 
 using log4net;
 using HSVSESSIONLib;
@@ -121,6 +122,15 @@ namespace HFM
                              "and name as extract file."), DefaultValue(null)] string logFile,
                 ExtractOptions options)
         {
+            if(logFile == null || logFile == "") {
+                logFile = Path.ChangeExtension(extractFile, ".log");
+            }
+            // TODO: Display options etc
+            _log.FineFormat("    Extract file: {0}", extractFile);
+            _log.FineFormat("    Log file:     {0}", logFile);
+            // TODO: Ensure extractFile and logFile are writeable locations
+            HFM.Try("Extracting metadata",
+                    () => HsvMetadataLoad.Extract(extractFile, logFile));
         }
 
     }

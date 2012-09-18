@@ -108,10 +108,15 @@ namespace HFMCmd
         protected static readonly ILog _log = LogManager.GetLogger(
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
+        /// Registry of available commands
         private Registry _commands;
+        /// Current context in which to execute commands
         private Context _context;
         /// Reference to the command-line interface/parser
         private UI _cmdLine;
+        /// Reference to the argument mapper used to convert command-line args
+        /// to objects
+        private PluggableArgumentMapper _argumentMapper;
         /// Reference to the log4net repository
         private ILoggerRepository _logRepository;
         /// Reference to the logger hierarchy
@@ -146,12 +151,12 @@ namespace HFMCmd
             _context.Set(new LogOutput());
 
             // Process command-line arguments
-            var argMap = new PluggableArgumentMapper();
+            _argumentMapper = new PluggableArgumentMapper();
 
             // TODO: Work out a way to have this happen automagically
             //HFM.LoadExtractOptions.RegisterWithArgumentMapper(argMap);
 
-            _cmdLine = new UI(HFMCmd.Resource.Help.Purpose, argMap);
+            _cmdLine = new UI(HFMCmd.Resource.Help.Purpose, _argumentMapper);
             ValueArgument arg = _cmdLine.AddPositionalArgument("CommandOrFile",
                     "The name of the command to execute, or the path to a file containing commands to execute");
             arg.IsRequired = true;
@@ -253,12 +258,12 @@ namespace HFMCmd
                     continue;
                 }
                 else if(param.IsCollection) {
-                    // TODO: How do we determine what settings are valid at this point?
-                    _log.Debug("Processing collection");
-                    // TODO: Get individual settings from collection and add them
-                    //foreach(var settingKey in settings.ValidKeys()) {
-                        //AddSettingAsArg();
-                    //}
+                    _log.DebugFormat("Processing collection type {0}", param.ParameterType);
+                    // Get individual settings from collection and add them
+                    foreach(var setting in _commands.GetSettings(param.ParameterType)) {
+                        // TODO: Only add if valid for this version of HFM and not deprecated
+                        AddSettingAsArg(setting);
+                    }
                 }
                 else {
                     AddSettingAsArg(param);
@@ -271,6 +276,13 @@ namespace HFMCmd
         {
             var key = char.ToUpper(setting.Name[0]) + setting.Name.Substring(1);
             _log.DebugFormat("Adding keyword arg {0}", key);
+
+            // Add mapping for enum (if necessary)
+            if(setting.ParameterType.IsEnum && !_argumentMapper.CanConvert(setting.ParameterType)) {
+                _argumentMapper.AddEnum(setting.ParameterType);
+            }
+
+            // Add a keyword argument for this setting
             var arg = _cmdLine.AddKeywordArgument(key, setting.Description, setting.ParameterType);
             arg.IsRequired = !setting.HasDefaultValue;
             arg.IsSensitive = setting.IsSensitive;

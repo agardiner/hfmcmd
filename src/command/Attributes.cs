@@ -80,9 +80,11 @@ namespace Command
         public Type ParameterType { get; set; }
         /// Whether the setting is sensitive, and should be masked
         public bool IsSensitive { get; set; }
-        /// Whether the setting has a DefaultValue
+        /// Whether the setting has a DefaultValue; settings default to true
         public bool HasDefaultValue { get; set; }
-        /// Default value for setting (may be null)
+        /// Default value for setting (may be null, even if this is not the
+        /// default)
+        // TODO: Do we need another field to indicate if default is available?
         public object DefaultValue { get; set; }
         /// Version in which the setting was introduced
         public string Since { get; set; }
@@ -92,12 +94,14 @@ namespace Command
         public SettingAttribute()
         {
             ParameterType = typeof(bool);
+            HasDefaultValue = true;
         }
 
         public SettingAttribute(string name)
         {
             Name = name;
             ParameterType = typeof(bool);
+            HasDefaultValue = true;
         }
     }
 

@@ -251,9 +251,9 @@ namespace CommandLine
     /// </summary>
     public class PluggableArgumentMapper : IArgumentMapper
     {
-        private Dictionary<Type, Func<string, Dictionary<string, object>, object>> _maps;
+        private Dictionary<Type, Func<string, Type, Dictionary<string, object>, object>> _maps;
 
-        public Func<string, Dictionary<string, object>, object> this[Type type] {
+        public Func<string, Type, Dictionary<string, object>, object> this[Type type] {
             get { return _maps[type]; }
             set { _maps[type] = value; }
         }
@@ -266,12 +266,46 @@ namespace CommandLine
         /// Construct a new instance, and registers default conversions if
         /// includeDefaults is true.
         public PluggableArgumentMapper(bool includeDefaults) {
-            _maps = new Dictionary<Type, Func<string, Dictionary<string, object>, object>>();
+            _maps = new Dictionary<Type, Func<string, Type, Dictionary<string, object>, object>>();
             if(includeDefaults) {
-                this[typeof(int)] = (val, args) => int.Parse(val);
-                this[typeof(bool)] = (val, args) =>
+                this[typeof(int)] = (val, type, args) => int.Parse(val);
+                this[typeof(bool)] = (val, type, args) =>
                     new Regex("^t(rue)?|y(es)?$", RegexOptions.IgnoreCase).IsMatch(val);
-                this[typeof(string[])] = (val, args) => val.Split(',');
+                this[typeof(string[])] = (val, type, args) => val.Split(',');
+            }
+        }
+
+
+        public object ConvertEnum(string val, Type type, Dictionary<string, object> args)
+        {
+            // Try to parse value as provided
+            try {
+                return Enum.Parse(type, val);
+            }
+            catch (ArgumentException)
+            { }
+
+            // If we get here, we got an ArgumentException, so try TitleCase-ing value
+            try {
+                if (val == val.ToUpper()) {
+                    val = val.Substring(0, 1) + val.Substring(1).ToLower();
+                }
+                return Enum.Parse(type, val);
+            }
+            catch (ArgumentException ex) {
+                throw new ArgumentException(string.Format("Invalid value '{0}' specified for {1}. Valid values are: {2}",
+                            val, type, string.Join(", ", Enum.GetNames(type))), ex);
+            }
+        }
+
+
+        public void AddEnum(Type enumType)
+        {
+            if(typeof(Enum).IsAssignableFrom(enumType)) {
+                this[enumType] = (val, type, args) => ConvertEnum(val, type, args);
+            }
+            else {
+                throw new ArgumentException(string.Format("Type {0} is not an enum", enumType));
             }
         }
 
@@ -282,10 +316,12 @@ namespace CommandLine
             _maps.Remove(type);
         }
 
+
         public bool CanConvert(Type type)
         {
             return _maps.ContainsKey(type);
         }
+
 
         public object ConvertArgument(Argument arg, string value, Dictionary<string, object> argVals)
         {
@@ -293,7 +329,7 @@ namespace CommandLine
                 throw new ArgumentException(
                         string.Format("No conversion is registered for type {0}", arg.Type));
             }
-            return _maps[arg.Type](value, argVals);
+            return _maps[arg.Type](value, arg.Type, argVals);
         }
 
     }

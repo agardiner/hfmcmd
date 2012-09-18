@@ -72,6 +72,7 @@ namespace HFM
         protected object _options;
         protected Dictionary<string, LoadExtractOption> _settings;
 
+        internal object IHsvLoadExtractOptions { get { return _options; } }
 
         public object this[string key]
         {
