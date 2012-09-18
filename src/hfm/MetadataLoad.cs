@@ -12,6 +12,37 @@ namespace HFM
 
     public class MetadataLoad
     {
+
+        [Setting("Accounts"),
+         Setting("SystemAccounts"),
+         Setting("AppSettings"),
+         Setting("CellTextLabels", Since = "11.1.2.2"),
+         Setting("CheckIntegrity"),
+         Setting("ClearAccounts", Deprecated = "11.1.2.2"),
+         Setting("ClearAll", Since = "11.1.2.2"),
+         Setting("ClearConsolMethods", Deprecated = "11.1.2.2"),
+         Setting("ClearCurrencies", Deprecated = "11.1.2.2"),
+         Setting("ClearCustom1", Deprecated = "11.1.2.2"),
+         Setting("ClearCustom2", Deprecated = "11.1.2.2"),
+         Setting("ClearCustom3", Deprecated = "11.1.2.2"),
+         Setting("ClearCustom4", Deprecated = "11.1.2.2"),
+         Setting("ClearEntities", Deprecated = "11.1.2.2"),
+         Setting("ClearScenarios", Deprecated = "11.1.2.2"),
+         Setting("Currencies"),
+         Setting("Custom1", Deprecated = "11.1.2.2"),
+         Setting("Custom2", Deprecated = "11.1.2.2"),
+         Setting("Custom3", Deprecated = "11.1.2.2"),
+         Setting("Custom4", Deprecated = "11.1.2.2"),
+         Setting("CustomX", Since = "11.1.2.2"),
+         Setting("Delimiter", ParameterType = typeof(string)), // TODO: Validation list
+         Setting("Entities"),
+         Setting("FileFormat", ParameterType = typeof(HSV_METALOADEX_FILE_FORMAT)),
+         Setting("ICP"),
+         Setting("LoadSystemMembers"),
+         Setting("Prescan"),
+         Setting("Scenarios"),
+         Setting("UseReplaceMode"),
+         Setting("Values")]
         public class LoadOptions : LoadExtractOptions
         {
             [Factory]
@@ -19,11 +50,28 @@ namespace HFM
                 base(typeof(IHsvLoadExtractOptions), typeof(IHsvLoadExtractOption),
                      typeof(HSV_METADATALOAD_OPTION), mdl.HsvMetadataLoad.LoadOptions)
             {
-                // TODO: Tell base class about enum on FileFormat
             }
         }
 
 
+        [Setting("Accounts"),
+         Setting("SystemAccounts"),
+         Setting("AppSettings"),
+         Setting("CellTextLabels", Since = "11.1.2.2"),
+         Setting("ConsolMethods"),
+         Setting("Currencies"),
+         Setting("Custom1", Deprecated = "11.1.2.2"),
+         Setting("Custom2", Deprecated = "11.1.2.2"),
+         Setting("Custom3", Deprecated = "11.1.2.2"),
+         Setting("Custom4", Deprecated = "11.1.2.2"),
+         Setting("CustomX", Since = "11.1.2.2"),
+         Setting("Delimiter", ParameterType = typeof(string)), // TODO: Validation list
+         Setting("Entities"),
+         Setting("ExtractSystemMembers"),
+         Setting("FileFormat", ParameterType = typeof(HSV_METALOADEX_FILE_FORMAT)),
+         Setting("ICPs"),
+         Setting("Scenarios"),
+         Setting("Values")]
         public class ExtractOptions : LoadExtractOptions
         {
             [Factory]
@@ -31,7 +79,6 @@ namespace HFM
                 base(typeof(IHsvLoadExtractOptions), typeof(IHsvLoadExtractOption),
                      typeof(HSV_METADATAEXTRACT_OPTION), mdl.HsvMetadataLoad.ExtractOptions)
             {
-                // TODO: Tell base class about enum on FileFormat
             }
         }
 

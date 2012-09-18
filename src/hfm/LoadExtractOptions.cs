@@ -88,21 +88,8 @@ namespace HFM
         {
             _optionsType = optionsType;
             _optionType = optionType;
-            _enumType = enumType;
             _options = options;
             _settings = new Dictionary<string, LoadExtractOption>();
-
-            foreach(var mbr in Enum.GetNames(_enumType)) {
-                // Filter out _MIN and _MAX enum members if present
-                if(mbr.EndsWith("_MIN") || mbr.EndsWith("_MAX")) {
-                    continue;
-                }
-
-                // Obtain the option object corresponding to the enum member
-                var option = new LoadExtractOption(optionType, optionsType.GetMethod("get_Item")
-                        .Invoke(_options, new object[] { Enum.Parse(_enumType, mbr )}));
-                _settings[option.Name] = option;
-            }
         }
 
 
