@@ -20,9 +20,11 @@ namespace Command
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
         // Dictionary of command instances keyed by command name
-        private IDictionary<string, Command> _commands;
+        private Dictionary<string, Command> _commands;
         // Dictionary of types to factory constructors/methods/properties
-        private IDictionary<Type, Factory> _factories;
+        private Dictionary<Type, Factory> _factories;
+        /// Dictionary of class types to settings that instances of the class hold
+        private Dictionary<Type, List<SettingAttribute>> _settings;
         // Dictionary of types to alternate factories
         protected List<Factory> _alternates;
 
@@ -36,6 +38,7 @@ namespace Command
         {
             _commands = new Dictionary<string, Command>(StringComparer.OrdinalIgnoreCase);
             _factories = new Dictionary<Type, Factory>();
+            _settings = new Dictionary<Type, List<SettingAttribute>>();
             _alternates = new List<Factory>();
         }
 
@@ -76,6 +79,14 @@ namespace Command
             string desc;
 
             if(t.IsClass) {
+                // Process class level attributes
+                List<SettingAttribute> settings = new List<SettingAttribute>();
+                foreach(var attr in t.GetCustomAttributes(typeof(SettingAttribute), false)) {
+                    settings.Add((SettingAttribute)attr);
+                }
+                _settings[t] = settings;
+
+                // Process members of class
                 foreach(var mi in t.GetMembers(BindingFlags.Public|BindingFlags.Instance)) {
                     cmd = null;
                     factory = null;
@@ -117,7 +128,6 @@ namespace Command
         {
             _commands.Add(cmd.Name, cmd);
         }
-
 
 
         /// <summary>
@@ -170,6 +180,16 @@ namespace Command
         public Factory GetFactory(Type type)
         {
             return _factories[type];
+        }
+
+
+        /// <summary>
+        /// Returns a list of the settings an ISettingsCollection instance
+        /// holds.
+        /// </summary>
+        public List<SettingAttribute> GetSettings(Type type)
+        {
+            return _settings[type];
         }
 
 

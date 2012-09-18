@@ -155,12 +155,6 @@ namespace Command
         }
 
         /// <summary>
-        /// Returns a list of the valid keys that can be used with the settings
-        /// collection.
-        /// </summary>
-        List<string> ValidKeys();
-
-        /// <summary>
         /// Returns the default value for a single setting in the collection.
         /// </summary>
         object DefaultValue(string key);

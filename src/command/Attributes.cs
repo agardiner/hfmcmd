@@ -15,7 +15,7 @@ namespace Command
     /// </summary>
     [AttributeUsage(AttributeTargets.Method | AttributeTargets.Parameter,
      AllowMultiple = false)]
-    class DescriptionAttribute : Attribute
+    public class DescriptionAttribute : Attribute
     {
         public string Description;
 
@@ -31,7 +31,7 @@ namespace Command
     /// invoked from a script or command file.
     /// </summary>
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
-    class CommandAttribute : Attribute
+    public class CommandAttribute : Attribute
     {
     }
 
@@ -45,7 +45,7 @@ namespace Command
     /// </summary>
     [AttributeUsage(AttributeTargets.Constructor | AttributeTargets.Method | AttributeTargets.Property,
      AllowMultiple = false)]
-    class FactoryAttribute : Attribute
+    public class FactoryAttribute : Attribute
     {
     }
 
@@ -59,8 +59,46 @@ namespace Command
     /// </summary>
     [AttributeUsage(AttributeTargets.Constructor | AttributeTargets.Method | AttributeTargets.Property,
      AllowMultiple = false)]
-    class AlternateFactoryAttribute : Attribute
+    public class AlternateFactoryAttribute : Attribute
     {
+    }
+
+
+    /// <summary>
+    /// Used to define the possible settings that can appear in an
+    /// ISettingsCollection subclass. These often change between versions, so
+    /// Since and Deprecated arguments are supported.
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
+    public class SettingAttribute : Attribute, ISetting
+    {
+        /// Name of the setting
+        public string Name { get; set; }
+        /// Description of the setting
+        public string Description { get; set; }
+        /// The Type of value which the setting accepts
+        public Type ParameterType { get; set; }
+        /// Whether the setting is sensitive, and should be masked
+        public bool IsSensitive { get; set; }
+        /// Whether the setting has a DefaultValue
+        public bool HasDefaultValue { get; set; }
+        /// Default value for setting (may be null)
+        public object DefaultValue { get; set; }
+        /// Version in which the setting was introduced
+        public string Since { get; set; }
+        /// Version in which the setting was deprecated
+        public string Deprecated { get; set; }
+
+        public SettingAttribute()
+        {
+            ParameterType = typeof(bool);
+        }
+
+        public SettingAttribute(string name)
+        {
+            Name = name;
+            ParameterType = typeof(bool);
+        }
     }
 
 
@@ -73,7 +111,7 @@ namespace Command
     /// at the end of the list of parameters).
     /// </summary>
     [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false)]
-    class DefaultValueAttribute : Attribute
+    public class DefaultValueAttribute : Attribute
     {
         public object Value;
 
@@ -89,7 +127,7 @@ namespace Command
     /// sensitive information such as passwords. These will be masked if logged.
     /// </summary>
     [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false)]
-    class SensitiveValueAttribute : Attribute
+    public class SensitiveValueAttribute : Attribute
     {
     }
 
