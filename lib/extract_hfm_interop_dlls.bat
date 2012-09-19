@@ -23,6 +23,6 @@ MKDIR %TARGET%
 %TLBIMP% %HFM_HOME%\Server\HsvSession.dll /out: %OUTPUT_PATH%\Interop.HSVSESSIONLib.dll /namespace:HSVSESSIONLib
 %TLBIMP% %HFM_HOME%\Server\HsvStarSchemaACM.dll /out: %OUTPUT_PATH%\Interop.HSVSTARSCHEMAACMLib.dll /namespace:HSVSTARSCHEMAACMLib
 %TLBIMP% %HFM_HOME%\Server\HsvSystemInfo.dll /out: %OUTPUT_PATH%\Interop.HSVSYSTEMINFOLib.dll /namespace:HSVSYSTEMINFOLib
-
 %TLBIMP% %HFM_HOME%\Server\HsxServer.exe /out: %OUTPUT_PATH%\Interop.HSXSERVERLib.dll /namespace:HSXSERVERLib
 
+%TLBIMP% "%HFM_HOME%\Web Server\HFMwDocuments.dll" /out: %OUTPUT_PATH%\Interop.HFMWDOCUMENTSLib.dll /namespace:HFMWDOCUMENTSLib
