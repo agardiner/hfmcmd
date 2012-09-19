@@ -99,9 +99,6 @@ namespace HFM
             HsvMetadataLoad.SetSession(session.HsvSession);
         }
 
-        [Command]
-        public void Test() { new LoadOptions(this); new ExtractOptions(this); }
-
 
         [Command,
          Description("Loads an HFM application's metadata from a native ASCII or XML file")]

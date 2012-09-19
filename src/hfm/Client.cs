@@ -68,7 +68,8 @@ namespace HFM
             catch(COMException ex) {
                 unchecked {
                     if(ex.ErrorCode == (int)0x80040154) {
-                        _log.Error("Unable to instantiate an HsxClient COM object; is HFM installed on this machine?", ex);
+                        _log.Error("Unable to instantiate an HsxClient COM object; " +
+                                   "is HFM installed on this machine?", ex);
                     }
                 }
                 throw ex;
@@ -83,9 +84,12 @@ namespace HFM
                      "details need to be those of a Shared Services user (native or external) " +
                      "that has been provisioned to one or more HFM applications.")]
         public Connection SetLogonInfo(
-                [Description("The Windows domain to which the user belongs"), DefaultValue(null)] string domain,
-                [Description("The user name to login with") ] string userName,
-                [Description("The password to login with"), SensitiveValue] string password)
+                [Description("The Windows domain to which the user belongs"), DefaultValue(null)]
+                string domain,
+                [Description("The user name to login with")]
+                string userName,
+                [Description("The password to login with"), SensitiveValue]
+                string password)
         {
             HFM.Try("Setting logon credentials via username and password",
                     () => _client.SetLogonInfoSSO(domain, userName, null, password));
@@ -99,7 +103,8 @@ namespace HFM
                      "an existing authenticated session, and may been obtained from the GetLogonToken " +
                      "command, or from another Hyperion session.")]
         public Connection SetLogonToken(
-                [Description("An SSO token obtained from an existing Shared Services connection")] string token)
+                [Description("An SSO token obtained from an existing Shared Services connection")]
+                string token)
         {
             HFM.Try("Setting logon credentials via SSO token",
                     () => _client.SetLogonInfoSSO(null, null, token, null));
@@ -111,7 +116,8 @@ namespace HFM
         public Server GetServer(string clusterName)
         {
             object server = null;
-            HFM.Try("Retrieving HsxServer instance", () => server = _client.GetServerOnCluster(clusterName));
+            HFM.Try("Retrieving HsxServer instance",
+                    () => server = _client.GetServerOnCluster(clusterName));
             return new Server((HsxServer)server);
         }
 
@@ -135,7 +141,12 @@ namespace HFM
 
 
         [Command]
-        public void GetClusterInfo(string serverName, bool loadBalanced, IOutput output)
+        public void GetClusterInfo(
+                [Description("The name of the server")]
+                string serverName,
+                [Description("True to return the cluster name for the server, false to return the server name")]
+                bool loadBalanced,
+                IOutput output)
         {
             string clusterName = null;
             // TODO: This seems to always throw an exception!?
@@ -165,7 +176,7 @@ namespace HFM
                 [DefaultValue(true)] bool deleteAll,
                 [DefaultValue(null)] string[] errorReferences)
         {
-
+            // TODO: Implement me!
         }
 
 
@@ -218,7 +229,11 @@ namespace HFM
         /// interacting with it.
         [Command, Factory,
          Description("Open an HFM application and establish a session.")]
-        public Session OpenApplication(string clusterName, string appName)
+        public Session OpenApplication(
+                [Description("The name of the cluster on which to open the application")]
+                string clusterName,
+                [Description("The name of the application to open")]
+                string appName)
         {
             object hsxServer = null, hsvSession = null;
             HFM.Try(string.Format("Opening application {0} on {1}", appName, clusterName),
@@ -231,7 +246,10 @@ namespace HFM
 
         [Command,
          Description("Returns the names of the available provisioning projects in Shared Services.")]
-        public string[] GetProvisioningProjects(string clusterName, IOutput output)
+        public string[] GetProvisioningProjects(
+                [Description("The name of the cluster from which to obtain the Shared Services information")]
+                string clusterName,
+                IOutput output)
         {
             object projects = null;
             HFM.Try("Retrieving names of provisioning projects",
@@ -248,12 +266,22 @@ namespace HFM
 
         [Command,
          Description("Creates a new HFM classic application.")]
-        public void CreateApplication(string clusterName, string appName,
-                string appDesc, string profilePath,
-                [DefaultValue("Default Application Group")] string sharedServicesProject,
+        public void CreateApplication(
+                [Description("The name of the cluster on which to create the application")]
+                string clusterName,
+                [Description("The name to be given to the new application")]
+                string appName,
+                [Description("The description for the new application (cannot be blank)")]
+                string appDesc,
+                [Description("Path to the application profile (.per) file used to define the" +
+                             "time and custom dimensions")]
+                string profilePath,
+                [DefaultValue("Default Application Group")]
+                string sharedServicesProject,
                 [Description("The URL of the virtual directory for Financial Management. " +
                  "The URL should include the protocol, Web server name and port, and virtual " +
-                 "directory name.")] string appWebServerUrl)
+                 "directory name.")]
+                string appWebServerUrl)
         {
             byte[] profile = File.ReadAllBytes(profilePath);
 
@@ -267,7 +295,11 @@ namespace HFM
         [Command,
          Description("Deletes the specified HFM (classic) application. Note: HFM applications " +
                      "created via or migrated to EPMA cannot be deleted via this command.")]
-        public void DeleteApplication(string clusterName, string appName)
+        public void DeleteApplication(
+                [Description("The name of the cluster from which to delete the application")]
+                string clusterName,
+                [Description("The name of the application to be deleted")]
+                string appName)
         {
             HFM.Try(string.Format("Deleting application {0} on {1}", appName, clusterName),
                     () => _client.DeleteApplication(clusterName, "Financial Management", appName));
@@ -276,7 +308,10 @@ namespace HFM
 
         [Command,
          Description("Returns true if the connected user has CreateApplication rights on the HFM cluster")]
-        public bool UserHasCreateApplicationRights(string clusterName, IOutput output)
+        public bool UserHasCreateApplicationRights(
+                [Description("The name of the cluster on which to check the user rights")]
+                string clusterName,
+                IOutput output)
         {
             bool hasAccess = false;
             HFM.Try("Checking if user has CreateApplication rights",
@@ -289,7 +324,10 @@ namespace HFM
 
         [Command,
          Description("Returns true if the connected user has SystemAdmin rights on the HFM cluster")]
-        public bool UserHasSystemAdminRights(string clusterName, IOutput output)
+        public bool UserHasSystemAdminRights(
+                [Description("The name of the cluster on which to check the user rights")]
+                string clusterName,
+                IOutput output)
         {
             bool hasAdmin = false;
             HFM.Try("Checking if user has SystemAdmin rights",
