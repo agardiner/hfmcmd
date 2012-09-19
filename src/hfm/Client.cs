@@ -273,14 +273,15 @@ namespace HFM
                 string appName,
                 [Description("The description for the new application (cannot be blank)")]
                 string appDesc,
-                [Description("Path to the application profile (.per) file used to define the" +
+                [Description("Path to the application profile (.per) file used to define the " +
                              "time and custom dimensions")]
                 string profilePath,
-                [DefaultValue("Default Application Group")]
+                [Description("The name of the project to assign the application to in Shared Services"),
+                 DefaultValue("Default Application Group")]
                 string sharedServicesProject,
                 [Description("The URL of the virtual directory for Financial Management. " +
                  "The URL should include the protocol, Web server name and port, and virtual " +
-                 "directory name.")]
+                 "directory name, e.g. http://<server>:80/hfm")]
                 string appWebServerUrl)
         {
             byte[] profile = File.ReadAllBytes(profilePath);

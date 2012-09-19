@@ -183,6 +183,12 @@ namespace Command
         }
 
 
+        public IEnumerable<Command> EachCommand()
+        {
+            return _commands.Values;
+        }
+
+
         /// <summary>
         /// Returns a list of the settings an ISettingsCollection instance
         /// holds.

@@ -299,9 +299,51 @@ namespace HFMCmd
         }
 
 
+        [Command, Description("Displays help information")]
+        public void Help(
+                [Description("The name of a command for which to display detailed help"),
+                 DefaultValue(null)]
+                string command)
+        {
+            if(command == null) {
+                // TODO: Display general help
+                Console.Out.WriteLine(HFMCmd.Resource.Help.General);
+            }
+            else if(string.Equals(command, "Commands", StringComparison.OrdinalIgnoreCase)) {
+                // TODO: Display a list of commands
+                Console.Out.WriteLine("Commands:");
+                foreach(var cmd in _commands.EachCommand()) {
+                    Console.Out.WriteLine("    {0}", cmd.Name);
+                }
+            }
+            else {
+                // TODO: Display help for the requested command
+                var cmd = _commands[command];
+                Console.Out.WriteLine("Help for command {0}", cmd.Name);
+                Console.Out.WriteLine();
+                if(cmd.Description != null) {
+                    Console.Out.WriteLine("Description");
+                    Console.Out.WriteLine("-----------");
+                    Console.Out.WriteLine(cmd.Description);
+                    Console.Out.WriteLine();
+                }
+                if(cmd.Parameters != null) {
+                    Console.Out.WriteLine("Parameters");
+                    Console.Out.WriteLine("----------");
+                    foreach(var parm in cmd.Parameters) {
+                        Console.Out.WriteLine("  {0,-25} {1}", parm.Name, parm.Description);
+                    }
+                }
+            }
+        }
+
+
         [Command, Description("Set the log level and/or log file")]
-        public void Log([Description("Level at which to log"), DefaultValue(null)] string level,
-                        [Description("Path to log file"), DefaultValue(null)] string logFile)
+        public void Log(
+                [Description("Level at which to log; unchanged if not specified"), DefaultValue(null)]
+                string level,
+                [Description("Path to log file; unchanged if not specified"), DefaultValue(null)]
+                string logFile)
         {
             // Set the log level
             if(level != null) {

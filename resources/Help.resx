@@ -130,4 +130,13 @@
     </value>
   </data>
 
+  <data name="General">
+    <value>
+      Some general help to go here!
+
+      To obtain a list of available commands, use:
+        {0} Help Commands
+    </value>
+  </data>
+
 </root>
