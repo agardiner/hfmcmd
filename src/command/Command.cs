@@ -159,9 +159,6 @@ namespace Command
         /// </summary>
         object DefaultValue(string key);
 
-        /// Means for iterating over settings in a collection
-        IEnumerable<ISetting> Each();
-
     }
 
 

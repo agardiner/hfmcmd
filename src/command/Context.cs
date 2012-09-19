@@ -277,13 +277,20 @@ namespace Command
             var parms = new object[cmd.Parameters.Count];
             var i = 0;
             foreach(var param in cmd.Parameters) {
+                _log.DebugFormat("Processing parameter {0}", param.Name);
                 if(args.ContainsKey(param.Name)) {
                     _log.DebugFormat("Setting {0} to '{1}'", param.Name,
                             param.IsSensitive ? "******" : args[param.Name]);
                     parms[i++] = args[param.Name];
                 }
                 else if(param.IsCollection) {
-                    // TODO: Add support for ISettingsCollection parameters
+                    // Attempt to create an instance of the collection class if necessary
+                    if(!HasObject(param.ParameterType)) {
+                        foreach(var step in FindPathToType(param.ParameterType)) {
+                            Instantiate(step, args);
+                        }
+                    }
+                    // Set each setting that has a value in the supplied args
                     var coll = this[param.ParameterType] as ISettingsCollection;
                     foreach(var setting in GetSettings(param.ParameterType)) {
                         if(args.ContainsKey(setting.Name)) {
