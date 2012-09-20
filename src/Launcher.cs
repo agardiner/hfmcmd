@@ -274,20 +274,17 @@ namespace HFMCmd
 
         protected void AddSettingAsArg(ISetting setting)
         {
-            var key = char.ToUpper(setting.Name[0]) + setting.Name.Substring(1);
-            _log.DebugFormat("Adding keyword arg {0}", key);
+            if(setting.IsCurrent(HFM.HFM.Version)) {
+                var key = char.ToUpper(setting.Name[0]) + setting.Name.Substring(1);
+                _log.DebugFormat("Adding keyword arg {0}", key);
 
-            // Add mapping for enum (if necessary)
-            if(setting.ParameterType.IsEnum && !_argumentMapper.CanConvert(setting.ParameterType)) {
-                _argumentMapper.AddEnum(setting.ParameterType);
-            }
-
-            // Add a keyword argument for this setting
-            var arg = _cmdLine.AddKeywordArgument(key, setting.Description, setting.ParameterType);
-            arg.IsRequired = !setting.HasDefaultValue;
-            arg.IsSensitive = setting.IsSensitive;
-            if(setting.HasDefaultValue && setting.DefaultValue != null) {
-                arg.DefaultValue = setting.DefaultValue.ToString();
+                // Add a keyword argument for this setting
+                var arg = _cmdLine.AddKeywordArgument(key, setting.Description, setting.ParameterType);
+                arg.IsRequired = !setting.HasDefaultValue;
+                arg.IsSensitive = setting.IsSensitive;
+                if(setting.HasDefaultValue && setting.DefaultValue != null) {
+                    arg.DefaultValue = setting.DefaultValue.ToString();
+                }
             }
         }
 
@@ -331,7 +328,18 @@ namespace HFMCmd
                     Console.Out.WriteLine("Parameters");
                     Console.Out.WriteLine("----------");
                     foreach(var parm in cmd.Parameters) {
-                        Console.Out.WriteLine("  {0,-25} {1}", parm.Name, parm.Description);
+                        if(parm.HasParameterAttribute) {
+                            if(parm.IsCurrent(HFM.HFM.Version)) {
+                                Console.Out.WriteLine("  {0,-25} {1}", parm.Name, parm.Description);
+                            }
+                        }
+                        else if(parm.IsCollection) {
+                            foreach(var setting in _commands.GetSettings(parm.ParameterType)) {
+                                if(setting.IsCurrent(HFM.HFM.Version)) {
+                                    Console.Out.WriteLine("  {0,-25} {1}", setting.Name, setting.Description);
+                                }
+                            }
+                        }
                     }
                 }
             }

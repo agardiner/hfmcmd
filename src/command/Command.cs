@@ -104,6 +104,8 @@ namespace Command
         public string Name { get { return _name; } }
         /// Returns the type of the parameter's values
         public Type ParameterType { get { return _paramType; } }
+        /// Returns true if the command parameter has a ParameterAttribute
+        public bool HasParameterAttribute { get { return _paramAttribute != null; } }
         /// Returns the ParameterAttribute associated with this parameter (if any)
         public ParameterAttribute ParameterAttribute { get { return _paramAttribute; } }
         /// Returns the description of the parameter

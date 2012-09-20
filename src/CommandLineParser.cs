@@ -263,20 +263,71 @@ namespace CommandLine
         public PluggableArgumentMapper() : this(true) { }
 
 
+        /// <summary>
         /// Construct a new instance, and registers default conversions if
         /// includeDefaults is true.
+        /// </summary>
         public PluggableArgumentMapper(bool includeDefaults) {
             _maps = new Dictionary<Type, Func<string, Type, Dictionary<string, object>, object>>();
             if(includeDefaults) {
+                this[typeof(string)] = (val, type, args) => val;
                 this[typeof(int)] = (val, type, args) => int.Parse(val);
+                this[typeof(double)] = (val, type, args) => double.Parse(val);
                 this[typeof(bool)] = (val, type, args) =>
                     new Regex("^t(rue)?|y(es)?$", RegexOptions.IgnoreCase).IsMatch(val);
-                this[typeof(string[])] = (val, type, args) => val.Split(',');
             }
         }
 
 
-        public object ConvertEnum(string val, Type type, Dictionary<string, object> args)
+        /// <summary>
+        /// Remove the map expression for type.
+        /// </summary>
+        public void Remove(Type type)
+        {
+            _maps.Remove(type);
+        }
+
+
+        /// <summary>
+        /// Returns true if type can be converted, false if it cannot.
+        /// </summary>
+        public bool CanConvert(Type type)
+        {
+            if(type.IsArray) {
+                return type.GetElementType().IsEnum || _maps.ContainsKey(type.GetElementType());
+            }
+            else if(type.IsEnum) {
+                return true;
+            }
+            else {
+                return _maps.ContainsKey(type);
+            }
+        }
+
+
+        /// <summary>
+        /// Returns the result of converting the supplied argument.
+        /// </summary>
+        public object ConvertArgument(Argument arg, string value, Dictionary<string, object> argVals)
+        {
+            if(CanConvert(arg.Type)) {
+                if(_maps.ContainsKey(arg.Type)) {
+                    return _maps[arg.Type](value, arg.Type, argVals);
+                }
+                else if(arg.Type.IsEnum) {
+                    return ConvertEnum(value, arg.Type);
+                }
+                else if(arg.Type.IsArray) {
+                    return ConvertArray(value, arg.Type.GetElementType(), argVals);
+                }
+            }
+            throw new ArgumentException(
+                    string.Format("No conversion is registered for type {0}", arg.Type));
+        }
+
+
+        /// Converts a string to an enum
+        protected object ConvertEnum(string val, Type type)
         {
             // Try to parse value as provided
             try {
@@ -285,51 +336,44 @@ namespace CommandLine
             catch (ArgumentException)
             { }
 
-            // If we get here, we got an ArgumentException, so try TitleCase-ing value
+            // OK, so see if exactly one enum value ends with the supplied value
             try {
-                if (val == val.ToUpper()) {
-                    val = val.Substring(0, 1) + val.Substring(1).ToLower();
-                }
-                return Enum.Parse(type, val);
+                var enumVal = Enum.GetNames(type).Single(
+                        name => name.EndsWith(val, StringComparison.OrdinalIgnoreCase));
+                return Enum.Parse(type, enumVal);
             }
-            catch (ArgumentException ex) {
+            catch (Exception ex) {
                 throw new ArgumentException(string.Format("Invalid value '{0}' specified for {1}. Valid values are: {2}",
                             val, type, string.Join(", ", Enum.GetNames(type))), ex);
             }
         }
 
 
-        public void AddEnum(Type enumType)
+        /// Converts a string to an array of objects
+        protected object ConvertArray(string val, Type type, Dictionary<string, object> argVals)
         {
-            if(typeof(Enum).IsAssignableFrom(enumType)) {
-                this[enumType] = (val, type, args) => ConvertEnum(val, type, args);
+            string[] vals = val.Split(',');
+            object[] obj = (object [])Array.CreateInstance(type, vals.Length);
+            for(int i = 0; i < vals.Length; ++i) {
+                obj[i] = ConvertArrayElement(vals[i], type, argVals);
+            }
+            return obj;
+        }
+
+
+        /// Converts a single element of an array
+        protected object ConvertArrayElement(string val, Type type, Dictionary<string, object> argVals)
+        {
+            if(_maps.ContainsKey(type)) {
+                return _maps[type](val, type, argVals);
+            }
+            else if(type.IsEnum) {
+                return ConvertEnum(val, type);
             }
             else {
-                throw new ArgumentException(string.Format("Type {0} is not an enum", enumType));
-            }
-        }
-
-
-        /// Remove the map expression for type.
-        public void Remove(Type type)
-        {
-            _maps.Remove(type);
-        }
-
-
-        public bool CanConvert(Type type)
-        {
-            return _maps.ContainsKey(type);
-        }
-
-
-        public object ConvertArgument(Argument arg, string value, Dictionary<string, object> argVals)
-        {
-            if(!_maps.ContainsKey(arg.Type)) {
                 throw new ArgumentException(
-                        string.Format("No conversion is registered for type {0}", arg.Type));
+                        string.Format("No conversion is registered for type {0}", type));
             }
-            return _maps[arg.Type](value, arg.Type, argVals);
         }
 
     }
