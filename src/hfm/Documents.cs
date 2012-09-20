@@ -94,10 +94,10 @@ namespace HFM
                 [Parameter("The document repository folder that contains the documents to return")]
                 string path,
                 [Parameter("A list of document type(s) to return",
-                           DefaultValue = new EDocumentType[] { EDocumentType.All })]
+                           DefaultValue = EDocumentType.All)]
                 EDocumentType[] documentTypes,
                 [Parameter("A list of document file type(s) to return",
-                           DefaultValue = new EDocumentFileType[] { EDocumentFileType.All })]
+                           DefaultValue = EDocumentFileType.All)]
                 EDocumentFileType[] documentFileTypes,
                 [Parameter("Start time of the timestamp filtering range (0 for no start filter)",
                            DefaultValue = 0)]
