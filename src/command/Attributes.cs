@@ -82,6 +82,37 @@ namespace Command
         public bool   IsSensitive { get; set; }
         /// The constant prefix of all values in the enum which can be omitted
         public string EnumPrefix { get; set; }
+        /// Version in which the setting was introduced
+        public string Since { get; set; }
+        /// Version in which the setting was deprecated
+        public string Deprecated { get; set; }
+
+
+        /// Checks if the setting is current for a specified version, based on
+        // the Since and/or Deprecated settings.
+        public bool IsCurrent(string version)
+        {
+            bool current = true;
+            if(Since != null || Deprecated != null) {
+                var ver = ConvertVersionStringToNumber(version);
+                var from = Since != null ? ConvertVersionStringToNumber(Since) : ver;
+                var to = Deprecated != null ? ConvertVersionStringToNumber(Deprecated) : ver + 1;
+                current = ver >= from && ver < to;
+            }
+            return current;
+        }
+
+
+        private int ConvertVersionStringToNumber(string ver)
+        {
+            var parts = ver.Split('.');
+            int verNum = 0;
+
+            for(var i = 0; i < 4; i++) {
+                verNum = verNum * 100 + (i < parts.Length ? int.Parse(parts[i]) : 0);
+            }
+            return verNum;
+        }
 
     }
 
@@ -120,10 +151,6 @@ namespace Command
         public string Name { get; set; }
         /// The Type of value which the setting accepts
         public Type ParameterType { get; set; }
-        /// Version in which the setting was introduced
-        public string Since { get; set; }
-        /// Version in which the setting was deprecated
-        public string Deprecated { get; set; }
 
 
         public SettingAttribute(string name)
@@ -131,33 +158,6 @@ namespace Command
             Name = name;
             ParameterType = typeof(bool);
             _hasDefaultValue = true;
-        }
-
-
-        /// Checks if the setting is current for a specified version, based on
-        // the Since and/or Deprecated settings.
-        public bool IsCurrent(string version)
-        {
-            bool current = true;
-            if(Since != null || Deprecated != null) {
-                var ver = ConvertVersionStringToNumber(version);
-                var from = Since != null ? ConvertVersionStringToNumber(Since) : ver;
-                var to = Deprecated != null ? ConvertVersionStringToNumber(Deprecated) : ver + 1;
-                current = ver >= from && ver < to;
-            }
-            return current;
-        }
-
-
-        private int ConvertVersionStringToNumber(string ver)
-        {
-            var parts = ver.Split('.');
-            int verNum = 0;
-
-            for(var i = 0; i < 4; i++) {
-                verNum = verNum * 100 + (i < parts.Length ? int.Parse(parts[i]) : 0);
-            }
-            return verNum;
         }
     }
 

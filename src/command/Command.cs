@@ -81,6 +81,9 @@ namespace Command
         bool HasDefaultValue { get; }
         /// The default value (if HasDefaultValue is true)
         object DefaultValue { get; }
+
+        /// Is the setting current for the specified version?
+        bool IsCurrent(string version);
     }
 
 
@@ -131,6 +134,12 @@ namespace Command
         public bool IsCollection
         {
             get { return typeof(ISettingsCollection).IsAssignableFrom(ParameterType); }
+        }
+
+        /// Returns true if the parameter is current
+        public bool IsCurrent(string version)
+        {
+            return _paramAttribute != null ? _paramAttribute.IsCurrent(version) : true;
         }
 
 
