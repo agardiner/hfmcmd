@@ -92,33 +92,54 @@ namespace Command
     {
         // Fields
         private string _name;
-        private Type _parameterType;
+        private Type _paramType;
+        private ParameterAttribute _paramAttribute;
 
         // Properties
-        public string Name { get { return _name; } }
-        public Type ParameterType { get { return _parameterType; } }
-        public string Description { get; set; }
-        public bool HasDefaultValue { get; set; }
-        public object DefaultValue { get; set; }
-        public bool IsSensitive { get; set; }
 
+        /// Returns the name of the parameter
+        public string Name { get { return _name; } }
+        /// Returns the type of the parameter's values
+        public Type ParameterType { get { return _paramType; } }
+        /// Returns the ParameterAttribute associated with this parameter (if any)
+        public ParameterAttribute ParameterAttribute { get { return _paramAttribute; } }
+        /// Returns the description of the parameter
+        public string Description {
+            get {
+                return _paramAttribute != null ? _paramAttribute.Description : null;
+            }
+        }
+        /// Returns true if this parameter has a default value
+        public bool HasDefaultValue {
+            get {
+                return _paramAttribute != null ? _paramAttribute.HasDefaultValue : false;
+            }
+        }
+        /// Returns the default value for this parameter
+        public object DefaultValue {
+            get {
+                return _paramAttribute != null ? _paramAttribute.DefaultValue : null;
+            }
+        }
+        /// Returns true if this parameter value is sensitive
+        public bool IsSensitive {
+            get {
+                return _paramAttribute != null ? _paramAttribute.IsSensitive : false;
+            }
+        }
+        /// Returns true if this parameter is an ISettingsCollection
         public bool IsCollection
         {
             get { return typeof(ISettingsCollection).IsAssignableFrom(ParameterType); }
         }
 
+
         /// Constructor
         public CommandParameter(ParameterInfo pi)
         {
             _name = pi.Name;
-            _parameterType = pi.ParameterType;
-            var attr = Attribute.GetCustomAttribute(pi, typeof(ParameterAttribute)) as ParameterAttribute;
-            if(attr != null) {
-                Description = attr.Description;
-                DefaultValue = attr.DefaultValue;
-                HasDefaultValue = attr.HasDefaultValue;
-                IsSensitive = attr.IsSensitive;
-            }
+            _paramType = pi.ParameterType;
+            _paramAttribute = Attribute.GetCustomAttribute(pi, typeof(ParameterAttribute)) as ParameterAttribute;
         }
 
         public override string ToString()
