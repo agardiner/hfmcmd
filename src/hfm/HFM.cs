@@ -24,6 +24,9 @@ namespace HFM
         protected static readonly ILog _log = LogManager.GetLogger(
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
+        /// Returns the current installed HFM version
+        public static string Version { get { return ResourceManager.Version; } }
+
 
         /// <summary>
         /// Encapsulate a common pattern for performing an API call against HFM.
