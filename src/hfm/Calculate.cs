@@ -25,7 +25,7 @@ namespace HFM
         }
 
 
-        [Command]
+        [Command("Performs an allocation")]
         public void Allocate()
         {
 

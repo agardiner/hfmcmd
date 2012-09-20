@@ -299,10 +299,10 @@ namespace HFMCmd
         }
 
 
-        [Command, Description("Displays help information")]
+        [Command("Displays help information")]
         public void Help(
-                [Description("The name of a command for which to display detailed help"),
-                 DefaultValue(null)]
+                [Parameter("The name of a command for which to display detailed help",
+                 DefaultValue = null)]
                 string command)
         {
             if(command == null) {
@@ -338,11 +338,11 @@ namespace HFMCmd
         }
 
 
-        [Command, Description("Set the log level and/or log file")]
+        [Command("Set the log level and/or log file")]
         public void Log(
-                [Description("Level at which to log; unchanged if not specified"), DefaultValue(null)]
+                [Parameter("Level at which to log; unchanged if not specified", DefaultValue = null)]
                 string level,
-                [Description("Path to log file; unchanged if not specified"), DefaultValue(null)]
+                [Parameter("Path to log file; unchanged if not specified", DefaultValue = null)]
                 string logFile)
         {
             // Set the log level

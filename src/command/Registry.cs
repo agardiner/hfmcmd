@@ -76,7 +76,6 @@ namespace Command
         {
             Factory factory;
             Command cmd;
-            string desc;
 
             if(t.IsClass) {
                 // Process class level attributes
@@ -90,13 +89,9 @@ namespace Command
                 foreach(var mi in t.GetMembers(BindingFlags.Public|BindingFlags.Instance)) {
                     cmd = null;
                     factory = null;
-                    desc = null;
                     foreach(var attr in mi.GetCustomAttributes(false)) {
-                        if(attr is DescriptionAttribute) {
-                            desc = (attr as DescriptionAttribute).Description;
-                        }
                         if(attr is CommandAttribute) {
-                            cmd = new Command(t, mi as MethodInfo);
+                            cmd = new Command(t, mi as MethodInfo, attr as CommandAttribute);
                             Add(cmd);
                         }
                         if(attr is FactoryAttribute) {
@@ -109,12 +104,9 @@ namespace Command
                             Add(factory, true);
                         }
                     }
-                    if(cmd != null) {
-                        cmd.Description = desc;
-                        if(factory != null) {
-                            cmd._factory = factory;
-                            factory._command = cmd;
-                        }
+                    if(cmd != null && factory != null) {
+                        cmd._factory = factory;
+                        factory._command = cmd;
                     }
                 }
             }

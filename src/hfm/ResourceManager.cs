@@ -56,7 +56,7 @@ namespace HFM
         }
 
 
-        [Command, Description("Displays the version of HFM that is installed")]
+        [Command("Displays the version of HFM that is installed")]
         public string GetHFMVersion(IOutput output)
         {
             var ver = (string)_resourceManager.GetCurrentVersionInUserDisplayFormat();
@@ -68,7 +68,7 @@ namespace HFM
         }
 
 
-        [Command, Description("Displays the version and build number of HFM that is installed")]
+        [Command("Displays the version and build number of HFM that is installed")]
         public string GetHFMBuild(IOutput output)
         {
             string ver = (string)_resourceManager.GetCurrentVersion();

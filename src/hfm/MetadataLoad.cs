@@ -37,7 +37,7 @@ namespace HFM
          Setting("CustomX", Since = "11.1.2.2"),
          Setting("Delimiter", ParameterType = typeof(string)), // TODO: Validation list
          Setting("Entities"),
-         Setting("FileFormat", ParameterType = typeof(HSV_METALOADEX_FILE_FORMAT)),
+         Setting("FileFormat", ParameterType = typeof(HSV_METALOADEX_FILE_FORMAT), EnumPrefix = "HSV_METALOADEX_"),
          Setting("ICP"),
          Setting("LoadSystemMembers"),
          Setting("Prescan"),
@@ -69,7 +69,7 @@ namespace HFM
          Setting("Delimiter", ParameterType = typeof(string)), // TODO: Validation list
          Setting("Entities"),
          Setting("ExtractSystemMembers"),
-         Setting("FileFormat", ParameterType = typeof(HSV_METALOADEX_FILE_FORMAT)),
+         Setting("FileFormat", ParameterType = typeof(HSV_METALOADEX_FILE_FORMAT), EnumPrefix = "HSV_METALOADEX_"),
          Setting("ICPs"),
          Setting("Scenarios"),
          Setting("Values")]
@@ -100,23 +100,26 @@ namespace HFM
         }
 
 
-        [Command,
-         Description("Loads an HFM application's metadata from a native ASCII or XML file")]
+        [Command("Loads an HFM application's metadata from a native ASCII or XML file")]
         public void LoadMetadata(
-                [Description("Path to the source metadata extract file")] string extractFile,
-                [Description("Path to the load log file; if not specified, defaults to same path " +
-                             "and name as the source metadata file."), DefaultValue(null)] string logFile,
+                [Parameter("Path to the source metadata extract file")]
+                string extractFile,
+                [Parameter("Path to the load log file; if not specified, defaults to same path " +
+                             "and name as the source metadata file.",
+                 DefaultValue = null)]
+                string logFile,
                 LoadOptions options)
         {
         }
 
 
-        [Command,
-         Description("Extracts an HFM application's metadata to a native ASCII or XML file")]
+        [Command("Extracts an HFM application's metadata to a native ASCII or XML file")]
         public void ExtractMetadata(
-                [Description("Path to the generated metadata extract file")] string extractFile,
-                [Description("Path to the extract log file; if not specified, defaults to same path " +
-                             "and name as extract file."), DefaultValue(null)] string logFile,
+                [Parameter("Path to the generated metadata extract file")]
+                string extractFile,
+                [Parameter("Path to the extract log file; if not specified, defaults to same path " +
+                           "and name as extract file.", DefaultValue = null)]
+                string logFile,
                 ExtractOptions options)
         {
             if(logFile == null || logFile == "") {

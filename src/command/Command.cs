@@ -45,28 +45,17 @@ namespace Command
 
 
         // Constructor
-        public Command(Type t, MethodInfo mi)
+        public Command(Type t, MethodInfo mi, CommandAttribute attr)
         {
             this.MethodInfo = mi;
             this.Type = t;
+            this.Description = attr.Description;
 
             _log.DebugFormat("Found command {0}", this.Name);
 
             foreach(var pi in mi.GetParameters()) {
                 var param = new CommandParameter(pi);
                 _log.DebugFormat("Found parameter {0}", param);
-                foreach(var attr in pi.GetCustomAttributes(false)) {
-                    if(attr is DefaultValueAttribute) {
-                        param.DefaultValue = (attr as DefaultValueAttribute).Value;
-                        param.HasDefaultValue = true;
-                    }
-                    if(attr is SensitiveValueAttribute) {
-                        param.IsSensitive = true;
-                    }
-                    if(attr is DescriptionAttribute) {
-                        param.Description = (attr as DescriptionAttribute).Description;
-                    }
-                }
                 this.Parameters.Add(param);
             }
         }
@@ -110,8 +99,8 @@ namespace Command
         public Type ParameterType { get { return _parameterType; } }
         public string Description { get; set; }
         public bool HasDefaultValue { get; set; }
-        public bool IsSensitive { get; set; }
         public object DefaultValue { get; set; }
+        public bool IsSensitive { get; set; }
 
         public bool IsCollection
         {
@@ -123,6 +112,13 @@ namespace Command
         {
             _name = pi.Name;
             _parameterType = pi.ParameterType;
+            var attr = Attribute.GetCustomAttribute(pi, typeof(ParameterAttribute)) as ParameterAttribute;
+            if(attr != null) {
+                Description = attr.Description;
+                DefaultValue = attr.DefaultValue;
+                HasDefaultValue = attr.HasDefaultValue;
+                IsSensitive = attr.IsSensitive;
+            }
         }
 
         public override string ToString()

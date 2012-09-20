@@ -29,23 +29,26 @@ namespace HFM
 
 
         // Reference to HFM HsxServer object
-        protected readonly HsxServer _server;
+        protected readonly HsxServer _hsxServer;
+
+        // Property for accessing underlying HsxServer instance; accessible only
+        // to other HFM components
+        internal HsxServer HsxServer { get { return _hsxServer; } }
 
 
         public Server(HsxServer server)
         {
-            _server = server;
+            _hsxServer = server;
         }
 
 
-        [Command,
-         Description("Returns the names of the applications that are known to the server")]
+        [Command("Returns the names of the applications that are known to the server")]
         public string[] GetApplications(IOutput output)
         {
             object products, apps = null, descs = null, dsns;
             string[] sApps, sDescs;
             HFM.Try("Retrieving names of applications",
-                    () => _server.EnumDataSources(out products, out apps, out descs, out dsns));
+                    () => _hsxServer.EnumDataSources(out products, out apps, out descs, out dsns));
             sApps = apps as string[];
             sDescs = descs as string[];
             output.SetFields("Application", "Description");
@@ -56,14 +59,13 @@ namespace HFM
         }
 
 
-        [Command,
-         Description("Returns the names of the Extended Analytics DSNs that are registered on the server")]
+        [Command("Returns the names of the Extended Analytics DSNs that are registered on the server")]
         public string[] GetDSNs(IOutput output)
         {
             object dsns = null;
             string[] sDSNs;
             HFM.Try("Retrieving names of DSNs",
-                    () => dsns = _server.EnumRegisteredDSNs());
+                    () => dsns = _hsxServer.EnumRegisteredDSNs());
             sDSNs = dsns as string[];
             output.SetFields("DSN Name");
             if(sDSNs == null) {

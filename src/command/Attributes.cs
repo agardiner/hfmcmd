@@ -10,29 +10,17 @@ namespace Command
 {
 
     /// <summary>
-    /// Define an attribute which will be used to set descriptions for Commands
-    /// and CommandParameters.
-    /// </summary>
-    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Parameter,
-     AllowMultiple = false)]
-    public class DescriptionAttribute : Attribute
-    {
-        public string Description;
-
-        public DescriptionAttribute(string desc)
-        {
-            this.Description = desc;
-        }
-    }
-
-
-    /// <summary>
     /// Define an attribute which will be used to tag methods that can be
     /// invoked from a script or command file.
     /// </summary>
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
     public class CommandAttribute : Attribute
     {
+        public string Description { get; set; }
+
+        public CommandAttribute(string desc) {
+            Description = desc;
+        }
     }
 
 
@@ -78,6 +66,8 @@ namespace Command
         public string Description { get; set; }
         /// The Type of value which the setting accepts
         public Type ParameterType { get; set; }
+        /// The constant prefix of all values in the enum which can be omitted
+        public string EnumPrefix { get; set; }
         /// Whether the setting is sensitive, and should be masked
         public bool IsSensitive { get; set; }
         /// Whether the setting has a DefaultValue; settings default to true
@@ -107,32 +97,39 @@ namespace Command
 
 
     /// <summary>
-    /// Define an attribute which will be used to specify default values for
-    /// optional parameters on a Command.
-    /// A DefaultValue attribute is used instead of default values on the
-    /// actual method, since a) default values are only available from v4 of
-    /// .Net, and b) they have restrictions on where they can appear (e.g. only
-    /// at the end of the list of parameters).
+    /// Define an attribute which will be used to specify additional parameter
+    /// information, such as default values, sensitive flags, enum prefixes,
+    /// etc.
     /// </summary>
+    /// <remarks>
+    /// DefaultValues are captured through attributes instead of default values
+    /// on the actual method parameters, since a) default parameter values are
+    /// only available from v4 of .Net, and b) they have restrictions on where
+    /// they can appear (only at the end of the list of parameters).
+    /// </remarks>
     [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false)]
-    public class DefaultValueAttribute : Attribute
+    public class ParameterAttribute : Attribute
     {
-        public object Value;
+        private object _defaultValue = null;
+        private bool   _hasDefaultValue = false;
 
-        public DefaultValueAttribute(object val)
-        {
-            this.Value = val;
+        public string Description { get; set; }
+        public bool   HasDefaultValue { get { return _hasDefaultValue; } }
+        public object DefaultValue {
+            get {
+                return _defaultValue;
+            }
+            set {
+                _defaultValue = value;
+                _hasDefaultValue = true;
+            }
         }
-    }
+        public bool   IsSensitive { get; set; }
+        public string EnumPrefix { get; set; }
 
-
-    /// <summary>
-    /// Define an attribute which will be used to tag parameters that contain
-    /// sensitive information such as passwords. These will be masked if logged.
-    /// </summary>
-    [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false)]
-    public class SensitiveValueAttribute : Attribute
-    {
+        public ParameterAttribute(string desc) {
+            Description = desc;
+        }
     }
 
 }
