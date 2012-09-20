@@ -95,7 +95,7 @@ namespace HFM
         [Factory]
         public MetadataLoad(Session session)
         {
-            HsvMetadataLoad = new HsvMetadataLoadACVClass();
+            HsvMetadataLoad = new HsvMetadataLoadACV();
             HsvMetadataLoad.SetSession(session.HsvSession);
         }
 
