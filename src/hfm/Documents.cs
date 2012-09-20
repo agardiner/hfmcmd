@@ -7,6 +7,7 @@ using HFMWDOCUMENTSLib;
 using HFMCONSTANTSLib;
 
 using Command;
+using HFMCmd;
 
 
 namespace HFM
@@ -48,9 +49,28 @@ namespace HFM
             IntercompayReport = tagDOCUMENTTYPES.WEBOM_DOCTYPE_RPTINTERCOMPANY,
             JournalReport = tagDOCUMENTTYPES.WEBOM_DOCTYPE_RPTJOURNAL,
             Task = tagDOCUMENTTYPES.WEBOM_DOCTYPE_TASK,
-            DataForm = tagDOCUMENTTYPES.WEBOM_DOCTYPE_WEBFORM,
+            WebForm = tagDOCUMENTTYPES.WEBOM_DOCTYPE_WEBFORM,
             DataGrid = tagDOCUMENTTYPES.WEBOM_DOCTYPE_WEBGRID,
             TaskList = tagDOCUMENTTYPES.WEBOM_DOCTYPE_WORKSPACE
+        }
+
+        public enum EDocumentFileType
+        {
+            All = tagDOCUMENTFILETYPES.WEBOM_DOCFILETYPE_ALL,
+            Folder = tagDOCUMENTFILETYPES.WEBOM_DOCFILETYPE_FOLDER,
+            WebFormDef = tagDOCUMENTFILETYPES.WEBOM_DOCFILETYPE_FORMDEF,
+            ReportDefRPT = tagDOCUMENTFILETYPES.WEBOM_DOCFILETYPE_RPTDEF,
+            ReportDefXML = tagDOCUMENTFILETYPES.WEBOM_DOCFILETYPE_RPTXML,
+            ReportDefHTML = tagDOCUMENTFILETYPES.WEBOM_DOCFILETYPE_RPTHTML,
+            XML = tagDOCUMENTFILETYPES.WEBOM_DOCFILETYPE_XML,
+            Task = tagDOCUMENTFILETYPES.WEBOM_DOCFILETYPE_TASK
+        }
+
+        public enum EPublicPrivate
+        {
+            Public = tagENUMSHOWPRIVATEDOCS.ENUMSHOWPRIVATEDOCS_DONTSHOW,
+            Private = tagENUMSHOWPRIVATEDOCS.ENUMSHOWPRIVATEDOCS_SHOW,
+            Both = tagENUMSHOWPRIVATEDOCS.ENUMSHOWPRIVATEDOCS_SHOWALL
         }
 
         public class DocumentFilter //: ISettingsCollection
@@ -69,17 +89,59 @@ namespace HFM
 
 
         [Command("Returns a list of documents that satisfy the search criteria")]
+        // TODO: Handle conversion of date/times to doubles
         public void EnumDocuments(
                 [Parameter("The document repository folder that contains the documents to return")]
                 string path,
-                [Parameter("The document type to return",
-                 DefaultValue = tagDOCUMENTTYPES.WEBOM_DOCTYPE_ALL, EnumPrefix = "WEBOM_DOCTYPE_")]
-                tagDOCUMENTTYPES documentTypes,
-                tagDOCUMENTFILETYPES documentFileTypes,
+                [Parameter("A list of document type(s) to return",
+                           DefaultValue = new EDocumentType[] { EDocumentType.All })]
+                EDocumentType[] documentTypes,
+                [Parameter("A list of document file type(s) to return",
+                           DefaultValue = new EDocumentFileType[] { EDocumentFileType.All })]
+                EDocumentFileType[] documentFileTypes,
+                [Parameter("Start time of the timestamp filtering range (0 for no start filter)",
+                           DefaultValue = 0)]
                 double startTime,
+                [Parameter("End time of the timestamp filtering range (0 for no end-time filter)",
+                           DefaultValue = 0)]
                 double endTime,
-                long includePrivateDocs)
+                [Parameter("A visibility setting used to determine whether public, private or both " +
+                           "types of documents should be returned",
+                 DefaultValue = false)]
+                EPublicPrivate visibility,
+                IOutput output)
         {
+            bool filterTimestamp = startTime > 0 || endTime > 0;
+            object oNames = null, oDescs = null, oTimestamps = null, oSecurityClasses = null,
+                   oIsPrivate = null, oFolderContentTypes = null, oDocOwners = null,
+                   oFileTypes = null, oDocTypes = null;
+            string[] names, descs, securityClasses, docOwners;
+            double[] timestamps;
+            bool[] isPrivate;
+            EDocumentType[] folderContentTypes, docTypes;
+            EDocumentFileType[] fileTypes;
+
+            // TODO: Handle recursive paths
+            HFM.Try("Retrieving documents", () =>
+                    oNames = _documents.EnumDocumentsEx(path, documentTypes, documentFileTypes,
+                        filterTimestamp, startTime, endTime, (int)visibility,
+                        ref oDescs, ref oTimestamps, ref oSecurityClasses, ref oIsPrivate,
+                        ref oFolderContentTypes, ref oDocOwners, ref oFileTypes, ref oDocTypes));
+
+            names = oNames as string[];
+            descs = oDescs as string[];
+            timestamps = oTimestamps as double[];
+            securityClasses = oSecurityClasses as string[];
+            isPrivate = oIsPrivate as bool[];
+            folderContentTypes = oFolderContentTypes as EDocumentType[];
+            docOwners = oDocOwners as string[];
+            fileTypes = oFileTypes as EDocumentFileType[];
+            docTypes = oDocTypes as EDocumentType[];
+
+            output.SetFields("Name", "Description", "Document Type");
+            for(var i = 0; i < (names as string[]).Length; ++i) {
+                output.WriteRecord(names[i], descs[i], docTypes[i].ToString());
+            }
         }
 
     }

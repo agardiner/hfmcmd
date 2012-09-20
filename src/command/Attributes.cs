@@ -16,7 +16,8 @@ namespace Command
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
     public class CommandAttribute : Attribute
     {
-        public string Description { get; set; }
+        /// Description of the command (mandatory)
+        public readonly string Description;
 
         public CommandAttribute(string desc) {
             Description = desc;
