@@ -132,6 +132,33 @@ namespace Command
             ParameterType = typeof(bool);
             _hasDefaultValue = true;
         }
+
+
+        /// Checks if the setting is current for a specified version, based on
+        // the Since and/or Deprecated settings.
+        public bool IsCurrent(string version)
+        {
+            bool current = true;
+            if(Since != null || Deprecated != null) {
+                var ver = ConvertVersionStringToNumber(version);
+                var from = Since != null ? ConvertVersionStringToNumber(Since) : ver;
+                var to = Deprecated != null ? ConvertVersionStringToNumber(Deprecated) : ver + 1;
+                current = ver >= from && ver < to;
+            }
+            return current;
+        }
+
+
+        private int ConvertVersionStringToNumber(string ver)
+        {
+            var parts = ver.Split('.');
+            int verNum = 0;
+
+            for(var i = 0; i < 4; i++) {
+                verNum = verNum * 100 + (i < parts.Length ? int.Parse(parts[i]) : 0);
+            }
+            return verNum;
+        }
     }
 
 }

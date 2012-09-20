@@ -21,9 +21,12 @@ namespace HFM
         // Reference to HsvResourceManager used to obtain error message details.
         private static readonly HsvResourceManager _resourceManager;
 
+        // Flag indicating whether we have already logged the absence of ResourceManager
         private static bool _loggedErrorMessagesUnavailable = false;
 
-        public static readonly int Version;
+        /// The current version of HFM that is installed on this machine
+        public static readonly string Version;
+
 
         // Static initializer - initializes HsvResourceManager
         static ResourceManager()
@@ -32,17 +35,13 @@ namespace HFM
                 _resourceManager = new HsvResourceManager();
                 _resourceManager.Initialize((short)tagHFM_TIERS.HFM_TIER1);
 
-                var ver = (string)_resourceManager.GetCurrentVersionInUserDisplayFormat();
-                foreach(var part in ver.Split('.')) {
-                    Version = Version * 100 + int.Parse(part);
-                    if(Version > 10000000) break;
-                }
-                _log.InfoFormat("Version number {0}", Version);
+                Version = (string)_resourceManager.GetCurrentVersionInUserDisplayFormat();
             }
             catch (COMException ex) {
                 unchecked {
                     if(ex.ErrorCode == (int)0x80040154) {
-                        _log.Error("Unable to instantiate an HsvResourceManager COM object; is HFM installed on this machine?");
+                        _log.Error("Unable to instantiate an HsvResourceManager COM object; " +
+                                   "is HFM installed on this machine?");
                     }
                 }
                 throw ex;
