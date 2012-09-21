@@ -92,12 +92,12 @@ namespace HFM
         public void EnumDocuments(
                 [Parameter("The document repository folder that contains the documents to return")]
                 string path,
-                [Parameter("A list of document type(s) to return",
+                [Parameter("The document type(s) to return",
                            DefaultValue = EDocumentType.All)]
-                EDocumentType[] documentTypes,
-                [Parameter("A list of document file type(s) to return",
+                EDocumentType documentTypes,
+                [Parameter("The document file type(s) to return",
                            DefaultValue = EDocumentFileType.All)]
-                EDocumentFileType[] documentFileTypes,
+                EDocumentFileType documentFileTypes,
                 [Parameter("Start time of the timestamp filtering range (0 for no start filter)",
                            DefaultValue = 0)]
                 double startTime,
@@ -106,7 +106,7 @@ namespace HFM
                 double endTime,
                 [Parameter("A visibility setting used to determine whether public, private or both " +
                            "types of documents should be returned",
-                 DefaultValue = false)]
+                 DefaultValue = EPublicPrivate.Public)]
                 EPublicPrivate visibility,
                 IOutput output)
         {
@@ -114,9 +114,10 @@ namespace HFM
             object oNames = null, oDescs = null, oTimestamps = null, oSecurityClasses = null,
                    oIsPrivate = null, oFolderContentTypes = null, oDocOwners = null,
                    oFileTypes = null, oDocTypes = null;
-            string[] names, descs, securityClasses, docOwners;
+            string[] names, descs, docOwners;
+            int[] securityClasses;
             double[] timestamps;
-            bool[] isPrivate;
+            int[] isPrivate;
             EDocumentType[] folderContentTypes, docTypes;
             EDocumentFileType[] fileTypes;
 
@@ -127,19 +128,19 @@ namespace HFM
                         ref oDescs, ref oTimestamps, ref oSecurityClasses, ref oIsPrivate,
                         ref oFolderContentTypes, ref oDocOwners, ref oFileTypes, ref oDocTypes));
 
-            names = oNames as string[];
-            descs = oDescs as string[];
-            timestamps = oTimestamps as double[];
-            securityClasses = oSecurityClasses as string[];
-            isPrivate = oIsPrivate as bool[];
-            folderContentTypes = oFolderContentTypes as EDocumentType[];
-            docOwners = oDocOwners as string[];
-            fileTypes = oFileTypes as EDocumentFileType[];
-            docTypes = oDocTypes as EDocumentType[];
+            names = HFM.Object2Array<string>(oNames);
+            descs = HFM.Object2Array<string>(oDescs);
+            timestamps = HFM.Object2Array<double>(oTimestamps);
+            securityClasses = HFM.Object2Array<int>(oSecurityClasses);
+            isPrivate = HFM.Object2Array<int>(oIsPrivate);
+            folderContentTypes = HFM.Object2Array<EDocumentType>(oFolderContentTypes);
+            docOwners = HFM.Object2Array<string>(oDocOwners);
+            fileTypes = HFM.Object2Array<EDocumentFileType>(oFileTypes);
+            docTypes = HFM.Object2Array<EDocumentType>(oDocTypes);
 
-            output.SetFields("Name", "Description", "Document Type");
-            for(var i = 0; i < (names as string[]).Length; ++i) {
-                output.WriteRecord(names[i], descs[i], docTypes[i].ToString());
+            output.SetFields("Name", "Document Type", "Description");
+            for(var i = 0; i < names.Length; ++i) {
+                output.WriteRecord(names[i], docTypes[i].ToString(), descs[i]);
             }
         }
 

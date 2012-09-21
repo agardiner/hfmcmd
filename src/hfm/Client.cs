@@ -275,6 +275,8 @@ namespace HFM
             if(_manageApps == null) {
                 _log.Trace("Creating HFMwManageApplications instance");
                 _manageApps = new HFMwManageApplications();
+                HFM.Try("Setting logon info for web application",
+                        () => _manageApps.SetLogonInfoSSO(_domain, _userName, _token, _password));
             }
 
             HFM.Try(string.Format("Opening web application {0} on {1}", appName, clusterName),

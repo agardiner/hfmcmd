@@ -82,6 +82,17 @@ namespace HFM
             }
         }
 
+
+        /// <summary>
+        /// Convenience method for dealing with the annoying fact that arrays
+        /// returned from HFM have type Object, and need to be cast to the
+        /// appropriate native array type.
+        /// </summary>
+        public static T[] Object2Array<T>(object retVal)
+        {
+            return Array.ConvertAll((object[])retVal, o => (T)o);
+        }
+
     }
 
 }

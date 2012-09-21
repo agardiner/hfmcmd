@@ -353,9 +353,9 @@ namespace CommandLine
         protected object ConvertArray(string val, Type type, Dictionary<string, object> argVals)
         {
             string[] vals = val.Split(',');
-            object[] obj = (object [])Array.CreateInstance(type, vals.Length);
+            var obj = Array.CreateInstance(type, vals.Length); //.Cast<object>().ToArray();
             for(int i = 0; i < vals.Length; ++i) {
-                obj[i] = ConvertArrayElement(vals[i], type, argVals);
+                obj.SetValue(ConvertArrayElement(vals[i], type, argVals), i);
             }
             return obj;
         }
@@ -881,7 +881,13 @@ namespace CommandLine
                     _log.DebugFormat("No value was specified for argument {0}", arg.Key);
                     if(arg.DefaultValue != null) {
                         _log.TraceFormat("Setting argument {0} to default value '{1}'", arg.Key, arg.DefaultValue);
-                        result.Add(arg.Key, arg.DefaultValue);
+                        if(Definition.ArgumentMapper != null && arg.Type != typeof(string)) {
+                            // Convert argument value to required type
+                            result.Add(arg.Key, Definition.ArgumentMapper.ConvertArgument(arg, arg.DefaultValue, result));
+                        }
+                        else {
+                            result.Add(arg.Key, arg.DefaultValue);
+                        }
                     }
                     else if(arg.IsRequired) {
                         _log.ErrorFormat("No value was specified for required argument '{0}'", arg.Key);
