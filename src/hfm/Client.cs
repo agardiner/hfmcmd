@@ -6,6 +6,8 @@ using log4net;
 using HSXCLIENTLib;
 using HSXSERVERLib;
 using HSVSESSIONLib;
+using HFMWAPPLICATIONSLib;
+using HFMWSESSIONLib;
 
 using Command;
 using HFMCmd;
@@ -20,8 +22,6 @@ namespace HFM
     // - DisableNewConnections
     // - EnableNewConnections
     // - EnumProhibitConnections
-    // - EnumUsersOnSystem
-    // - EnumUsersOnSystemEx
     // - EnumUsersOnSystemEx2
     // - GetApplicationFolder
     // - GetServerOnCluster
@@ -61,7 +61,7 @@ namespace HFM
         [Factory]
         public Client()
         {
-            _log.Debug("Creating HsxClient instance");
+            _log.Trace("Creating HsxClient instance");
             try {
                 _client = new HsxClient();
             }
@@ -91,9 +91,7 @@ namespace HFM
                 [Parameter("The password to login with", IsSensitive = true)]
                 string password)
         {
-            HFM.Try("Setting logon credentials via username and password",
-                    () => _client.SetLogonInfoSSO(domain, userName, null, password));
-            return new Connection(_client);
+            return new Connection(_client, domain, userName, password);
         }
 
 
@@ -106,9 +104,7 @@ namespace HFM
                 [Parameter("An SSO token obtained from an existing Shared Services connection")]
                 string token)
         {
-            HFM.Try("Setting logon credentials via SSO token",
-                    () => _client.SetLogonInfoSSO(null, null, token, null));
-            return new Connection(_client);
+            return new Connection(_client, token);
         }
 
 
@@ -197,12 +193,31 @@ namespace HFM
 
 
         protected HsxClient _client;
-        protected string _app;
+        protected HFMwManageApplications _manageApps;
+        private string _domain;
+        private string _userName;
+        private string _password;
+        private string _token;
+        protected bool _appOpened;
 
 
-        internal Connection(HsxClient client)
+        internal Connection(HsxClient client, string domain, string userName, string password)
         {
             _client = client;
+            _domain = domain;
+            _userName = userName;
+            _password = password;
+            HFM.Try("Setting logon credentials via username and password",
+                    () => _client.SetLogonInfoSSO(domain, userName, null, password));
+        }
+
+
+        internal Connection(HsxClient client, string token)
+        {
+            _client = client;
+            _token = token;
+            HFM.Try("Setting logon credentials via SSO token",
+                    () => _client.SetLogonInfoSSO(null, null, token, null));
         }
 
 
@@ -217,7 +232,7 @@ namespace HFM
 
             HFM.Try("Retrieving logon info",
                 () => token = _client.GetLogonInfoSSO(out domain, out user));
-            if(_app == null) {
+            if(!_appOpened) {
                 _log.Warn("SSO token cannot be retrieved until an application has been opened");
             }
             output.SetFields("Domain", "UserName", "SSO Token");
@@ -240,8 +255,31 @@ namespace HFM
             HFM.Try(string.Format("Opening application {0} on {1}", appName, clusterName),
                     () => _client.OpenApplication(clusterName, "Financial Management", appName,
                             out hsxServer, out hsvSession));
-            _app = appName;
+            _appOpened = true;
             return new Session((HsvSession)hsvSession);
+        }
+
+
+        /// Opens the named application, and returns a Session object for
+        /// interacting with it.
+        [Factory,
+         Command("Open an HFM web application and establish a session.")]
+        public WebSession OpenWebApplication(
+                [Parameter("The name of the cluster on which to open the application")]
+                string clusterName,
+                [Parameter("The name of the application to open")]
+                string appName)
+        {
+            object hfmwSession = null;
+
+            if(_manageApps == null) {
+                _log.Trace("Creating HFMwManageApplications instance");
+                _manageApps = new HFMwManageApplications();
+            }
+
+            HFM.Try(string.Format("Opening web application {0} on {1}", appName, clusterName),
+                    () => hfmwSession = _manageApps.OpenApplication(clusterName, appName));
+            return new WebSession((HFMwSession)hfmwSession);
         }
 
 

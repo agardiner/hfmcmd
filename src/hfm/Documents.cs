@@ -80,11 +80,10 @@ namespace HFM
 
 
         [Factory]
-        public Documents(Session session)
+        public Documents(WebSession session)
         {
-            // TODO: Determine if this needs to use the HFMwSession, HFMwManageApplications etc libraries
-            _documents = (HFMwManageDocuments)session.HsvSession.CreateObject("Hyperion.HFMwManageDocuments");
-            _documents.SetWebSession(session.HsvSession);
+            _documents = new HFMwManageDocuments();
+            _documents.SetWebSession(session.HFMwSession);
         }
 
 
