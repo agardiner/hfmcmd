@@ -275,6 +275,7 @@ namespace CommandLine
                 this[typeof(double)] = (val, type, args) => double.Parse(val);
                 this[typeof(bool)] = (val, type, args) =>
                     new Regex("^t(rue)?|y(es)?$", RegexOptions.IgnoreCase).IsMatch(val);
+                this[typeof(DateTime)] = (val, type, args) => DateTime.Parse(val);
             }
         }
 

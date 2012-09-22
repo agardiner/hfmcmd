@@ -34,6 +34,12 @@ namespace HFM
         // Reference to HFM HFMwManageDocuments object
         internal readonly HFMwManageDocuments _documents;
 
+        // Depth of recursion
+        private int _depth = 0;
+
+        /// <summary>
+        /// Enumeration of available document types
+        /// </summary>
         public enum EDocumentType
         {
             All = tagDOCUMENTTYPES.WEBOM_DOCTYPE_ALL,
@@ -54,6 +60,9 @@ namespace HFM
             TaskList = tagDOCUMENTTYPES.WEBOM_DOCTYPE_WORKSPACE
         }
 
+        /// <summary>
+        /// Enumeration of available document file types
+        /// </summary>
         public enum EDocumentFileType
         {
             All = tagDOCUMENTFILETYPES.WEBOM_DOCFILETYPE_ALL,
@@ -66,6 +75,9 @@ namespace HFM
             Task = tagDOCUMENTFILETYPES.WEBOM_DOCFILETYPE_TASK
         }
 
+        /// <summary>
+        /// Enumeration of possible visibility choices
+        /// </summary>
         public enum EPublicPrivate
         {
             Public = tagENUMSHOWPRIVATEDOCS.ENUMSHOWPRIVATEDOCS_DONTSHOW,
@@ -73,10 +85,24 @@ namespace HFM
             Both = tagENUMSHOWPRIVATEDOCS.ENUMSHOWPRIVATEDOCS_SHOWALL
         }
 
-        public class DocumentFilter //: ISettingsCollection
+
+        public class DocumentInfo
         {
-            List<EDocumentType> _documentTypes = new List<EDocumentType>();
+            public string Name;
+            public string Path;
+            public string Description;
+            public EDocumentType DocumentType;
+            public EDocumentFileType DocumentFileType;
+            public DateTime Timestamp;
+            public string DocumentOwner;
+            public int SecurityClass;
+            public bool IsPrivate;
+            public EDocumentType FolderContentType;
+
+            public bool IsFolder { get { return DocumentType == EDocumentType.Folder; } }
         }
+
+
 
 
         [Factory]
@@ -87,30 +113,25 @@ namespace HFM
         }
 
 
-        [Command("Returns a list of documents that satisfy the search criteria")]
-        // TODO: Handle conversion of date/times to doubles
-        public void EnumDocuments(
+        [Command("Returns a listing of documents that satisfy the search criteria")]
+        public List<DocumentInfo> EnumDocuments(
                 [Parameter("The document repository folder that contains the documents to return")]
                 string path,
+                [Parameter("If true, recurses into each directory encountered, and returns its content as well",
+                           DefaultValue = false)]
+                bool recurseIntoFolders,
                 [Parameter("The document type(s) to return",
                            DefaultValue = EDocumentType.All)]
                 EDocumentType documentTypes,
                 [Parameter("The document file type(s) to return",
                            DefaultValue = EDocumentFileType.All)]
                 EDocumentFileType documentFileTypes,
-                [Parameter("Start time of the timestamp filtering range (0 for no start filter)",
-                           DefaultValue = 0)]
-                double startTime,
-                [Parameter("End time of the timestamp filtering range (0 for no end-time filter)",
-                           DefaultValue = 0)]
-                double endTime,
                 [Parameter("A visibility setting used to determine whether public, private or both " +
                            "types of documents should be returned",
                  DefaultValue = EPublicPrivate.Public)]
                 EPublicPrivate visibility,
                 IOutput output)
         {
-            bool filterTimestamp = startTime > 0 || endTime > 0;
             object oNames = null, oDescs = null, oTimestamps = null, oSecurityClasses = null,
                    oIsPrivate = null, oFolderContentTypes = null, oDocOwners = null,
                    oFileTypes = null, oDocTypes = null;
@@ -120,11 +141,11 @@ namespace HFM
             int[] isPrivate;
             EDocumentType[] folderContentTypes, docTypes;
             EDocumentFileType[] fileTypes;
+            var docs = new List<DocumentInfo>();
 
-            // TODO: Handle recursive paths
-            HFM.Try("Retrieving documents", () =>
+            HFM.Try(string.Format("Retrieving documents at {0}", path), () =>
                     oNames = _documents.EnumDocumentsEx(path, documentTypes, documentFileTypes,
-                        filterTimestamp, startTime, endTime, (int)visibility,
+                        false, 0, 0, (int)visibility,  // Note: timestamp filtering does not work
                         ref oDescs, ref oTimestamps, ref oSecurityClasses, ref oIsPrivate,
                         ref oFolderContentTypes, ref oDocOwners, ref oFileTypes, ref oDocTypes));
 
@@ -138,10 +159,40 @@ namespace HFM
             fileTypes = HFM.Object2Array<EDocumentFileType>(oFileTypes);
             docTypes = HFM.Object2Array<EDocumentType>(oDocTypes);
 
-            output.SetFields("Name", "Document Type", "Description");
-            for(var i = 0; i < names.Length; ++i) {
-                output.WriteRecord(names[i], docTypes[i].ToString(), descs[i]);
+            if(!path.EndsWith(@"\")) {
+                path += @"\";
             }
+            for(var i = 0; i < names.Length; ++i) {
+                docs.Add(new DocumentInfo() {
+                    Name = names[i],
+                    Path = path + names[i],
+                    Description = descs[i],
+                    DocumentType = docTypes[i],
+                    DocumentFileType = fileTypes[i],
+                    Timestamp = DateTime.FromOADate(timestamps[i]),
+                    IsPrivate = isPrivate[i] != 0,
+                    DocumentOwner = docOwners[i],
+                    SecurityClass = securityClasses[i],
+                    FolderContentType = folderContentTypes[i]
+                });
+
+                if(recurseIntoFolders && docTypes[i] == EDocumentType.Folder) {
+                    // Recurse into sub-directory
+                    _depth++;
+                    docs.AddRange(EnumDocuments(path + names[i], recurseIntoFolders,
+                            documentTypes, documentFileTypes, visibility, output));
+                    _depth--;
+                }
+            }
+
+            if(_depth == 0) {
+                output.SetFields("Name", "Document Type", "Timestamp", "Description");
+                foreach(var doc in docs) {
+                    output.WriteRecord(doc.Name, doc.DocumentType.ToString(), doc.Timestamp.ToString(), doc.Description);
+                }
+            }
+
+            return docs;
         }
 
     }
