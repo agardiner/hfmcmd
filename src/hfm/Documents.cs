@@ -195,6 +195,33 @@ namespace HFM
             return docs;
         }
 
+
+        [Command("Creates a new folder")]
+        public void CreateFolder(
+                [Parameter("The path to the parent folder in which to create the new folder")]
+                string path,
+                [Parameter("The name of the new folder")]
+                string folderName,
+                [Parameter("A description for the new folder", DefaultValue = null)]
+                string description,
+                [Parameter("The name of the security class governing access to the folder",
+                 DefaultValue = "[Default]")]
+                string securityClass,
+                [Parameter("Flag indicating whether the folder should be public (i.e. visible to other users) or private",
+                 DefaultValue = false)]
+                bool isPrivate,
+                [Parameter("The document type(s) that are permitted within the folder",
+                 DefaultValue = EDocumentType.All)]
+                EDocumentType folderContentType,
+                [Parameter("Flag indicating whether any existing folder with the same name (and its content) should be overwritten",
+                 DefaultValue = false)]
+                bool overwrite)
+        {
+            HFM.Try("Creating new folder",
+                    () => _documents.CreateFolderEx(path, folderName, description, securityClass,
+                                                    isPrivate, (int)folderContentType, overwrite));
+            _log.InfoFormat(@"Folder created at {0}\{1}", path, folderName);
+        }
     }
 
 
