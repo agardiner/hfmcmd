@@ -153,9 +153,10 @@ namespace Command
         public Type ParameterType { get; set; }
 
 
-        public SettingAttribute(string name)
+        public SettingAttribute(string name, string desc)
         {
             Name = name;
+            Description = desc;
             ParameterType = typeof(bool);
             _hasDefaultValue = true;
         }
