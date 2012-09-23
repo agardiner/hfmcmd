@@ -73,6 +73,16 @@ namespace HFM
             return _optionType.GetProperty("DefaultValue").GetValue(option, null);
         }
 
+
+        public void GetOptionNames()
+        {
+            foreach(var val in Enum.GetValues(_enumType)) {
+                var option = _optionsType.GetMethod("get_Item").Invoke(_options, new object[] { val });
+                var name = _optionType.GetProperty("Name").GetValue(option, null);
+                _log.InfoFormat("Option {0} name: {1}", val, name);
+            }
+        }
+
     }
 
 }

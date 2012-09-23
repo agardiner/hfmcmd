@@ -38,12 +38,16 @@ namespace HFM
         /// data.
         /// </summary>
         [Setting("AccumulateWithinFile", "If set, then multiple data values for the same cell " +
-                 "accumulate, rather than overwriting one another"),
-         Setting("AppendToLog", "If true, any existing log file is appended to, instead of overwritten"),
+                 "accumulate, rather than overwriting one another",
+                 InternalName = "Accumulate within file"),
+         Setting("AppendToLog", "If true, any existing log file is appended to, instead of overwritten",
+                 InternalName = "Append to Log File"),
          Setting("ContainsShares", "Indicates whether the data file contains shares data, " +
-                 "such as Shares Outstanding, Voting Outstanding, or Owned"),
+                 "such as Shares Outstanding, Voting Outstanding, or Owned",
+                 InternalName = "Does the file contain shares data"),
          Setting("ContainsSubmissionPhase", "Indicates whether the data file contains data for " +
-                 "phased submissions"),
+                 "phased submissions",
+                 InternalName = "Does the file contain submission phase data"),
          Setting("Delimiter", "Data file delimiter",
                  ParameterType = typeof(string)), // TODO: Validation list
          Setting("DecimalChar", "The decimal character used within the data file",
@@ -51,9 +55,12 @@ namespace HFM
          Setting("ThousandsChar", "The thousands separator character used within the data file",
                  ParameterType = typeof(string)),
          Setting("UpdateMode", "Specifies how data loads affect existing data values",
+                 InternalName = "Duplicates",
                  ParameterType = typeof(EDataLoadUpdateMode),
                  DefaultValue = EDataLoadUpdateMode.Merge),
-         Setting("ScanOnly", "Scan data file for syntax errors (instead of loading it)")]
+         // TODO: Work out how to map a bool to an enum value
+         Setting("ScanOnly", "Scan data file for syntax errors (instead of loading it)",
+                 InternalName = "Mode")]
         public class LoadOptions : LoadExtractOptions
         {
             [Factory]
@@ -61,6 +68,7 @@ namespace HFM
                 base(typeof(IHsvLoadExtractOptions), typeof(IHsvLoadExtractOption),
                      typeof(HSV_DATALOAD_OPTION), dl.HsvcDataLoad.LoadOptions)
             {
+                //GetOptionNames();
             }
         }
 
@@ -69,10 +77,12 @@ namespace HFM
         /// Collection class holding options that can be specified when extracting
         /// data.
         /// </summary>
-        [Setting("AppendToLog", "If true, any existing log file is appended to, instead of overwritten"),
+        [Setting("AppendToLog", "If true, any existing log file is appended to, instead of overwritten",
+                 InternalName = "Append to Log File"),
          Setting("Delimiter", "File delimiter used in data extract file",
                  ParameterType = typeof(string)), // TODO: Validation list
-         Setting("IncludeCalculatedData", "If true, the data extract includes calculated data"),
+         Setting("IncludeCalculatedData", "If true, the data extract includes calculated data",
+                 InternalName = "Extract Calculated"),
          Setting("View", "The view of data (i.e. periodic, YTD, etc) to extract",
                  ParameterType = typeof(EDataView))]
          // TODO: Add support for member subsets
@@ -83,6 +93,7 @@ namespace HFM
                 base(typeof(IHsvLoadExtractOptions), typeof(IHsvLoadExtractOption),
                      typeof(HSV_DATAEXTRACT_OPTION), dl.HsvcDataLoad.ExtractOptions)
             {
+                //GetOptionNames();
             }
         }
 
@@ -147,7 +158,7 @@ namespace HFM
             }
             // TODO: Display options etc
             _log.FineFormat("    Data file: {0}", dataFile);
-            _log.FineFormat("    Log file:     {0}", logFile);
+            _log.FineFormat("    Log file:  {0}", logFile);
 
             // Ensure dataFile and logFile are writeable locations
             Utilities.FileWriteable(dataFile);

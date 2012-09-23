@@ -151,11 +151,14 @@ namespace Command
         public string Name { get; set; }
         /// The Type of value which the setting accepts
         public Type ParameterType { get; set; }
+        /// Internal name of the setting
+        public string InternalName { get; set; }
 
 
         public SettingAttribute(string name, string desc)
         {
             Name = name;
+            InternalName = name;
             Description = desc;
             ParameterType = typeof(bool);
             _hasDefaultValue = true;

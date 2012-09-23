@@ -294,7 +294,7 @@ namespace Command
                     var coll = this[param.ParameterType] as ISettingsCollection;
                     foreach(var setting in GetSettings(param.ParameterType)) {
                         if(args.ContainsKey(setting.Name)) {
-                            coll[setting.Name] = args[setting.Name];
+                            coll[setting.InternalName] = args[setting.Name];
                         }
                     }
                     parms[i++] = coll;
