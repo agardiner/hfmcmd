@@ -73,6 +73,7 @@ namespace HFM
             if(errors) {
                 _log.Error("Rules load resulted in errors; check log file for details");
                 // TODO:  Should we show the warnings here?
+                // TODO: Throw HFM exception
             }
             if(warnings) {
                 _log.Warn("Rules load resulted in warnings; check log file for details");
@@ -104,6 +105,67 @@ namespace HFM
 
             HFM.Try("Extracting rules",
                     () => HsvRulesLoad.ExtractCalcRulesEx(rulesFile, logFile, (int)rulesFormat));
+        }
+
+
+        [Command("Loads an HFM application's member list rules from a native member list rule file")]
+        public void LoadMemberLists(
+                [Parameter("Path to the source member lists rules file")]
+                string memberListFile,
+                [Parameter("Path to the load log file; if not specified, defaults to same path " +
+                             "and name as the source rules file.",
+                 DefaultValue = null)]
+                string logFile,
+                [Parameter("Scan member list rules file for syntax errors, rather than loading it",
+                 DefaultValue = false)]
+                bool scanOnly)
+        {
+            bool errors = false, warnings = false, info = false;
+
+            if(logFile == null || logFile == "") {
+                logFile = Path.ChangeExtension(memberListFile, ".log");
+            }
+
+            // Ensure rules file exists and logFile is writeable
+            Utilities.FileExists(memberListFile);
+            Utilities.FileWriteable(logFile);
+
+            HFM.Try("Loading member lists",
+                    () => HsvRulesLoad.LoadMemberListRules(memberListFile, logFile, scanOnly,
+                                                      out errors, out warnings, out info));
+            if(errors) {
+                _log.Error("Member List Rules load resulted in errors; check log file for details");
+                // TODO:  Should we show the warnings here?
+                // TODO: Throw HFM exception
+            }
+            if(warnings) {
+                _log.Warn("Member List Rules load resulted in warnings; check log file for details");
+                // TODO:  Should we show the warnings here?
+            }
+        }
+
+
+        [Command("Extracts an HFM application's member lists to a native member list file")]
+        public void ExtractMemberLists(
+                [Parameter("Path to the generated member list extract file")]
+                string memberListFile,
+                [Parameter("Path to the extract log file; if not specified, defaults to same path " +
+                           "and name as extract file.", DefaultValue = null)]
+                string logFile)
+        {
+            if(logFile == null || logFile == "") {
+                logFile = Path.ChangeExtension(memberListFile, ".log");
+            }
+            // TODO: Display options etc
+            _log.FineFormat("    Member Lists file: {0}", memberListFile);
+            _log.FineFormat("    Log file:     {0}", logFile);
+
+            // Ensure rulesFile and logFile are writeable locations
+            Utilities.FileWriteable(memberListFile);
+            Utilities.FileWriteable(logFile);
+
+            HFM.Try("Extracting member lists",
+                    () => HsvRulesLoad.ExtractMemberListRules(memberListFile, logFile));
         }
 
     }
