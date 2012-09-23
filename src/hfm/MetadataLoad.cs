@@ -63,7 +63,7 @@ namespace HFM
                  ParameterType = typeof(HSV_METALOADEX_FILE_FORMAT), EnumPrefix = "HSV_METALOADEX_"),
          Setting("ICP", "Load ICP dimension"),
          Setting("LoadSystemMembers", "Load System members"),
-         Setting("Prescan", "Pre-scan metadata file for syntax errors (instead of loading it)"),
+         Setting("scanOnly", "Scan metadata file for syntax errors (instead of loading it)"),
          Setting("Scenarios", "Load Scenario dimension"),
          Setting("UseReplaceMode", "Use Replace mode, so that existing metadata is replaced by this load. " +
                  "If this option is set, existing metadata not in the metadata file is removed."),

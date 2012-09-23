@@ -73,7 +73,7 @@ namespace HFM
             if(errors) {
                 _log.Error("Rules load resulted in errors; check log file for details");
                 // TODO:  Should we show the warnings here?
-                // TODO: Throw HFM exception
+                throw new HFMException("One or more error(s) were encountered during the rules load");
             }
             if(warnings) {
                 _log.Warn("Rules load resulted in warnings; check log file for details");
@@ -136,7 +136,7 @@ namespace HFM
             if(errors) {
                 _log.Error("Member List Rules load resulted in errors; check log file for details");
                 // TODO:  Should we show the warnings here?
-                // TODO: Throw HFM exception
+                throw new HFMException("One or more error(s) were encountered during the member lists load");
             }
             if(warnings) {
                 _log.Warn("Member List Rules load resulted in warnings; check log file for details");

@@ -51,9 +51,9 @@ namespace HFM
         public class ExtractOptions : LoadExtractOptions
         {
             [Factory]
-            public ExtractOptions(SecurityLoad mdl) :
+            public ExtractOptions(SecurityLoad sl) :
                 base(typeof(IHsvLoadExtractOptions), typeof(IHsvLoadExtractOption),
-                     typeof(HSV_SECURITYEXTRACT_OPTION), mdl.HsvSecurityLoad.ExtractOptions)
+                     typeof(HSV_SECURITYEXTRACT_OPTION), sl.HsvSecurityLoad.ExtractOptions)
             {
             }
         }
