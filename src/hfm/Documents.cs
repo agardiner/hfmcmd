@@ -90,7 +90,7 @@ namespace HFM
         public class DocumentInfo
         {
             public string Name;
-            public string Path;
+            public string Folder;
             public string Description;
             public EDocumentType DocumentType;
             public EDocumentFileType DocumentFileType;
@@ -108,7 +108,7 @@ namespace HFM
                         case EDocumentFileType.Folder:
                             return Name;
                         case EDocumentFileType.WebFormDef:
-                            return Name + ".def";
+                            return Name + ".wdf";
                         case EDocumentFileType.ReportDefRPT:
                             return Name + ".rpt";
                         case EDocumentFileType.ReportDefXML:
@@ -193,10 +193,10 @@ namespace HFM
                 path += @"\";
             }
             for(var i = 0; i < names.Length; ++i) {
-                if(nameRE.IsMatch(names[i])) {
+                if(docTypes[i] == EDocumentType.Folder || nameRE.IsMatch(names[i])) {
                     docs.Add(new DocumentInfo() {
                         Name = names[i],
-                        Path = path + names[i],
+                        Folder = path,
                         Description = descs[i],
                         DocumentType = docTypes[i],
                         DocumentFileType = fileTypes[i],
@@ -220,7 +220,8 @@ namespace HFM
             if(output != null && _depth == 0) {
                 output.SetFields("Name", "Document Type", "Timestamp", "Description");
                 foreach(var doc in docs) {
-                    output.WriteRecord(doc.Name, doc.DocumentType.ToString(), doc.Timestamp.ToString(), doc.Description);
+                    output.WriteRecord(doc.Name, doc.DocumentType.ToString(),
+                            doc.Timestamp.ToString(), doc.Description);
                 }
             }
 
@@ -284,13 +285,13 @@ namespace HFM
                            DefaultValue = EDocumentFileType.All)]
                 EDocumentFileType documentFileType)
         {
-            byte[] docContent = null;
+            string docContent = null;
             object desc = null, secClass = null;
             HFM.Try("Retrieving document",
-                    () => docContent = (byte[])_documents.GetDocument(path, name,
+                    () => docContent = (string)_documents.GetDocument(path, name,
                                                     (int)documentType, (int)documentFileType,
                                                     ref desc, ref secClass));
-            return docContent;
+            return Utilities.GetBytes(docContent);
         }
 
 
@@ -381,8 +382,10 @@ namespace HFM
             paths = new string[(docs.Count)];
             names = new string[(docs.Count)];
             foreach(var doc in docs) {
-                paths[i] = doc.Path;
+                paths[i] = doc.Folder;
                 names[i] = doc.Name;
+                _log.Info(doc.Folder);
+                _log.Info(doc.Name);
                 i++;
             }
 
@@ -428,7 +431,8 @@ namespace HFM
                 string sourceDir,
                 [Parameter("A file name pattern identifying the documents to be loaded; " +
                            "wildcards may be used. Note that the name pattern does not " +
-                           "apply to folder names when IncludeSubDirs is true.")]
+                           "apply to folder names when IncludeSubDirs is true.",
+                           DefaultValue = "*")]
                 string namePattern,
                 [Parameter("The folder in the HFM document repository where the documents should be placed")]
                 string targetFolder,
@@ -441,9 +445,11 @@ namespace HFM
                 EDocumentType documentType,
                 [Parameter("The document file type being uploaded")]
                 EDocumentFileType documentFileType,
-                [Parameter("The security class to be assigned to the uploaded documents")]
+                [Parameter("The security class to be assigned to the uploaded documents",
+                           DefaultValue = "[Default]")]
                 string securityClass,
-                [Parameter("If true, the documents are created as private documents; otherwise they are public")]
+                [Parameter("If true, the documents are created as private documents; otherwise they are public",
+                           DefaultValue = false)]
                 bool isPrivate,
                 [Parameter("True to overwrite existing documents, false to leave existing documents unchanged",
                            DefaultValue = false)]
@@ -456,11 +462,13 @@ namespace HFM
             }
 
             // Upload documents matching name
-            foreach(var dir in Directory.GetDirectories(sourceDir)) {
-                _log.DebugFormat(@"Processing directory {0}\{1}", sourceDir, dir);
-                if(!DoesDocumentExist(targetFolder, dir, EDocumentType.Folder,
-                                      EDocumentFileType.Folder, EPublicPrivate.Both)) {
-                    CreateFolder(targetFolder, dir, null, securityClass, isPrivate, EDocumentType.All, false);
+            foreach(var dirPath in Directory.GetDirectories(sourceDir)) {
+                var dir = Utilities.GetDirectoryName(dirPath);
+                _log.DebugFormat("Processing directory {0}", dir);
+                if(!DoesDocumentExist(targetFolder, dir,
+                                      EDocumentType.Folder, EDocumentFileType.Folder, EPublicPrivate.Both)) {
+                    CreateFolder(targetFolder, dir, null,
+                                 securityClass, isPrivate, EDocumentType.All, false);
                 }
                 if(includeSubDirs) {
                     _depth++;
@@ -471,7 +479,8 @@ namespace HFM
                 }
             }
 
-            foreach(var file in Directory.GetFiles(sourceDir)) {
+            foreach(var filePath in Directory.GetFiles(sourceDir)) {
+                var file = Path.GetFileName(filePath);
                 if(!nameRE.IsMatch(file)) {
                     continue;
                 }
@@ -480,7 +489,7 @@ namespace HFM
                                                    EDocumentFileType.All,
                                                    EPublicPrivate.Both)) {
                     _log.FineFormat("Loading {0} to {1}", file, targetFolder);
-                    var content = File.ReadAllBytes(file);
+                    var content = File.ReadAllBytes(filePath);
                     SaveDocument(targetFolder, Path.GetFileNameWithoutExtension(file), null,
                                  documentType, documentFileType, content,
                                  securityClass, isPrivate, overwrite);
@@ -521,15 +530,17 @@ namespace HFM
                                      documentFileTypes, visibility, null);
             foreach(var doc in docs) {
                 tgtPath = Path.Combine(targetDir,
-                                       Utilities.PathDifference(doc.Path, path));
+                                       Utilities.PathDifference(path, doc.Folder).Substring(1));
                 filePath = Path.Combine(tgtPath, doc.DefaultFileName);
-                if(doc.IsFolder && !Directory.Exists(filePath)) {
-                    _log.FineFormat("Creating directory {0}", filePath);
-                    Directory.CreateDirectory(filePath);
+                if(doc.IsFolder) {
+                    if(!Directory.Exists(filePath)) {
+                        _log.FineFormat("Creating directory {0}", filePath);
+                        Directory.CreateDirectory(filePath);
+                    }
                 }
                 else if(overwrite || !File.Exists(filePath)) {
                     _log.FineFormat("Extracting document {0} to {1}", doc.Name, filePath);
-                    var content = GetDocument(doc.Path, doc.Name, doc.DocumentType, doc.DocumentFileType);
+                    var content = GetDocument(doc.Folder, doc.Name, doc.DocumentType, doc.DocumentFileType);
                     using (FileStream fs = File.Open(filePath, FileMode.OpenOrCreate,
                                                      FileAccess.Write, FileShare.None)) {
                         fs.Write(content, 0, content.Length);

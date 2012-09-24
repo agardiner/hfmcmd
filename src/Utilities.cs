@@ -18,7 +18,7 @@ namespace HFMCmd
         /// </summary>
         public static Regex ConvertWildcardPatternToRE(string pattern)
         {
-            return new Regex("^" + pattern.Replace(".", @"\.")
+            return new Regex("^" + pattern.Replace(".", @"\.").Replace(@"\", @"\\")
                     .Replace("*", ".*").Replace("?", ".") + "$",
                     RegexOptions.IgnoreCase);
         }
@@ -59,6 +59,13 @@ namespace HFMCmd
         }
 
 
+        public static string GetDirectoryName(string path)
+        {
+            var di = new DirectoryInfo(path);
+            return di.Name;
+        }
+
+
         /// <summary>
         /// Returns the part of path2 that is not in path1.
         /// </summary>
@@ -74,6 +81,15 @@ namespace HFMCmd
                 }
             }
             return diff;
+        }
+
+
+        /// <summary>
+        /// Convert a string to a byte array, using ASCII encoding.
+        /// </summary>
+        public static byte[] GetBytes(string str)
+        {
+            return System.Text.Encoding.ASCII.GetBytes(str);
         }
 
     }
