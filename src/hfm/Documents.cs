@@ -101,6 +101,31 @@ namespace HFM
             public EDocumentType FolderContentType;
 
             public bool IsFolder { get { return DocumentType == EDocumentType.Folder; } }
+            public string DefaultFileName
+            {
+                get {
+                    switch(DocumentFileType) {
+                        case EDocumentFileType.Folder:
+                            return Name;
+                        case EDocumentFileType.WebFormDef:
+                            return Name + ".def";
+                        case EDocumentFileType.ReportDefRPT:
+                            return Name + ".rpt";
+                        case EDocumentFileType.ReportDefXML:
+                            return Name + ".xml";
+                        case EDocumentFileType.ReportDefHTML:
+                            return Name + ".html";
+                        case EDocumentFileType.XML:
+                            return Name + ".xml";
+                        case EDocumentFileType.Task:
+                            return Name + ".xml";
+                        default:
+                            throw new ArgumentException(string.Format(
+                                        "Document has invalid document file type {0}",
+                                        DocumentFileType));
+                    }
+                }
+            }
         }
 
 
@@ -406,15 +431,22 @@ namespace HFM
         {
             var nameRE = Utilities.ConvertWildcardPatternToRE(namePattern);
 
+            if(_depth == 0) {
+                _log.InfoFormat("Loading documents from {0} to {1}", sourceDir, targetFolder);
+            }
+
             // Upload documents matching name
             foreach(var dir in Directory.GetDirectories(sourceDir)) {
+                _log.DebugFormat(@"Processing directory {0}\{1}", sourceDir, dir);
                 if(!DoesDocumentExist(targetFolder, dir, EDocumentType.Folder, EDocumentFileType.Folder)) {
                     CreateFolder(targetFolder, dir, null, securityClass, isPrivate, EDocumentType.All, false);
                 }
                 if(includeSubDirs) {
+                    _depth++;
                     LoadDocuments(Path.Combine(sourceDir, dir), namePattern, Path.Combine(targetFolder, dir),
                                   includeSubDirs, documentType, documentFileType, securityClass,
                                   isPrivate, overwrite);
+                    _depth--;
                 }
             }
 
@@ -425,9 +457,11 @@ namespace HFM
                 if(overwrite || !DoesDocumentExist(targetFolder, file,
                                                    EDocumentType.All,
                                                    EDocumentFileType.All)) {
+                    _log.FineFormat("Loading {0} to {1}", file, targetFolder);
                     var content = File.ReadAllBytes(file);
-                    SaveDocument(targetFolder, file, null, documentType, documentFileType,
-                                 content, securityClass, isPrivate, overwrite);
+                    SaveDocument(targetFolder, Path.GetFileNameWithoutExtension(file), null,
+                                 documentType, documentFileType, content,
+                                 securityClass, isPrivate, overwrite);
                 }
             }
         }
@@ -458,28 +492,28 @@ namespace HFM
                            DefaultValue = true)]
                 bool overwrite)
         {
-            string tgtPath;
+            string tgtPath, filePath;
             int extracted = 0;
 
             var docs = EnumDocuments(path, namePattern, includeSubFolders, documentTypes,
                                      documentFileTypes, visibility, null);
             foreach(var doc in docs) {
-                tgtPath = Path.Combine(Path.Combine(targetDir,
-                                                    Utilities.PathDifference(doc.Path, path)),
-                                       doc.Name);
-                if(doc.IsFolder && !Directory.Exists(tgtPath)) {
-                    _log.FineFormat("Creating directory {0}", tgtPath);
-                    Directory.CreateDirectory(tgtPath);
+                tgtPath = Path.Combine(targetDir,
+                                       Utilities.PathDifference(doc.Path, path));
+                filePath = Path.Combine(tgtPath, doc.DefaultFileName);
+                if(doc.IsFolder && !Directory.Exists(filePath)) {
+                    _log.FineFormat("Creating directory {0}", filePath);
+                    Directory.CreateDirectory(filePath);
                 }
-                else if(overwrite || !File.Exists(tgtPath)) {
-                    _log.FineFormat("Creating document {0}", doc.Name);
+                else if(overwrite || !File.Exists(filePath)) {
+                    _log.FineFormat("Extracting document {0} to {1}", doc.Name, filePath);
                     var content = GetDocument(doc.Path, doc.Name, doc.DocumentType, doc.DocumentFileType);
-                    using (FileStream fs = File.Open(tgtPath, FileMode.OpenOrCreate,
+                    using (FileStream fs = File.Open(filePath, FileMode.OpenOrCreate,
                                                      FileAccess.Write, FileShare.None)) {
                         fs.Write(content, 0, content.Length);
                     }
                     // Update last modified time to match document timestamp
-                    File.SetLastWriteTime(tgtPath, doc.Timestamp);
+                    File.SetLastWriteTime(filePath, doc.Timestamp);
                     extracted++;
                 }
             }

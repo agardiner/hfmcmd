@@ -6,6 +6,9 @@ using System.Text.RegularExpressions;
 namespace HFMCmd
 {
 
+    /// <summary>
+    /// Utility class providing a collection of static utility methods.
+    /// </summary>
     public static class Utilities
     {
 
