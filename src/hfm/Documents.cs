@@ -224,6 +224,64 @@ namespace HFM
         }
 
 
+        [Command("Returns the contents of a document as a string")]
+        public string GetDocument(
+                [Parameter("The path to the folder from which to retrieve the docuemnt")]
+                string path,
+                [Parameter("The name of the document to retrieve")]
+                string name,
+                // TODO: Do we need these parameters? Can multiple documents of different types exist
+                // with the same name in the same folder?
+                [Parameter("The document type to look for; use All to check all documents",
+                           DefaultValue = EDocumentType.All)]
+                EDocumentType documentType,
+                [Parameter("The document file type to look for; use All to check all documents",
+                           DefaultValue = EDocumentFileType.All)]
+                EDocumentFileType documentFileType)
+        {
+            string docContent = null;
+            object desc = null, secClass = null;
+            HFM.Try("Retrieving document",
+                    () => docContent = (string)_documents.GetDocument(path, name,
+                                                    (int)documentType, (int)documentFileType,
+                                                    ref desc, ref secClass));
+            return docContent;
+        }
+
+
+        [Command("Saves a document to the requested folder and name")]
+        public void SaveDocument(
+                [Parameter("The path to the folder in which to save the document")]
+                string path,
+                [Parameter("The name to give the document")]
+                string name,
+                [Parameter("The description to give the document")]
+                string desc,
+                [Parameter("The document type to save the document as")]
+                EDocumentType documentType,
+                [Parameter("The document file type to save the document as")]
+                EDocumentFileType documentFileType,
+                [Parameter("The content for the new document")]
+                string content,
+                [Parameter("The security class to assign the document",
+                           DefaultValue = "[Default]")]
+                string securityClass,
+                [Parameter("If true, the document is saved as a private document; otherwise, it is public",
+                           DefaultValue = false)]
+                bool isPrivate,
+                [Parameter("True to overwrite any existing document with the same name in the folder",
+                           DefaultValue = true)]
+                bool overwrite)
+
+        {
+            HFM.Try("Saving document",
+                    () => _documents.SaveDocumentEx(path, name, desc, (int)documentType,
+                                                    (int)documentFileType, securityClass,
+                                                    content, isPrivate, (int)EDocumentType.All,
+                                                    overwrite));
+        }
+
+
         [Command("Deletes a single document")]
         public bool DeleteDocument(
                 [Parameter("The path to the folder containing the document to delete")]
@@ -318,7 +376,12 @@ namespace HFM
         }
 
 
-        public void Load()
+        public void LoadDocuments()
+        {
+        }
+
+
+        public void ExtractDocuments()
         {
         }
 
