@@ -146,8 +146,8 @@ namespace HFM
             }
 
             // Ensure metadata file exists and logFile is writeable
-            Utilities.FileExists(metadataFile);
-            Utilities.FileWriteable(logFile);
+            Utilities.EnsureFileExists(metadataFile);
+            Utilities.EnsureFileWriteable(logFile);
 
             HFM.Try("Loading metadata",
                     () => HsvMetadataLoad.Load(metadataFile, logFile));
@@ -171,8 +171,8 @@ namespace HFM
             _log.FineFormat("    Log file:     {0}", logFile);
 
             // Ensure extractFile and logFile are writeable locations
-            Utilities.FileWriteable(metadataFile);
-            Utilities.FileWriteable(logFile);
+            Utilities.EnsureFileWriteable(metadataFile);
+            Utilities.EnsureFileWriteable(logFile);
 
             HFM.Try("Extracting metadata",
                     () => HsvMetadataLoad.Extract(metadataFile, logFile));

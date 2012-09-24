@@ -92,8 +92,8 @@ namespace HFM
             }
 
             // Ensure security file exists and logFile is writeable
-            Utilities.FileExists(securityFile);
-            Utilities.FileWriteable(logFile);
+            Utilities.EnsureFileExists(securityFile);
+            Utilities.EnsureFileWriteable(logFile);
 
             HFM.Try("Loading security",
                     () => HsvSecurityLoad.Load(securityFile, logFile, out oWarnings));
@@ -121,8 +121,8 @@ namespace HFM
             _log.FineFormat("    Log file:     {0}", logFile);
 
             // Ensure securityFile and logFile are writeable locations
-            Utilities.FileWriteable(securityFile);
-            Utilities.FileWriteable(logFile);
+            Utilities.EnsureFileWriteable(securityFile);
+            Utilities.EnsureFileWriteable(logFile);
 
             HFM.Try("Extracting security",
                     () => HsvSecurityLoad.Extract(securityFile, logFile));

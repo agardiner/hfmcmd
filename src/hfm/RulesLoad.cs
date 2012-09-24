@@ -64,8 +64,8 @@ namespace HFM
             }
 
             // Ensure rules file exists and logFile is writeable
-            Utilities.FileExists(rulesFile);
-            Utilities.FileWriteable(logFile);
+            Utilities.EnsureFileExists(rulesFile);
+            Utilities.EnsureFileWriteable(logFile);
 
             HFM.Try("Loading rules",
                     () => HsvRulesLoad.LoadCalcRules2(rulesFile, logFile, scanOnly, checkIntegrity,
@@ -100,8 +100,8 @@ namespace HFM
             _log.FineFormat("    Log file:     {0}", logFile);
 
             // Ensure rulesFile and logFile are writeable locations
-            Utilities.FileWriteable(rulesFile);
-            Utilities.FileWriteable(logFile);
+            Utilities.EnsureFileWriteable(rulesFile);
+            Utilities.EnsureFileWriteable(logFile);
 
             HFM.Try("Extracting rules",
                     () => HsvRulesLoad.ExtractCalcRulesEx(rulesFile, logFile, (int)rulesFormat));
@@ -127,8 +127,8 @@ namespace HFM
             }
 
             // Ensure rules file exists and logFile is writeable
-            Utilities.FileExists(memberListFile);
-            Utilities.FileWriteable(logFile);
+            Utilities.EnsureFileExists(memberListFile);
+            Utilities.EnsureFileWriteable(logFile);
 
             HFM.Try("Loading member lists",
                     () => HsvRulesLoad.LoadMemberListRules(memberListFile, logFile, scanOnly,
@@ -161,8 +161,8 @@ namespace HFM
             _log.FineFormat("    Log file:     {0}", logFile);
 
             // Ensure rulesFile and logFile are writeable locations
-            Utilities.FileWriteable(memberListFile);
-            Utilities.FileWriteable(logFile);
+            Utilities.EnsureFileWriteable(memberListFile);
+            Utilities.EnsureFileWriteable(logFile);
 
             HFM.Try("Extracting member lists",
                     () => HsvRulesLoad.ExtractMemberListRules(memberListFile, logFile));

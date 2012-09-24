@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Collections.Generic;
 
 using log4net;
@@ -225,7 +226,7 @@ namespace HFM
 
 
         [Command("Returns the contents of a document as a string")]
-        public string GetDocument(
+        public byte[] GetDocument(
                 [Parameter("The path to the folder from which to retrieve the docuemnt")]
                 string path,
                 [Parameter("The name of the document to retrieve")]
@@ -239,10 +240,10 @@ namespace HFM
                            DefaultValue = EDocumentFileType.All)]
                 EDocumentFileType documentFileType)
         {
-            string docContent = null;
+            byte[] docContent = null;
             object desc = null, secClass = null;
             HFM.Try("Retrieving document",
-                    () => docContent = (string)_documents.GetDocument(path, name,
+                    () => docContent = (byte[])_documents.GetDocument(path, name,
                                                     (int)documentType, (int)documentFileType,
                                                     ref desc, ref secClass));
             return docContent;
@@ -262,7 +263,7 @@ namespace HFM
                 [Parameter("The document file type to save the document as")]
                 EDocumentFileType documentFileType,
                 [Parameter("The content for the new document")]
-                string content,
+                byte[] content,
                 [Parameter("The security class to assign the document",
                            DefaultValue = "[Default]")]
                 string securityClass,
@@ -275,7 +276,7 @@ namespace HFM
 
         {
             HFM.Try("Saving document",
-                    () => _documents.SaveDocumentEx(path, name, desc, (int)documentType,
+                    () => _documents.SaveDocument2(path, name, desc, (int)documentType,
                                                     (int)documentFileType, securityClass,
                                                     content, isPrivate, (int)EDocumentType.All,
                                                     overwrite));
@@ -376,13 +377,113 @@ namespace HFM
         }
 
 
-        public void LoadDocuments()
+        [Command("Loads matching documents from the file system to HFM")]
+        public void LoadDocuments(
+                [Parameter("The source path containing the documents to be loaded")]
+                string sourceDir,
+                [Parameter("A file name pattern identifying the documents to be loaded; " +
+                           "wildcards may be used. Note that the name pattern does not " +
+                           "apply to folder names when IncludeSubDirs is true.")]
+                string namePattern,
+                [Parameter("The folder in the HFM document repository where the documents should be placed")]
+                string targetFolder,
+                [Parameter("A flag indicating whether sub-directories below the source directory " +
+                           "should also be loaded. If true, sub-folders will be created below the " +
+                           "target folder with the same names as the sub-directories.",
+                           DefaultValue = false)]
+                bool includeSubDirs,
+                [Parameter("The document type being uploaded")]
+                EDocumentType documentType,
+                [Parameter("The document file type being uploaded")]
+                EDocumentFileType documentFileType,
+                [Parameter("The security class to be assigned to the uploaded documents")]
+                string securityClass,
+                [Parameter("If true, the documents are created as private documents; otherwise they are public")]
+                bool isPrivate,
+                [Parameter("True to overwrite existing documents, false to leave existing documents unchanged",
+                           DefaultValue = false)]
+                bool overwrite)
         {
+            var nameRE = Utilities.ConvertWildcardPatternToRE(namePattern);
+
+            // Upload documents matching name
+            foreach(var dir in Directory.GetDirectories(sourceDir)) {
+                if(!DoesDocumentExist(targetFolder, dir, EDocumentType.Folder, EDocumentFileType.Folder)) {
+                    CreateFolder(targetFolder, dir, null, securityClass, isPrivate, EDocumentType.All, false);
+                }
+                if(includeSubDirs) {
+                    LoadDocuments(Path.Combine(sourceDir, dir), namePattern, Path.Combine(targetFolder, dir),
+                                  includeSubDirs, documentType, documentFileType, securityClass,
+                                  isPrivate, overwrite);
+                }
+            }
+
+            foreach(var file in Directory.GetFiles(sourceDir)) {
+                if(!nameRE.IsMatch(file)) {
+                    continue;
+                }
+                if(overwrite || !DoesDocumentExist(targetFolder, file,
+                                                   EDocumentType.All,
+                                                   EDocumentFileType.All)) {
+                    var content = File.ReadAllBytes(file);
+                    SaveDocument(targetFolder, file, null, documentType, documentFileType,
+                                 content, securityClass, isPrivate, overwrite);
+                }
+            }
         }
 
 
-        public void ExtractDocuments()
+        [Command("Extracts documents from the HFM repository")]
+        public void ExtractDocuments(
+                [Parameter("The source folder from which document extraction is to take place")]
+                string path,
+                [Parameter("A document name pattern identifying the documents to extract",
+                           DefaultValue = '*')]
+                string namePattern,
+                [Parameter("The file system path where extracted documents are to be placed")]
+                string targetDir,
+                [Parameter("A flag indicating whether documents in sub-folders should be included",
+                           DefaultValue = false)]
+                bool includeSubFolders,
+                [Parameter("The document type(s) to be extracted",
+                           DefaultValue = EDocumentType.All)]
+                EDocumentType documentTypes,
+                [Parameter("The document file type(s) to be extracted",
+                           DefaultValue = EDocumentFileType.All)]
+                EDocumentFileType documentFileTypes,
+                [Parameter("The type of documents to extract (public, private, or both)",
+                           DefaultValue = EPublicPrivate.Both)]
+                EPublicPrivate visibility,
+                [Parameter("Flag indicating whether existing files should be overwritten",
+                           DefaultValue = true)]
+                bool overwrite)
         {
+            string tgtPath;
+            int extracted = 0;
+
+            var docs = EnumDocuments(path, namePattern, includeSubFolders, documentTypes,
+                                     documentFileTypes, visibility, null);
+            foreach(var doc in docs) {
+                tgtPath = Path.Combine(Path.Combine(targetDir,
+                                                    Utilities.PathDifference(doc.Path, path)),
+                                       doc.Name);
+                if(doc.IsFolder && !Directory.Exists(tgtPath)) {
+                    _log.FineFormat("Creating directory {0}", tgtPath);
+                    Directory.CreateDirectory(tgtPath);
+                }
+                else if(overwrite || !File.Exists(tgtPath)) {
+                    _log.FineFormat("Creating document {0}", doc.Name);
+                    var content = GetDocument(doc.Path, doc.Name, doc.DocumentType, doc.DocumentFileType);
+                    using (FileStream fs = File.Open(tgtPath, FileMode.OpenOrCreate,
+                                                     FileAccess.Write, FileShare.None)) {
+                        fs.Write(content, 0, content.Length);
+                    }
+                    // Update last modified time to match document timestamp
+                    File.SetLastWriteTime(tgtPath, doc.Timestamp);
+                    extracted++;
+                }
+            }
+            _log.InfoFormat("Successfully extracted {0} documents to {1}", extracted, targetDir);
         }
 
     }

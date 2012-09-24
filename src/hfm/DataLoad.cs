@@ -131,8 +131,8 @@ namespace HFM
             }
 
             // Ensure data file exists and logFile is writeable
-            Utilities.FileExists(dataFile);
-            Utilities.FileWriteable(logFile);
+            Utilities.EnsureFileExists(dataFile);
+            Utilities.EnsureFileWriteable(logFile);
 
             HFM.Try("Loading data",
                     () => oErrors = HsvcDataLoad.Load2(dataFile, logFile));
@@ -161,8 +161,8 @@ namespace HFM
             _log.FineFormat("    Log file:  {0}", logFile);
 
             // Ensure dataFile and logFile are writeable locations
-            Utilities.FileWriteable(dataFile);
-            Utilities.FileWriteable(logFile);
+            Utilities.EnsureFileWriteable(dataFile);
+            Utilities.EnsureFileWriteable(logFile);
 
             HFM.Try("Extracting data",
                     () => HsvcDataLoad.Extract(dataFile, logFile));
