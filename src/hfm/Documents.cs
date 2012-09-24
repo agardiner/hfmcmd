@@ -173,8 +173,8 @@ namespace HFM
             var nameRE = Utilities.ConvertWildcardPatternToRE(namePattern);
             var docs = new List<DocumentInfo>();
 
-            HFM.Try(string.Format("Retrieving documents at {0}", path), () =>
-                    oNames = _documents.EnumDocumentsEx(path, documentTypes, documentFileTypes,
+            HFM.Try(string.Format("Retrieving documents at {0}", path),
+                    () => oNames = _documents.EnumDocumentsEx(path, documentTypes, documentFileTypes,
                         false, 0, 0, (int)visibility,  // Note: timestamp filtering does not work
                         ref oDescs, ref oTimestamps, ref oSecurityClasses, ref oIsPrivate,
                         ref oFolderContentTypes, ref oDocOwners, ref oFileTypes, ref oDocTypes));
@@ -239,13 +239,32 @@ namespace HFM
                 EDocumentType documentType,
                 [Parameter("The document file type to look for; use All to check all documents",
                            DefaultValue = EDocumentFileType.All)]
-                EDocumentFileType documentFileType)
+                EDocumentFileType documentFileType,
+                [Parameter("A visibility setting used to determine whether public, private or both " +
+                           "types of documents should be checked",
+                 DefaultValue = EPublicPrivate.Both)]
+                EPublicPrivate visibility)
         {
+            object oNames = null, oDescs = null, oTimestamps = null, oSecurityClasses = null,
+                   oIsPrivate = null, oFolderContentTypes = null, oDocOwners = null,
+                   oFileTypes = null, oDocTypes = null;
+            string[] names;
+            var nameRE = Utilities.ConvertWildcardPatternToRE(name);
             bool exists = false;
 
             HFM.Try("Checking if document exists",
-                   () => exists = (bool)_documents.DoesDocumentExist(path, name, (int)documentType,
-                                                                     (int)documentFileType));
+                    () => oNames = _documents.EnumDocumentsEx(path, documentType, documentFileType,
+                        false, 0, 0, (int)visibility,  // Note: timestamp filtering does not work
+                        ref oDescs, ref oTimestamps, ref oSecurityClasses, ref oIsPrivate,
+                        ref oFolderContentTypes, ref oDocOwners, ref oFileTypes, ref oDocTypes));
+            names = HFM.Object2Array<string>(oNames);
+            for(var i = 0; i < names.Length; ++i) {
+                if(nameRE.IsMatch(names[i])) {
+                    exists = true;
+                    break;
+                }
+            }
+            _log.TraceFormat("Document {0} {1} exist", name, exists ? "does" : "does not");
             return exists;
         }
 
@@ -319,11 +338,12 @@ namespace HFM
             string[] paths = new string[] { path };
             string[] names = new string[] { name };
 
-            if(DoesDocumentExist(path, name, EDocumentType.All, EDocumentFileType.All)) {
+            if(DoesDocumentExist(path, name, EDocumentType.All, EDocumentFileType.All, EPublicPrivate.Both)) {
                 HFM.Try("Deleting document",
                         () => _documents.DeleteDocuments(paths, names, (int)EDocumentType.All,
                                                          (int)EDocumentFileType.All, false));
-                deleted = !DoesDocumentExist(path, name, EDocumentType.All, EDocumentFileType.All);
+                deleted = !DoesDocumentExist(path, name, EDocumentType.All,
+                                             EDocumentFileType.All, EPublicPrivate.Both);
                 if(deleted) {
                     _log.InfoFormat("Successfully deleted document {0} from {1}", name, path);
                 }
@@ -438,7 +458,8 @@ namespace HFM
             // Upload documents matching name
             foreach(var dir in Directory.GetDirectories(sourceDir)) {
                 _log.DebugFormat(@"Processing directory {0}\{1}", sourceDir, dir);
-                if(!DoesDocumentExist(targetFolder, dir, EDocumentType.Folder, EDocumentFileType.Folder)) {
+                if(!DoesDocumentExist(targetFolder, dir, EDocumentType.Folder,
+                                      EDocumentFileType.Folder, EPublicPrivate.Both)) {
                     CreateFolder(targetFolder, dir, null, securityClass, isPrivate, EDocumentType.All, false);
                 }
                 if(includeSubDirs) {
@@ -456,7 +477,8 @@ namespace HFM
                 }
                 if(overwrite || !DoesDocumentExist(targetFolder, file,
                                                    EDocumentType.All,
-                                                   EDocumentFileType.All)) {
+                                                   EDocumentFileType.All,
+                                                   EPublicPrivate.Both)) {
                     _log.FineFormat("Loading {0} to {1}", file, targetFolder);
                     var content = File.ReadAllBytes(file);
                     SaveDocument(targetFolder, Path.GetFileNameWithoutExtension(file), null,
