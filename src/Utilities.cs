@@ -1,4 +1,5 @@
 using System.IO;
+using System.Text.RegularExpressions;
 
 
 namespace HFMCmd
@@ -6,6 +7,18 @@ namespace HFMCmd
 
     public static class Utilities
     {
+
+        /// <summary>
+        /// Converts a pattern containing ? and * characters into a case-
+        /// insensitive regular expression.
+        /// </summary>
+        public static Regex ConvertWildcardPatternToRE(string pattern)
+        {
+            return new Regex("^" + pattern.Replace(".", @"\.")
+                    .Replace("*", ".*").Replace("?", ".") + "$",
+                    RegexOptions.IgnoreCase);
+        }
+
 
         /// <summary>
         /// Checks if the specified path exists and can be read.

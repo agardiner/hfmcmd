@@ -117,9 +117,12 @@ namespace HFM
         public List<DocumentInfo> EnumDocuments(
                 [Parameter("The document repository folder that contains the documents to return")]
                 string path,
-                [Parameter("If true, recurses into each directory encountered, and returns its content as well",
+                [Parameter("An optional pattern that document names should match; may include wildcards ? and *",
+                           DefaultValue = '*')]
+                string namePattern,
+                [Parameter("If true, recurses into each sub-folder encountered, and returns its content as well",
                            DefaultValue = false)]
-                bool recurseIntoFolders,
+                bool includeSubFolders,
                 [Parameter("The document type(s) to return",
                            DefaultValue = EDocumentType.All)]
                 EDocumentType documentTypes,
@@ -141,6 +144,7 @@ namespace HFM
             int[] isPrivate;
             EDocumentType[] folderContentTypes, docTypes;
             EDocumentFileType[] fileTypes;
+            var nameRE = Utilities.ConvertWildcardPatternToRE(namePattern);
             var docs = new List<DocumentInfo>();
 
             HFM.Try(string.Format("Retrieving documents at {0}", path), () =>
@@ -163,29 +167,31 @@ namespace HFM
                 path += @"\";
             }
             for(var i = 0; i < names.Length; ++i) {
-                docs.Add(new DocumentInfo() {
-                    Name = names[i],
-                    Path = path + names[i],
-                    Description = descs[i],
-                    DocumentType = docTypes[i],
-                    DocumentFileType = fileTypes[i],
-                    Timestamp = DateTime.FromOADate(timestamps[i]),
-                    IsPrivate = isPrivate[i] != 0,
-                    DocumentOwner = docOwners[i],
-                    SecurityClass = securityClasses[i],
-                    FolderContentType = folderContentTypes[i]
-                });
+                if(nameRE.IsMatch(names[i])) {
+                    docs.Add(new DocumentInfo() {
+                        Name = names[i],
+                        Path = path + names[i],
+                        Description = descs[i],
+                        DocumentType = docTypes[i],
+                        DocumentFileType = fileTypes[i],
+                        Timestamp = DateTime.FromOADate(timestamps[i]),
+                        IsPrivate = isPrivate[i] != 0,
+                        DocumentOwner = docOwners[i],
+                        SecurityClass = securityClasses[i],
+                        FolderContentType = folderContentTypes[i]
+                    });
+                }
 
-                if(recurseIntoFolders && docTypes[i] == EDocumentType.Folder) {
+                if(includeSubFolders && docTypes[i] == EDocumentType.Folder) {
                     // Recurse into sub-directory
                     _depth++;
-                    docs.AddRange(EnumDocuments(path + names[i], recurseIntoFolders,
+                    docs.AddRange(EnumDocuments(path + names[i], namePattern, includeSubFolders,
                             documentTypes, documentFileTypes, visibility, output));
                     _depth--;
                 }
             }
 
-            if(_depth == 0) {
+            if(output != null && _depth == 0) {
                 output.SetFields("Name", "Document Type", "Timestamp", "Description");
                 foreach(var doc in docs) {
                     output.WriteRecord(doc.Name, doc.DocumentType.ToString(), doc.Timestamp.ToString(), doc.Description);
@@ -193,6 +199,94 @@ namespace HFM
             }
 
             return docs;
+        }
+
+
+        [Command("Returns true if the specified document exists, or false if it does not")]
+        public bool DoesDocumentExist(
+                [Parameter("The path to the folder in which to check for the docuemnt")]
+                string path,
+                [Parameter("The name of the document")]
+                string name,
+                [Parameter("The document type to look for; use All to check all documents",
+                           DefaultValue = EDocumentType.All)]
+                EDocumentType documentType,
+                [Parameter("The document file type to look for; use All to check all documents",
+                           DefaultValue = EDocumentFileType.All)]
+                EDocumentFileType documentFileType)
+        {
+            bool exists = false;
+
+            HFM.Try("Checking if document exists",
+                   () => exists = (bool)_documents.DoesDocumentExist(path, name, (int)documentType,
+                                                                     (int)documentFileType));
+            return exists;
+        }
+
+
+        [Command("Deletes a single document")]
+        public bool DeleteDocument(
+                [Parameter("The path to the folder containing the document to delete")]
+                string path,
+                [Parameter("The name of the document to delete")]
+                string name)
+        {
+            bool deleted = false;
+            string[] paths = new string[] { path };
+            string[] names = new string[] { name };
+
+            if(DoesDocumentExist(path, name, EDocumentType.All, EDocumentFileType.All)) {
+                HFM.Try("Deleting document",
+                        () => _documents.DeleteDocuments(paths, names, (int)EDocumentType.All,
+                                                         (int)EDocumentFileType.All, false));
+                deleted = !DoesDocumentExist(path, name, EDocumentType.All, EDocumentFileType.All);
+                if(deleted) {
+                    _log.InfoFormat("Successfully deleted document {0} from {1}", name, path);
+                }
+            }
+            else {
+                _log.WarnFormat("No document named {0} was found in folder {1}", name, path);
+            }
+            return deleted;
+        }
+
+
+        [Command("Deletes documents that match the search criteria")]
+        public int DeleteDocuments(
+                [Parameter("The path to the folder from which to delete documents")]
+                string path,
+                [Parameter("The name of the document(s) to delete; may include wildcards ? and *")]
+                string namePattern,
+                [Parameter("Set to true to delete matching documents in sub-folders as well",
+                           DefaultValue = false)]
+                bool includeSubFolders,
+                [Parameter("The document type(s) to delete; use All to include all documents that " +
+                           "match the name, path, and any other criteria",
+                           DefaultValue = EDocumentType.All)]
+                EDocumentType documentTypes,
+                [Parameter("The document file type(s) to delete; use All to include all documents that " +
+                           "match the name, path, and any other criteria",
+                           DefaultValue = EDocumentFileType.All)]
+                EDocumentFileType documentFileTypes)
+        {
+            int i = 0;
+            string[] paths, names;
+            List<DocumentInfo> docs = EnumDocuments(path, namePattern, includeSubFolders,
+                    documentTypes, documentFileTypes, EPublicPrivate.Both, null);
+
+            paths = new string[(docs.Count)];
+            names = new string[(docs.Count)];
+            foreach(var doc in docs) {
+                paths[i] = doc.Path;
+                names[i] = doc.Name;
+                i++;
+            }
+
+            HFM.Try("Deleting documents",
+                    () => _documents.DeleteDocuments(paths, names, (int)documentTypes,
+                                                     (int)documentFileTypes, false));
+
+            return i;
         }
 
 
@@ -222,6 +316,12 @@ namespace HFM
                                                     isPrivate, (int)folderContentType, overwrite));
             _log.InfoFormat(@"Folder created at {0}\{1}", path, folderName);
         }
+
+
+        public void Load()
+        {
+        }
+
     }
 
 
