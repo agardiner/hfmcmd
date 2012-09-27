@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
+using System.Linq;
 
 using log4net;
 using HSVSESSIONLib;
@@ -27,17 +29,6 @@ namespace HFM
     /// - SaveDocument
     public class Documents
     {
-        // Reference to class logger
-        protected static readonly ILog _log = LogManager.GetLogger(
-            System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-
-
-        // Reference to HFM HFMwManageDocuments object
-        internal readonly HFMwManageDocuments _documents;
-
-        // Depth of recursion
-        private int _depth = 0;
-
         /// <summary>
         /// Enumeration of available document types
         /// </summary>
@@ -126,8 +117,43 @@ namespace HFM
                     }
                 }
             }
+
+
+            public bool IsVisible(EPublicPrivate visibility)
+            {
+                return visibility == EPublicPrivate.Both ||
+                       (visibility == EPublicPrivate.Public && !IsPrivate) ||
+                       (visibility == EPublicPrivate.Private && IsPrivate);
+            }
+
+            public bool IsDocumentType(EDocumentType docType)
+            {
+                return docType == EDocumentType.All || docType == DocumentType;
+            }
         }
 
+
+        public class DocumentException : Exception
+        {
+            public DocumentException(string format, params object[] items)
+                : base(string.Format(format, items))
+            { }
+        }
+
+
+        // Reference to class logger
+        protected static readonly ILog _log = LogManager.GetLogger(
+            System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
+
+        // Reference to HFM HFMwManageDocuments object
+        internal readonly HFMwManageDocuments _documents;
+
+        // Cache of folder -> List<DocumentInfo>
+        internal Dictionary<string, List<DocumentInfo>> _documentCache;
+
+        // Depth of recursion
+        private int _depth = 0;
 
 
 
@@ -136,30 +162,35 @@ namespace HFM
         {
             _documents = new HFMwManageDocuments();
             _documents.SetWebSession(session.HFMwSession);
+            _documentCache = new Dictionary<string, List<DocumentInfo>>(StringComparer.OrdinalIgnoreCase);
+            LoadCache(@"\", true);
         }
 
 
-        [Command("Returns a listing of documents that satisfy the search criteria")]
-        public List<DocumentInfo> EnumDocuments(
-                [Parameter("The document repository folder that contains the documents to return")]
-                string path,
-                [Parameter("An optional pattern that document names should match; may include wildcards ? and *",
-                           DefaultValue = '*')]
-                string namePattern,
-                [Parameter("If true, recurses into each sub-folder encountered, and returns its content as well",
-                           DefaultValue = false)]
-                bool includeSubFolders,
-                [Parameter("The document type(s) to return",
-                           DefaultValue = EDocumentType.All)]
-                EDocumentType documentTypes,
-                [Parameter("The document file type(s) to return",
-                           DefaultValue = EDocumentFileType.All)]
-                EDocumentFileType documentFileTypes,
-                [Parameter("A visibility setting used to determine whether public, private or both " +
-                           "types of documents should be returned",
-                 DefaultValue = EPublicPrivate.Public)]
-                EPublicPrivate visibility,
-                IOutput output)
+        /// <summary>
+        /// Convenience method for extendin a path with another folder.
+        /// Handles the corner case of the root folder.
+        /// </summary>
+        public static string AddFolderToPath(string path, string folder)
+        {
+            if(path == null || path.Length == 0) {
+                path = @"\";
+            }
+
+            if(folder != null && folder.Length > 0) {
+                return path.Length > 1 ? path + @"\" + folder : @"\" + folder;
+            }
+            else {
+                return path;
+            }
+        }
+
+
+        /// <summary>
+        /// Loads the document cache with info about all documents, keyed by
+        /// their folder paths.
+        /// </summary>
+        protected void LoadCache(string path, bool recurse)
         {
             object oNames = null, oDescs = null, oTimestamps = null, oSecurityClasses = null,
                    oIsPrivate = null, oFolderContentTypes = null, oDocOwners = null,
@@ -170,12 +201,15 @@ namespace HFM
             int[] isPrivate;
             EDocumentType[] folderContentTypes, docTypes;
             EDocumentFileType[] fileTypes;
-            var nameRE = Utilities.ConvertWildcardPatternToRE(namePattern);
             var docs = new List<DocumentInfo>();
 
-            HFM.Try(string.Format("Retrieving documents at {0}", path),
-                    () => oNames = _documents.EnumDocumentsEx(path, documentTypes, documentFileTypes,
-                        false, 0, 0, (int)visibility,  // Note: timestamp filtering does not work
+            if(path == null || path.Length == 0) {
+                path = @"\";
+            }
+
+            HFM.Try(string.Format("Retrieving details of all documents at {0}", path),
+                    () => oNames = _documents.EnumDocumentsEx(path, EDocumentType.All, EDocumentFileType.All,
+                        false, 0, 0, (int)EPublicPrivate.Both,
                         ref oDescs, ref oTimestamps, ref oSecurityClasses, ref oIsPrivate,
                         ref oFolderContentTypes, ref oDocOwners, ref oFileTypes, ref oDocTypes));
 
@@ -189,35 +223,127 @@ namespace HFM
             fileTypes = HFM.Object2Array<EDocumentFileType>(oFileTypes);
             docTypes = HFM.Object2Array<EDocumentType>(oDocTypes);
 
-            if(!path.EndsWith(@"\")) {
-                path += @"\";
-            }
             for(var i = 0; i < names.Length; ++i) {
-                if(docTypes[i] == EDocumentType.Folder || nameRE.IsMatch(names[i])) {
-                    docs.Add(new DocumentInfo() {
-                        Name = names[i],
-                        Folder = path,
-                        Description = descs[i],
-                        DocumentType = docTypes[i],
-                        DocumentFileType = fileTypes[i],
-                        Timestamp = DateTime.FromOADate(timestamps[i]),
-                        IsPrivate = isPrivate[i] != 0,
-                        DocumentOwner = docOwners[i],
-                        SecurityClass = securityClasses[i],
-                        FolderContentType = folderContentTypes[i]
-                    });
-                }
+                docs.Add(new DocumentInfo() {
+                    Name = names[i],
+                    Folder = path,
+                    Description = descs[i],
+                    DocumentType = docTypes[i],
+                    DocumentFileType = fileTypes[i],
+                    Timestamp = DateTime.FromOADate(timestamps[i]),
+                    IsPrivate = isPrivate[i] != 0,
+                    DocumentOwner = docOwners[i],
+                    SecurityClass = securityClasses[i],
+                    FolderContentType = folderContentTypes[i]
+                });
 
-                if(includeSubFolders && docTypes[i] == EDocumentType.Folder) {
+                if(recurse && docTypes[i] == EDocumentType.Folder) {
                     // Recurse into sub-directory
-                    _depth++;
-                    docs.AddRange(EnumDocuments(path + names[i], namePattern, includeSubFolders,
-                            documentTypes, documentFileTypes, visibility, output));
-                    _depth--;
+                    LoadCache(AddFolderToPath(path, names[i]), recurse);
                 }
             }
+            _documentCache[path] = docs;
+        }
 
-            if(output != null && _depth == 0) {
+
+        /// <summary>
+        /// Returns the details of all sub-folders in the given folder.
+        /// </summary>
+        public IEnumerable<DocumentInfo> GetFolders(string path, EPublicPrivate visibility)
+        {
+            if(_documentCache.ContainsKey(path)) {
+                return _documentCache[path].Where(doc => doc.DocumentType == EDocumentType.Folder &&
+                        doc.IsVisible(visibility));
+            }
+            else {
+                return null;
+            }
+        }
+
+
+        /// <summary>
+        /// Takes a path, and returns the reference to the folder object it represents
+        /// </summary>
+        public DocumentInfo GetParentFolder(string path)
+        {
+            DocumentInfo doc = null;
+            var re = new Regex(@"(.*)\\([^\\]+)(?:\\)?$");
+            var match = re.Match(path);
+            if(match.Success) {
+                var parent = match.Groups[1].Value;
+                if(parent.Length == 0) {
+                    parent = @"\";
+                }
+                var name = match.Groups[2].Value;
+                _log.DebugFormat("Parent folder of {0} is {1}", path, parent);
+                doc = FindDocument(parent, name, EDocumentType.Folder);
+            }
+            if(doc == null) {
+                throw new DocumentException("No parent folder could be found for {0}", path);
+            }
+            return doc;
+        }
+
+
+        /// <summary>
+        /// Returns a DocumentInfo object for the requested document if it
+        /// exists, or null if the document is not found.
+        /// </summary>
+        public DocumentInfo FindDocument(string path, string namePattern, EDocumentType docType)
+        {
+            _log.TraceFormat("Searching for {0} at {1}", namePattern, path);
+            DocumentInfo docInfo = null;
+            if(_documentCache.ContainsKey(path)) {
+                var nameRE = Utilities.ConvertWildcardPatternToRE(namePattern);
+                docInfo = _documentCache[path].FirstOrDefault(doc =>
+                        nameRE.IsMatch(doc.Name) && doc.IsDocumentType(docType));
+            }
+            return docInfo;
+        }
+
+
+        [Command("Returns a listing of documents that satisfy the search criteria")]
+        public List<DocumentInfo> EnumDocuments(
+                [Parameter("The document repository folder that contains the documents to return " +
+                           @"(note: the root folder is '\')",
+                           DefaultValue = @"\")]
+                string path,
+                [Parameter("An optional pattern that document names should match; may include wildcards ? and *",
+                           DefaultValue = "*")]
+                string namePattern,
+                [Parameter("If true, recurses into each sub-folder encountered, and returns its content as well",
+                           DefaultValue = false)]
+                bool includeSubFolders,
+                [Parameter("The document type(s) to return",
+                           DefaultValue = EDocumentType.All)]
+                EDocumentType documentType,
+                [Parameter("A visibility setting used to determine whether public, private or both " +
+                           "types of documents should be returned",
+                 DefaultValue = EPublicPrivate.Public)]
+                EPublicPrivate visibility,
+                IOutput output)
+        {
+            var nameRE = Utilities.ConvertWildcardPatternToRE(namePattern);
+            List<DocumentInfo> docs = new List<DocumentInfo>();
+
+            if(_documentCache.ContainsKey(path)) {
+                _log.TraceFormat("Locating matching documents at {0}", path);
+                docs.AddRange(_documentCache[path].Where(doc => nameRE.IsMatch(doc.Name) &&
+                         doc.IsDocumentType(documentType) && doc.IsVisible(visibility)));
+
+                if(includeSubFolders) {
+                    // Recurse into sub-directory
+                    foreach(var folder in GetFolders(path, visibility)) {
+                        docs.AddRange(EnumDocuments(AddFolderToPath(path, folder.Name), namePattern,
+                                      includeSubFolders, documentType, visibility, null));
+                    }
+                }
+            }
+            else {
+                _log.WarnFormat("The path '{0}' does not exist", path);
+            }
+
+            if(output != null) {
                 output.SetFields("Name", "Document Type", "Timestamp", "Description");
                 foreach(var doc in docs) {
                     output.WriteRecord(doc.Name, doc.DocumentType.ToString(),
@@ -237,34 +363,9 @@ namespace HFM
                 string name,
                 [Parameter("The document type to look for; use All to check all documents",
                            DefaultValue = EDocumentType.All)]
-                EDocumentType documentType,
-                [Parameter("The document file type to look for; use All to check all documents",
-                           DefaultValue = EDocumentFileType.All)]
-                EDocumentFileType documentFileType,
-                [Parameter("A visibility setting used to determine whether public, private or both " +
-                           "types of documents should be checked",
-                 DefaultValue = EPublicPrivate.Both)]
-                EPublicPrivate visibility)
+                EDocumentType documentType)
         {
-            object oNames = null, oDescs = null, oTimestamps = null, oSecurityClasses = null,
-                   oIsPrivate = null, oFolderContentTypes = null, oDocOwners = null,
-                   oFileTypes = null, oDocTypes = null;
-            string[] names;
-            var nameRE = Utilities.ConvertWildcardPatternToRE(name);
-            bool exists = false;
-
-            HFM.Try("Checking if document exists",
-                    () => oNames = _documents.EnumDocumentsEx(path, documentType, documentFileType,
-                        false, 0, 0, (int)visibility,  // Note: timestamp filtering does not work
-                        ref oDescs, ref oTimestamps, ref oSecurityClasses, ref oIsPrivate,
-                        ref oFolderContentTypes, ref oDocOwners, ref oFileTypes, ref oDocTypes));
-            names = HFM.Object2Array<string>(oNames);
-            for(var i = 0; i < names.Length; ++i) {
-                if(nameRE.IsMatch(names[i])) {
-                    exists = true;
-                    break;
-                }
-            }
+            bool exists = FindDocument(path, name, documentType) != null;
             _log.TraceFormat("Document {0} {1} exist", name, exists ? "does" : "does not");
             return exists;
         }
@@ -276,21 +377,29 @@ namespace HFM
                 string path,
                 [Parameter("The name of the document to retrieve")]
                 string name,
-                // TODO: Do we need these parameters? Can multiple documents of different types exist
-                // with the same name in the same folder?
-                [Parameter("The document type to look for; use All to check all documents",
+                // Multiple documents with the same name, but different document types can exist
+                // within a folder
+                [Parameter("The document type to look for; as names need not be unique within a folder, " +
+                           "the document type can be used to disambiguate the actual document required. " +
+                           "However, if the document you are after is unique, you can specify a document " +
+                           "type of 'All' to retrieve the first document with the specified name.",
                            DefaultValue = EDocumentType.All)]
-                EDocumentType documentType,
-                [Parameter("The document file type to look for; use All to check all documents",
-                           DefaultValue = EDocumentFileType.All)]
-                EDocumentFileType documentFileType)
+                EDocumentType documentType)
         {
             string docContent = null;
             object desc = null, secClass = null;
-            HFM.Try("Retrieving document",
-                    () => docContent = (string)_documents.GetDocument(path, name,
-                                                    (int)documentType, (int)documentFileType,
-                                                    ref desc, ref secClass));
+
+            // Find the document in the cache to determine its actual type and file type
+            var doc = FindDocument(path, name, documentType);
+            if(doc != null) {
+                HFM.Try("Retrieving document",
+                        () => docContent = (string)_documents.GetDocument(doc.Folder, doc.Name,
+                                           (int)doc.DocumentType, (int)doc.DocumentFileType,
+                                           ref desc, ref secClass));
+            }
+            else {
+                throw new DocumentException("No document named {0} could be found at {1}", name, path);
+            }
             return Utilities.GetBytes(docContent);
         }
 
@@ -325,34 +434,8 @@ namespace HFM
                                                     (int)documentFileType, securityClass,
                                                     content, isPrivate, (int)EDocumentType.All,
                                                     overwrite));
-        }
-
-
-        [Command("Deletes a single document")]
-        public bool DeleteDocument(
-                [Parameter("The path to the folder containing the document to delete")]
-                string path,
-                [Parameter("The name of the document to delete")]
-                string name)
-        {
-            bool deleted = false;
-            string[] paths = new string[] { path };
-            string[] names = new string[] { name };
-
-            if(DoesDocumentExist(path, name, EDocumentType.All, EDocumentFileType.All, EPublicPrivate.Both)) {
-                HFM.Try("Deleting document",
-                        () => _documents.DeleteDocuments(paths, names, (int)EDocumentType.All,
-                                                         (int)EDocumentFileType.All, false));
-                deleted = !DoesDocumentExist(path, name, EDocumentType.All,
-                                             EDocumentFileType.All, EPublicPrivate.Both);
-                if(deleted) {
-                    _log.InfoFormat("Successfully deleted document {0} from {1}", name, path);
-                }
-            }
-            else {
-                _log.WarnFormat("No document named {0} was found in folder {1}", name, path);
-            }
-            return deleted;
+            // Update cache
+            LoadCache(path, false);
         }
 
 
@@ -368,38 +451,63 @@ namespace HFM
                 [Parameter("The document type(s) to delete; use All to include all documents that " +
                            "match the name, path, and any other criteria",
                            DefaultValue = EDocumentType.All)]
-                EDocumentType documentTypes,
-                [Parameter("The document file type(s) to delete; use All to include all documents that " +
-                           "match the name, path, and any other criteria",
-                           DefaultValue = EDocumentFileType.All)]
-                EDocumentFileType documentFileTypes)
+                EDocumentType documentType,
+                [Parameter("Filter documents to be deleted to public, private or both",
+                           DefaultValue = EPublicPrivate.Both)]
+                EPublicPrivate visibility)
         {
             int i = 0;
-            string[] paths, names;
             List<DocumentInfo> docs = EnumDocuments(path, namePattern, includeSubFolders,
-                    documentTypes, documentFileTypes, EPublicPrivate.Both, null);
+                    documentType, visibility, null);
 
-            paths = new string[(docs.Count)];
-            names = new string[(docs.Count)];
+            var paths = new string[1];
+            var names = new string[1];
             foreach(var doc in docs) {
-                paths[i] = doc.Folder;
-                names[i] = doc.Name;
-                _log.Info(doc.Folder);
-                _log.Info(doc.Name);
+                paths[0] = doc.Folder;
+                names[0] = doc.Name;
+                HFM.Try("Deleting document",
+                        () => _documents.DeleteDocuments(paths, names, (int)doc.DocumentType,
+                                                         (int)doc.DocumentFileType, false));
+            // TODO: Update cache
                 i++;
             }
-
-            HFM.Try("Deleting documents",
-                    () => _documents.DeleteDocuments(paths, names, (int)documentTypes,
-                                                     (int)documentFileTypes, false));
 
             return i;
         }
 
 
+        [Command("Deletes the specified folder, including all its content and sub-folders")]
+        public void DeleteFolder(
+                [Parameter("The path to the folder to delete")]
+                string path)
+        {
+            var docs = EnumDocuments(path, "*", true, EDocumentType.All,
+                    EPublicPrivate.Both, null);
+            docs.Reverse();     // So we delete folder content before folders
+            if(path.Length > 1) {
+                // Add folder itself to list of items to be deleted
+                docs.Add(GetParentFolder(path));
+            }
+
+            var paths = new string[1];
+            var names = new string[1];
+            foreach(var doc in docs) {
+                paths[0] = doc.Folder;
+                names[0] = doc.Name;
+                HFM.Try("Deleting document {0}", doc.Name,
+                        () => _documents.DeleteDocuments(paths, names, (int)doc.DocumentType,
+                                                         (int)doc.DocumentFileType, false));
+                if(doc.DocumentType == EDocumentType.Folder) {
+                    _documentCache.Remove(AddFolderToPath(doc.Folder, doc.Name));
+                }
+            }
+            _log.InfoFormat("Successfully deleted folder {0}", path);
+        }
+
+
         [Command("Creates a new folder")]
         public void CreateFolder(
-                [Parameter("The path to the parent folder in which to create the new folder")]
+                [Parameter("The path to the parent folder in which to create the new folder (note: path must already exist)")]
                 string path,
                 [Parameter("The name of the new folder")]
                 string folderName,
@@ -421,7 +529,9 @@ namespace HFM
             HFM.Try("Creating new folder",
                     () => _documents.CreateFolderEx(path, folderName, description, securityClass,
                                                     isPrivate, (int)folderContentType, overwrite));
-            _log.InfoFormat(@"Folder created at {0}\{1}", path, folderName);
+            _log.InfoFormat(@"Folder created at {0}", AddFolderToPath(path, folderName));
+            // Update cache
+            LoadCache(path, true);
         }
 
 
@@ -465,17 +575,20 @@ namespace HFM
             foreach(var dirPath in Directory.GetDirectories(sourceDir)) {
                 var dir = Utilities.GetDirectoryName(dirPath);
                 _log.DebugFormat("Processing directory {0}", dir);
-                if(!DoesDocumentExist(targetFolder, dir,
-                                      EDocumentType.Folder, EDocumentFileType.Folder, EPublicPrivate.Both)) {
+                if(!DoesDocumentExist(targetFolder, dir, EDocumentType.Folder)) {
                     CreateFolder(targetFolder, dir, null,
                                  securityClass, isPrivate, EDocumentType.All, false);
                 }
                 if(includeSubDirs) {
                     _depth++;
-                    LoadDocuments(Path.Combine(sourceDir, dir), namePattern, Path.Combine(targetFolder, dir),
-                                  includeSubDirs, documentType, documentFileType, securityClass,
-                                  isPrivate, overwrite);
-                    _depth--;
+                    try {
+                        LoadDocuments(Path.Combine(sourceDir, dir), namePattern, Path.Combine(targetFolder, dir),
+                                      includeSubDirs, documentType, documentFileType, securityClass,
+                                      isPrivate, overwrite);
+                    }
+                    finally {
+                        _depth--;
+                    }
                 }
             }
 
@@ -485,14 +598,13 @@ namespace HFM
                     continue;
                 }
                 if(overwrite || !DoesDocumentExist(targetFolder, file,
-                                                   EDocumentType.All,
-                                                   EDocumentFileType.All,
-                                                   EPublicPrivate.Both)) {
+                                                   EDocumentType.All)) {
                     _log.FineFormat("Loading {0} to {1}", file, targetFolder);
                     var content = File.ReadAllBytes(filePath);
                     SaveDocument(targetFolder, Path.GetFileNameWithoutExtension(file), null,
                                  documentType, documentFileType, content,
                                  securityClass, isPrivate, overwrite);
+            // TODO: Update cache
                 }
             }
         }
@@ -512,7 +624,7 @@ namespace HFM
                 bool includeSubFolders,
                 [Parameter("The document type(s) to be extracted",
                            DefaultValue = EDocumentType.All)]
-                EDocumentType documentTypes,
+                EDocumentType documentType,
                 [Parameter("The document file type(s) to be extracted",
                            DefaultValue = EDocumentFileType.All)]
                 EDocumentFileType documentFileTypes,
@@ -526,8 +638,8 @@ namespace HFM
             string tgtPath, filePath;
             int extracted = 0;
 
-            var docs = EnumDocuments(path, namePattern, includeSubFolders, documentTypes,
-                                     documentFileTypes, visibility, null);
+            var docs = EnumDocuments(path, namePattern, includeSubFolders, documentType,
+                                     visibility, null);
             foreach(var doc in docs) {
                 tgtPath = Path.Combine(targetDir,
                                        Utilities.PathDifference(path, doc.Folder).Substring(1));
@@ -540,7 +652,7 @@ namespace HFM
                 }
                 else if(overwrite || !File.Exists(filePath)) {
                     _log.FineFormat("Extracting document {0} to {1}", doc.Name, filePath);
-                    var content = GetDocument(doc.Folder, doc.Name, doc.DocumentType, doc.DocumentFileType);
+                    var content = GetDocument(doc.Folder, doc.Name, doc.DocumentType);
                     using (FileStream fs = File.Open(filePath, FileMode.OpenOrCreate,
                                                      FileAccess.Write, FileShare.None)) {
                         fs.Write(content, 0, content.Length);

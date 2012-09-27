@@ -38,6 +38,24 @@ namespace HFM
 
 
         /// <summary>
+        /// Encapsulate a common pattern for performing an API call against HFM.
+        /// </summary>
+        public static void Try(string format, object arg, Action op)
+        {
+            Try(string.Format(format, arg), op);
+        }
+
+
+        /// <summary>
+        /// Encapsulate a common pattern for performing an API call against HFM.
+        /// </summary>
+        public static void Try(string format, object arg0, string arg1, Action op)
+        {
+            Try(string.Format(format, arg0, arg1), op);
+        }
+
+
+        /// <summary>
         /// Encapsulate a common pattern for performing an API call against
         /// HFM, prefixing the API call with a log message.
         /// </summary>
@@ -69,7 +87,7 @@ namespace HFM
         public static void Try(string action, Action op, Action<HFMException> handler)
         {
             if (action != null) {
-                _log.Info(action);
+                _log.Fine(action);
             }
             try {
                 op();
