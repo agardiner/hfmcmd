@@ -121,17 +121,17 @@ namespace HFM
         [Command("Returns the names of the HFM clusters and/or servers registered on this machine")]
         public string[] GetClusters(IOutput output)
         {
-            object clusters = null;
+            string[] clusters = null;
 
             HFM.Try("Retrieving names of registered clusters / servers",
-                    () => clusters = _client.EnumRegisteredClusterNames());
-            if(clusters != null) {
-                output.SetFields("Cluster");
-                foreach(var cluster in clusters as string[]) {
+                    () => clusters = _client.EnumRegisteredClusterNames() as string[]);
+            if(output != null && clusters != null) {
+                output.SetHeader("Cluster");
+                foreach(var cluster in clusters) {
                     output.WriteRecord(cluster);
                 }
             }
-            return clusters as string[];
+            return clusters;
         }
 
 
@@ -148,9 +148,8 @@ namespace HFM
             // TODO: This seems to always throw an exception!?
             HFM.Try("Obtaining cluster information for server",
                     () => _client.GetClusterInfo(serverName, loadBalanced, out clusterName));
-            if(clusterName != null) {
-                output.SetFields("Cluster Name");
-                output.WriteRecord(clusterName as string);
+            if(output != null && clusterName != null) {
+                output.WriteSingleValue("Cluster Name", clusterName);
             }
         }
 
@@ -161,8 +160,10 @@ namespace HFM
             string domain = null, userid = null;
             HFM.Try("Determining current logged on Windows user",
                     () => _client.DetermineWindowsLoggedOnUser(out domain, out userid));
-            output.SetFields("Domain", "User Name");
-            output.WriteRecord(domain, userid);
+            if(output != null) {
+                output.SetHeader("Domain", "User Name", 30);
+                output.WriteRecord(domain, userid);
+            }
             return string.Format(@"{0}\{1}", domain, userid);
         }
 
@@ -235,8 +236,10 @@ namespace HFM
             if(!_appOpened) {
                 _log.Warn("SSO token cannot be retrieved until an application has been opened");
             }
-            output.SetFields("Domain", "UserName", "SSO Token");
-            output.WriteRecord(domain, user, token);
+            if(output != null) {
+                output.SetHeader("Domain", "UserName", "SSO Token");
+                output.WriteSingleRecord(domain, user, token);
+            }
             return token;
         }
 
@@ -291,16 +294,13 @@ namespace HFM
                 string clusterName,
                 IOutput output)
         {
-            object projects = null;
+            string[] projects = null;
             HFM.Try("Retrieving names of provisioning projects",
-                    () => projects = _client.EnumProvisioningProjects(clusterName));
-            if(projects != null) {
-                output.SetFields("Project");
-                foreach(var project in projects as string[]) {
-                    output.WriteRecord(project);
-                }
+                    () => projects = _client.EnumProvisioningProjects(clusterName) as string[]);
+            if(output != null && projects != null) {
+                output.WriteEnumerable(projects, "Project", 40);
             }
-            return projects as string[];
+            return projects;
         }
 
 
@@ -354,8 +354,10 @@ namespace HFM
             bool hasAccess = false;
             HFM.Try("Checking if user has CreateApplication rights",
                     () => _client.DoesUserHaveCreateApplicationRights(clusterName, out hasAccess));
-            output.SetFields("Cluster", "CreateApplication");
-            output.WriteRecord(clusterName, hasAccess ? "true" : "false");
+            if(output != null) {
+                output.SetHeader("Cluster", "Create Application Rights", 28);
+                output.WriteSingleRecord(clusterName, hasAccess ? "Yes" : "No");
+            }
             return hasAccess;
         }
 
@@ -369,8 +371,10 @@ namespace HFM
             bool hasAdmin = false;
             HFM.Try("Checking if user has SystemAdmin rights",
                     () => _client.DoesUserHaveSystemAdminRights(clusterName, out hasAdmin));
-            output.SetFields("Cluster", "SystemAdmin");
-            output.WriteRecord(clusterName, hasAdmin ? "true" : "false");
+            if(output != null) {
+                output.SetHeader("Cluster", "System Admin Rights");
+                output.WriteSingleRecord(clusterName, hasAdmin ? "Yes" : "No");
+            }
             return hasAdmin;
         }
     }

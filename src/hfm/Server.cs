@@ -51,9 +51,12 @@ namespace HFM
                     () => _hsxServer.EnumDataSources(out products, out apps, out descs, out dsns));
             sApps = apps as string[];
             sDescs = descs as string[];
-            output.SetFields("Application", "Description");
-            for(var i = 0; i < sApps.Length; ++i) {
-                output.WriteRecord(sApps[i], sDescs[i]);
+            if(output != null) {
+                output.SetHeader("Application", "Description", 50);
+                for(var i = 0; i < sApps.Length; ++i) {
+                    output.WriteRecord(sApps[i], sDescs[i]);
+                }
+                output.End();
             }
             return sApps;
         }
@@ -62,19 +65,15 @@ namespace HFM
         [Command("Returns the names of the Extended Analytics DSNs that are registered on the server")]
         public string[] GetDSNs(IOutput output)
         {
-            object dsns = null;
-            string[] sDSNs;
+            string[] dsns = null;
+
             HFM.Try("Retrieving names of DSNs",
-                    () => dsns = _hsxServer.EnumRegisteredDSNs());
-            sDSNs = dsns as string[];
-            output.SetFields("DSN Name");
-            if(sDSNs == null) {
-                sDSNs = new string[] {};
+                    () => dsns = _hsxServer.EnumRegisteredDSNs() as string[]);
+
+            if(output != null && dsns != null) {
+                output.WriteEnumerable(dsns, "DSN Name");
             }
-            foreach(var dsn in sDSNs) {
-                output.WriteRecord(dsn);
-            }
-            return sDSNs;
+            return dsns;
         }
 
     }

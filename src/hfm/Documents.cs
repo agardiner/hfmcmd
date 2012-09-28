@@ -344,11 +344,12 @@ namespace HFM
             }
 
             if(output != null) {
-                output.SetFields("Name", "Document Type", "Timestamp", "Description");
+                output.SetHeader("Name", 30, "Document Type", "Timestamp", "Description", -1);
                 foreach(var doc in docs) {
-                    output.WriteRecord(doc.Name, doc.DocumentType.ToString(),
-                            doc.Timestamp.ToString(), doc.Description);
+                    output.WriteRecord(doc.Name, doc.DocumentType,
+                            doc.Timestamp, doc.Description);
                 }
+                output.End();
             }
 
             return docs;
