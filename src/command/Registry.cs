@@ -177,7 +177,7 @@ namespace Command
 
         public IEnumerable<Command> EachCommand()
         {
-            return _commands.Values;
+            return _commands.Values.OrderBy(c => c.Name);
         }
 
 

@@ -289,12 +289,12 @@ namespace HFM
         /// Returns a DocumentInfo object for the requested document if it
         /// exists, or null if the document is not found.
         /// </summary>
-        public DocumentInfo FindDocument(string path, string namePattern, EDocumentType docType)
+        public DocumentInfo FindDocument(string path, string name, EDocumentType docType)
         {
-            _log.TraceFormat("Searching for {0} at {1}", namePattern, path);
+            _log.TraceFormat("Searching for {0} at {1}", name, path);
             DocumentInfo docInfo = null;
             if(_documentCache.ContainsKey(path)) {
-                var nameRE = Utilities.ConvertWildcardPatternToRE(namePattern);
+                var nameRE = Utilities.ConvertWildcardPatternToRE(name);
                 docInfo = _documentCache[path].FirstOrDefault(doc =>
                         nameRE.IsMatch(doc.Name) && doc.IsDocumentType(docType));
             }
@@ -310,7 +310,7 @@ namespace HFM
                 string path,
                 [Parameter("An optional pattern that document names should match; may include wildcards ? and *",
                            DefaultValue = "*")]
-                string namePattern,
+                string name,
                 [Parameter("If true, recurses into each sub-folder encountered, and returns its content as well",
                            DefaultValue = false)]
                 bool includeSubFolders,
@@ -323,7 +323,7 @@ namespace HFM
                 EPublicPrivate visibility,
                 IOutput output)
         {
-            var nameRE = Utilities.ConvertWildcardPatternToRE(namePattern);
+            var nameRE = Utilities.ConvertWildcardPatternToRE(name);
             List<DocumentInfo> docs = new List<DocumentInfo>();
 
             if(_documentCache.ContainsKey(path)) {
@@ -334,7 +334,7 @@ namespace HFM
                 if(includeSubFolders) {
                     // Recurse into sub-directory
                     foreach(var folder in GetFolders(path, visibility)) {
-                        docs.AddRange(EnumDocuments(AddFolderToPath(path, folder.Name), namePattern,
+                        docs.AddRange(EnumDocuments(AddFolderToPath(path, folder.Name), name,
                                       includeSubFolders, documentType, visibility, null));
                     }
                 }
@@ -345,7 +345,7 @@ namespace HFM
 
             if(output != null) {
                 // TODO: Add support for outputting any field of DocumentInfo
-                output.SetHeader("Name", 30, "Document Type", "Timestamp", "Description", -1);
+                output.SetHeader("Name", 30, "Document Type", "Timestamp", "Description");
                 foreach(var doc in docs) {
                     output.WriteRecord(doc.Name, doc.DocumentType,
                             doc.Timestamp, doc.Description);
@@ -446,7 +446,7 @@ namespace HFM
                 [Parameter("The path to the folder from which to delete documents")]
                 string path,
                 [Parameter("The name of the document(s) to delete; may include wildcards ? and *")]
-                string namePattern,
+                string name,
                 [Parameter("Set to true to delete matching documents in sub-folders as well",
                            DefaultValue = false)]
                 bool includeSubFolders,
@@ -458,23 +458,29 @@ namespace HFM
                            DefaultValue = EPublicPrivate.Both)]
                 EPublicPrivate visibility)
         {
-            int i = 0;
-            List<DocumentInfo> docs = EnumDocuments(path, namePattern, includeSubFolders,
+            int count = 0;
+            List<DocumentInfo> docs = EnumDocuments(path, name, includeSubFolders,
                     documentType, visibility, null);
+            docs.Reverse();     // So we delete folder content before folders
 
             var paths = new string[1];
             var names = new string[1];
             foreach(var doc in docs) {
                 paths[0] = doc.Folder;
                 names[0] = doc.Name;
-                HFM.Try("Deleting document",
+                HFM.Try("Deleting document {0}", doc.Name,
                         () => _documents.DeleteDocuments(paths, names, (int)doc.DocumentType,
                                                          (int)doc.DocumentFileType, false));
-            // TODO: Update cache
-                i++;
+                count++;
+                if(doc.DocumentType == EDocumentType.Folder) {
+                    _documentCache.Remove(AddFolderToPath(doc.Folder, doc.Name));
+                }
             }
+            // Update cache
+            LoadCache(path, includeSubFolders);
+            _log.InfoFormat("Successfully deleted {0} documents", count);
 
-            return i;
+            return count;
         }
 
 
@@ -483,20 +489,15 @@ namespace HFM
                 [Parameter("The path to the folder to delete")]
                 string path)
         {
-            var docs = EnumDocuments(path, "*", true, EDocumentType.All,
-                    EPublicPrivate.Both, null);
-            docs.Reverse();     // So we delete folder content before folders
+            DeleteDocuments(path, "*", true, EDocumentType.All, EPublicPrivate.Both);
+
             if(path.Length > 1) {
                 // Add folder itself to list of items to be deleted
-                docs.Add(GetParentFolder(path));
-            }
+                var doc = GetParentFolder(path);
 
-            var paths = new string[1];
-            var names = new string[1];
-            foreach(var doc in docs) {
-                paths[0] = doc.Folder;
-                names[0] = doc.Name;
-                HFM.Try("Deleting document {0}", doc.Name,
+                var paths = new string[] { doc.Folder };
+                var names = new string[] { doc.Name };
+                HFM.Try("Deleting folder {0}", doc.Name,
                         () => _documents.DeleteDocuments(paths, names, (int)doc.DocumentType,
                                                          (int)doc.DocumentFileType, false));
                 if(doc.DocumentType == EDocumentType.Folder) {
@@ -545,7 +546,7 @@ namespace HFM
                            "wildcards may be used. Note that the name pattern does not " +
                            "apply to folder names when IncludeSubDirs is true.",
                            DefaultValue = "*")]
-                string namePattern,
+                string name,
                 [Parameter("The folder in the HFM document repository where the documents should be placed")]
                 string targetFolder,
                 [Parameter("A flag indicating whether sub-directories below the source directory " +
@@ -567,7 +568,7 @@ namespace HFM
                            DefaultValue = false)]
                 bool overwrite)
         {
-            var nameRE = Utilities.ConvertWildcardPatternToRE(namePattern);
+            var nameRE = Utilities.ConvertWildcardPatternToRE(name);
 
             if(_depth == 0) {
                 _log.InfoFormat("Loading documents from {0} to {1}", sourceDir, targetFolder);
@@ -584,7 +585,7 @@ namespace HFM
                 if(includeSubDirs) {
                     _depth++;
                     try {
-                        LoadDocuments(Path.Combine(sourceDir, dir), namePattern, Path.Combine(targetFolder, dir),
+                        LoadDocuments(Path.Combine(sourceDir, dir), name, Path.Combine(targetFolder, dir),
                                       includeSubDirs, documentType, documentFileType, securityClass,
                                       isPrivate, overwrite);
                     }
@@ -618,7 +619,7 @@ namespace HFM
                 string path,
                 [Parameter("A document name pattern identifying the documents to extract",
                            DefaultValue = '*')]
-                string namePattern,
+                string name,
                 [Parameter("The file system path where extracted documents are to be placed")]
                 string targetDir,
                 [Parameter("A flag indicating whether documents in sub-folders should be included",
@@ -640,7 +641,7 @@ namespace HFM
             string tgtPath, filePath;
             int extracted = 0;
 
-            var docs = EnumDocuments(path, namePattern, includeSubFolders, documentType,
+            var docs = EnumDocuments(path, name, includeSubFolders, documentType,
                                      visibility, null);
             foreach(var doc in docs) {
                 tgtPath = Path.Combine(targetDir,

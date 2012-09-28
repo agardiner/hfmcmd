@@ -221,7 +221,10 @@ namespace HFMCmd
                     }
                 }
                 var formats = _fieldNames.Select((field, i) =>
-                        string.Format("{{{0},-{1}}}", i, _widths[i])).ToArray();
+                        _widths[i] > 0 ?
+                            string.Format("{{{0},{1}}}", i, _widths[i] * -1) :
+                            "{0}"
+                        ).ToArray();
                 _format = new String(' ', IndentWidth) + string.Join(FieldSeparator, formats);
             }
             else {
@@ -300,6 +303,7 @@ namespace HFMCmd
 
             // Display the field headers if there is more than one field
             if(fields.Length > 1) {
+                _log.InfoFormat(_format, _fieldNames.Select((field, i) => new String('-', _widths[i])).ToArray());
                 _log.InfoFormat(_format, _fieldNames);
                 _log.InfoFormat(_format, _fieldNames.Select((field, i) => new String('-', _widths[i])).ToArray());
             }
