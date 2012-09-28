@@ -42,6 +42,7 @@ namespace HFMCmd
     }
 
 
+
     /// <summary>
     /// Helper class providing convenience methods that can be used with any
     /// IOutput implementations to ease output of common cases, such as:
@@ -130,48 +131,126 @@ namespace HFMCmd
     }
 
 
-    public class LogOutput : IOutput
+
+    /// <summary>
+    /// Base class for IOutput implementations that output data in fixed width
+    /// format.
+    /// </summary>
+    public abstract class FixedWidthOutput : IOutput
+    {
+        /// Maximum width for a line of output
+        private int _maxWidth = -1;
+
+        /// Level of indentation to use
+        public int IndentWidth = 0;
+        /// String to use as a field separator
+        public string FieldSeparator = " ";
+        /// Default field width if no width specified for a field
+        public int DefaultFieldWidth = 20;
+        /// Maximum width to constrain a line of output to. If the content
+        /// exceeds this length, it will be wrapped. A value of -1 indicates
+        /// no maximum width.
+        public int MaxWidth {
+            get { return _maxWidth; }
+            set { _maxWidth = value >= 50 ? value : -1; }
+        }
+
+        /// Names of the current fields
+        protected string[] _fieldNames;
+        /// Actual widths to be used for subsequent calls to WriteRecord
+        protected int[] _widths;
+        /// Format string used to format fields into a line of text
+        protected string _format;
+        /// Number of records output in current table
+        protected int _records;
+
+
+        public virtual void SetHeader(params object[] fields)
+        {
+            if(fields.Length > 0) {
+                _fieldNames = OutputHelper.GetFieldNamesAndWidths(fields, out _widths);
+                var total = IndentWidth;
+                for(var i = 0; i < _widths.Length; total += _widths[i++] + FieldSeparator.Length) {
+                    // Last field gets special treatment
+                    if(i == _widths.Length - 1 && MaxWidth > 0 && total < MaxWidth) {
+                        _widths[i] = MaxWidth - total;
+                    }
+                    else if(_widths[i] == 0) {
+                        _widths[i] = DefaultFieldWidth;
+                    }
+                }
+                var formats = _fieldNames.Select((field, i) =>
+                        string.Format("{{{0},-{1}}}", i, _widths[i])).ToArray();
+                _format = new String(' ', IndentWidth) + string.Join(FieldSeparator, formats);
+            }
+            else {
+                _format = null;
+            }
+            _records = 0;
+        }
+
+
+        public List<string> Wrap(params object[] values)
+        {
+            List<string> lines = new List<string>();
+            return lines;
+        }
+
+        public virtual void WriteRecord(params object[] values)
+        {
+            _records++;
+        }
+
+        public virtual void End()
+        {
+        }
+
+    }
+
+
+
+    public class LogOutput : FixedWidthOutput
     {
         // Reference to class logger
         protected static readonly ILog _log = LogManager.GetLogger(
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-        /// Level of indentation to use
-        public int IndentWidth = 4;
-        /// Default field width if no width specified for a given field name
-        public int DefaultFieldWidth = 20;
-        /// Field widths to use for fields with a matching name
-        public readonly Dictionary<string, int> FieldWidths =
-            new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
-        private int _records;
-        private int[] _widths;
-        private string _format;
-
-        public void SetHeader(params object[] fields)
+        /// Constructor
+        public LogOutput()
         {
-            _records = 0;
-            var headers = OutputHelper.GetFieldNamesAndWidths(fields, out _widths);
-            var formats = fields.Select((field, i) => string.Format("{{{0},-{1}}}", i, _widths[i])).ToArray();
-            _format = new String(' ', IndentWidth) + string.Join(" ", formats);
+            IndentWidth = 4;
+        }
+
+
+        public override void SetHeader(params object[] fields)
+        {
+            base.SetHeader(fields);
 
             // Display the field headers if there is more than one field
             if(fields.Length > 1) {
-                _log.InfoFormat(_format, fields);
-                _log.InfoFormat(_format, fields.Select((field, i) => new String('-', _widths[i])).ToArray());
+                _log.InfoFormat(_format, _fieldNames);
+                _log.InfoFormat(_format, _fieldNames.Select((field, i) => new String('-', _widths[i])).ToArray());
             }
         }
 
 
-        public void WriteRecord(params object[] values)
+        public override void WriteRecord(params object[] values)
         {
-            _log.InfoFormat(_format, values);
-            _records++;
+            if(_format != null) {
+                _log.InfoFormat(_format, values);
+            }
+            else {
+                foreach(var line in values) {
+                    _log.Info(line);
+                }
+            }
+            ++_records;
         }
 
-        public void End()
+        public override void End()
         {
-            if(_widths.Length > 0 && _records > 5) {
+            if(_widths != null && _widths.Length > 0 && _records > 5) {
                 _log.InfoFormat("{0} records output", _records);
             }
         }

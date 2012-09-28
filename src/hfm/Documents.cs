@@ -344,6 +344,7 @@ namespace HFM
             }
 
             if(output != null) {
+                // TODO: Add support for outputting any field of DocumentInfo
                 output.SetHeader("Name", 30, "Document Type", "Timestamp", "Description", -1);
                 foreach(var doc in docs) {
                     output.WriteRecord(doc.Name, doc.DocumentType,

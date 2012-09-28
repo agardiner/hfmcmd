@@ -145,25 +145,20 @@ namespace HFMCmd
             _commands.RegisterNamespace("HFMCmd");
             _commands.RegisterNamespace("HFM");
 
+            // Define command-line UI
+            _argumentMapper = new PluggableArgumentMapper();
+            _cmdLine = new UI(HFMCmd.Resource.Help.Purpose, _argumentMapper);
+
             // Create a Context for invoking Commands
             _context = new Context(_commands);
             _context.Set(this);
             _context.Set(new LogOutput());
 
-            // Process command-line arguments
-            _argumentMapper = new PluggableArgumentMapper();
-
-            // TODO: Work out a way to have this happen automagically
-            //HFM.LoadExtractOptions.RegisterWithArgumentMapper(argMap);
-
-            _cmdLine = new UI(HFMCmd.Resource.Help.Purpose, _argumentMapper);
+            // Standard command-line arguments
             ValueArgument arg = _cmdLine.AddPositionalArgument("CommandOrFile",
                     "The name of the command to execute, or the path to a file containing commands to execute");
             arg.IsRequired = true;
             arg.Validate = ValidateCommand;
-
-
-            // Standard command-line arguments
             arg = _cmdLine.AddKeywordArgument("LogLevel", "Set logging to the specified level",
                     (key, val) => Log(val, null));
             arg.AddValidator(new ListValidator("NONE", "SEVERE", "ERROR", "WARN",
@@ -171,6 +166,7 @@ namespace HFMCmd
             _cmdLine.AddFlagArgument("Debug", "Enable debug logging",
                     (key, val) => Log("DEBUG", null));
 
+            // Process command-line arguments
             try {
                 var args = _cmdLine.Parse(Environment.GetCommandLineArgs());
                 if(args != null) {
@@ -272,6 +268,7 @@ namespace HFMCmd
         }
 
 
+        /// Add a command-line argument for an ISetting
         protected void AddSettingAsArg(ISetting setting)
         {
             if(!setting.IsVersioned || setting.IsCurrent(HFM.HFM.Version)) {
@@ -296,51 +293,48 @@ namespace HFMCmd
         }
 
 
+
         [Command("Displays help information")]
         public void Help(
                 [Parameter("The name of a command for which to display detailed help",
                  DefaultValue = null)]
-                string command)
+                string command,
+                IOutput output)
         {
+            if(output == null) return;
             if(command == null) {
-                // TODO: Display general help
-                Console.Out.WriteLine(HFMCmd.Resource.Help.General);
+                // Display general help
+                output.WriteLine(HFMCmd.Resource.Help.General);
             }
             else if(string.Equals(command, "Commands", StringComparison.OrdinalIgnoreCase)) {
-                // TODO: Display a list of commands
-                Console.Out.WriteLine("Commands:");
-                foreach(var cmd in _commands.EachCommand()) {
-                    Console.Out.WriteLine("    {0}", cmd.Name);
-                }
+                // Display a list of commands
+                output.WriteEnumerable(_commands.EachCommand(), "Commands", 40);
             }
             else {
-                // TODO: Display help for the requested command
+                // Display help for the requested command
                 var cmd = _commands[command];
-                Console.Out.WriteLine("Help for command {0}", cmd.Name);
-                Console.Out.WriteLine();
+                output.WriteLine(string.Format("Help for command {0}", cmd.Name));
+                output.WriteLine();
                 if(cmd.Description != null) {
-                    Console.Out.WriteLine("Description");
-                    Console.Out.WriteLine("-----------");
-                    Console.Out.WriteLine(cmd.Description);
-                    Console.Out.WriteLine();
+                    output.WriteSingleValue("Description", cmd.Description);
                 }
                 if(cmd.Parameters != null) {
-                    Console.Out.WriteLine("Parameters");
-                    Console.Out.WriteLine("----------");
+                    output.SetHeader("Parameter", 30, "Description");
                     foreach(var parm in cmd.Parameters) {
                         if(parm.HasParameterAttribute) {
-                            if(parm.IsCurrent(HFM.HFM.Version)) {
-                                Console.Out.WriteLine("  {0,-25} {1}", parm.Name, parm.Description);
+                            if(!parm.IsVersioned || parm.IsCurrent(HFM.HFM.Version)) {
+                                output.WriteRecord(parm.Name, parm.Description);
                             }
                         }
                         else if(parm.IsCollection) {
                             foreach(var setting in _commands.GetSettings(parm.ParameterType)) {
-                                if(setting.IsCurrent(HFM.HFM.Version)) {
-                                    Console.Out.WriteLine("  {0,-25} {1}", setting.Name, setting.Description);
+                                if(!parm.IsVersioned || setting.IsCurrent(HFM.HFM.Version)) {
+                                    output.WriteRecord(setting.Name, setting.Description);
                                 }
                             }
                         }
                     }
+                    output.End();
                 }
             }
         }

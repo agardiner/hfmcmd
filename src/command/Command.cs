@@ -59,6 +59,12 @@ namespace Command
                 this.Parameters.Add(param);
             }
         }
+
+
+        public override string ToString()
+        {
+            return Name;
+        }
     }
 
 
