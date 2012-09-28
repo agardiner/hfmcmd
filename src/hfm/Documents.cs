@@ -419,7 +419,7 @@ namespace HFM
                 [Parameter("The document file type to save the document as")]
                 EDocumentFileType documentFileType,
                 [Parameter("The content for the new document")]
-                byte[] content,
+                string content,
                 [Parameter("The security class to assign the document",
                            DefaultValue = "[Default]")]
                 string securityClass,
@@ -431,7 +431,7 @@ namespace HFM
                 bool overwrite)
 
         {
-            HFM.Try("Saving document",
+            HFM.Try("Saving document {0} to {1}", name, path,
                     () => _documents.SaveDocument2(path, name, desc, (int)documentType,
                                                     (int)documentFileType, securityClass,
                                                     content, isPrivate, (int)EDocumentType.All,
@@ -603,11 +603,10 @@ namespace HFM
                 if(overwrite || !DoesDocumentExist(targetFolder, file,
                                                    EDocumentType.All)) {
                     _log.FineFormat("Loading {0} to {1}", file, targetFolder);
-                    var content = File.ReadAllBytes(filePath);
-                    SaveDocument(targetFolder, Path.GetFileNameWithoutExtension(file), null,
+                    var content = File.ReadAllText(filePath);
+                    SaveDocument(targetFolder, Path.GetFileNameWithoutExtension(file), "",
                                  documentType, documentFileType, content,
                                  securityClass, isPrivate, overwrite);
-            // TODO: Update cache
                 }
             }
         }
