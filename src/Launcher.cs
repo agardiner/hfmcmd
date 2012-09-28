@@ -316,10 +316,11 @@ namespace HFMCmd
                 output.WriteLine(string.Format("Help for command {0}", cmd.Name));
                 output.WriteLine();
                 if(cmd.Description != null) {
-                    output.WriteSingleValue("Description", cmd.Description);
+                    output.WriteSingleValue(cmd.Description, "Description", 80);
+                    output.WriteLine();
                 }
                 if(cmd.Parameters != null) {
-                    output.SetHeader("Parameter", 30, "Description");
+                    output.SetHeader("Parameter", 30, "Description", 50);
                     foreach(var parm in cmd.Parameters) {
                         if(parm.HasParameterAttribute) {
                             if(!parm.IsVersioned || parm.IsCurrent(HFM.HFM.Version)) {

@@ -54,6 +54,10 @@ namespace HFMCmd
     public static class OutputHelper
     {
 
+        public static char[] WHITESPACE = new char[] { ' ', '\n', '\t' };
+        public static char[] WORDBREAKS = new char[] { '-', ',', '.', ';', '(', ')', '[', ']' };
+
+
         /// <summary>
         /// Converts the object[] passed to SetHeader into field names and
         /// widths. The field names are returned as a string[], while the field
@@ -82,6 +86,43 @@ namespace HFMCmd
 
 
         /// <summary>
+        /// Method for wrapping text to a certain width.
+        /// </summary>
+        public static List<string> WrapText(object value, int width)
+        {
+            List<string> lines = new List<string>();
+            var sVal = value.ToString().Trim();
+            var wsPos = 0;
+            var wbPos = 0;
+            string chunk;
+
+            while(sVal.Length > width) {
+                chunk = sVal.Substring(0, width + 1);
+                wsPos = chunk.LastIndexOfAny(WHITESPACE);
+                wbPos = chunk.LastIndexOfAny(WORDBREAKS, width);
+                if(wsPos > 0 && wsPos > wbPos || wbPos - 5 < wsPos) {
+                    // Break at whitespace
+                    lines.Add(sVal.Substring(0, wsPos).Trim());
+                    sVal = sVal.Substring(wsPos).Trim();
+                }
+                else if(wbPos > 0) {
+                    // Break at word-break character
+                    lines.Add(sVal.Substring(0, wbPos + 1));
+                    sVal = sVal.Substring(wbPos + 1).Trim();
+                }
+                else {
+                    // Force a break at width
+                    lines.Add(sVal.Substring(0, width));
+                    sVal = sVal.Substring(width);
+                }
+            }
+            lines.Add(sVal);
+
+            return lines;
+        }
+
+
+        /// <summary>
         /// Eases use of the IOutput interface for cases where we just want to
         /// output a single line of text.
         /// </summary>
@@ -97,7 +138,7 @@ namespace HFMCmd
         /// Eases use of the IOutput interface for cases where we just want to
         /// output a single record with a single field.
         /// </summary>
-        public static void WriteSingleValue(this IOutput output, string field, object value)
+        public static void WriteSingleValue(this IOutput output, object value, params object[] field)
         {
             output.SetHeader(field);
             output.WriteRecord(value);
@@ -190,19 +231,49 @@ namespace HFMCmd
         }
 
 
-        public List<string> Wrap(params object[] values)
-        {
-            List<string> lines = new List<string>();
-            return lines;
-        }
-
         public virtual void WriteRecord(params object[] values)
         {
             _records++;
         }
 
+
         public virtual void End()
         {
+        }
+
+
+        /// <summary>
+        /// Wraps record values according to the current column widths, and
+        /// returns a List of lines, formatted to line up correctly in the
+        /// fields.
+        /// </summary>
+        public List<string> Wrap(params object[] values)
+        {
+            List<string>[] fields = new List<string>[values.Length];
+            var i =0;
+            var lineCount = 0;
+
+            foreach(var val in values) {
+                fields[i] = OutputHelper.WrapText(val, _widths[i]);
+                lineCount = Math.Max(lineCount, fields[i].Count);
+                i++;
+            }
+
+            List<string> lines = new List<string>(lineCount);
+
+            var line = 0;
+            string[] record = new string[values.Length];
+            while(line < lineCount) {
+                record = new string[values.Length];
+                for(i = 0; i < values.Length; ++i) {
+                    if(fields[i].Count > line) {
+                        record[i] = fields[i][line];
+                    }
+                }
+                lines.Add(string.Format(_format, record));
+                line++;
+            }
+            return lines;
         }
 
     }
@@ -238,12 +309,17 @@ namespace HFMCmd
         public override void WriteRecord(params object[] values)
         {
             if(_format != null) {
-                _log.InfoFormat(_format, values);
+                foreach(var line in Wrap(values)) {
+                    _log.Info(line);
+                }
             }
-            else {
+            else if(values.Length > 0) {
                 foreach(var line in values) {
                     _log.Info(line);
                 }
+            }
+            else {
+                _log.Info("");
             }
             ++_records;
         }

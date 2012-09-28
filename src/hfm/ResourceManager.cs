@@ -60,7 +60,7 @@ namespace HFM
         {
             var ver = (string)_resourceManager.GetCurrentVersionInUserDisplayFormat();
             if(output != null) {
-                output.WriteSingleValue("Version", ver);
+                output.WriteSingleValue(ver, "Version");
             }
             return ver;
         }
@@ -71,7 +71,7 @@ namespace HFM
         {
             string ver = (string)_resourceManager.GetCurrentVersion();
             if(output != null) {
-                output.WriteSingleValue("Version", ver);
+                output.WriteSingleValue(ver, "Version");
             }
             return ver;
         }

@@ -149,7 +149,7 @@ namespace HFM
             HFM.Try("Obtaining cluster information for server",
                     () => _client.GetClusterInfo(serverName, loadBalanced, out clusterName));
             if(output != null && clusterName != null) {
-                output.WriteSingleValue("Cluster Name", clusterName);
+                output.WriteSingleValue(clusterName, "Cluster Name");
             }
         }
 
