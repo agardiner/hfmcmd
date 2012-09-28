@@ -86,6 +86,8 @@ namespace Command
         public string Since { get; set; }
         /// Version in which the setting was deprecated
         public string Deprecated { get; set; }
+        /// Returns true if there is a Since or Deprecated attribute
+        public bool IsVersioned { get { return Since != null || Deprecated != null; } }
 
 
         /// Checks if the setting is current for a specified version, based on
@@ -93,7 +95,7 @@ namespace Command
         public bool IsCurrent(string version)
         {
             bool current = true;
-            if(Since != null || Deprecated != null) {
+            if(IsVersioned) {
                 var ver = ConvertVersionStringToNumber(version);
                 var from = Since != null ? ConvertVersionStringToNumber(Since) : ver;
                 var to = Deprecated != null ? ConvertVersionStringToNumber(Deprecated) : ver + 1;

@@ -81,6 +81,8 @@ namespace Command
         bool HasDefaultValue { get; }
         /// The default value (if HasDefaultValue is true)
         object DefaultValue { get; }
+        /// Returns true if the setting has a Since and/or Deprecated version
+        bool IsVersioned { get; }
 
         /// Is the setting current for the specified version?
         bool IsCurrent(string version);
@@ -136,6 +138,14 @@ namespace Command
         public bool IsCollection
         {
             get { return typeof(ISettingsCollection).IsAssignableFrom(ParameterType); }
+        }
+        /// Returns true if there is a Since or Deprecated attribute
+        public bool IsVersioned
+        {
+            get {
+                return _paramAttribute != null &&
+                    !(_paramAttribute.Since == null && _paramAttribute.Deprecated == null);
+            }
         }
 
         /// Returns true if the parameter is current

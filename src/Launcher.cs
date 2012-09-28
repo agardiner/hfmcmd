@@ -274,7 +274,7 @@ namespace HFMCmd
 
         protected void AddSettingAsArg(ISetting setting)
         {
-            if(setting.IsCurrent(HFM.HFM.Version)) {
+            if(!setting.IsVersioned || setting.IsCurrent(HFM.HFM.Version)) {
                 var key = char.ToUpper(setting.Name[0]) + setting.Name.Substring(1);
                 _log.DebugFormat("Adding keyword arg {0}", key);
 
