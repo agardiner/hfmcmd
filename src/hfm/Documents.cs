@@ -3,6 +3,7 @@ using System.IO;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Linq;
+using System.Xml;
 
 using log4net;
 using HSVSESSIONLib;
@@ -29,6 +30,7 @@ namespace HFM
     /// - SaveDocument
     public class Documents
     {
+
         /// <summary>
         /// Enumeration of available document types
         /// </summary>
@@ -44,13 +46,14 @@ namespace HFM
             IntercompanyMatchByTransactionID = tagDOCUMENTTYPES.WEBOM_DOCTYPE_RPTICMATCHBYTRANSID,
             IntercompanyMatchingTemplate = tagDOCUMENTTYPES.WEBOM_DOCTYPE_RPTICMATCHINGTEMPLATE,
             IntercompanyTransactionReport = tagDOCUMENTTYPES.WEBOM_DOCTYPE_RPTICTRANSACTION,
-            IntercompayReport = tagDOCUMENTTYPES.WEBOM_DOCTYPE_RPTINTERCOMPANY,
+            IntercompanyReport = tagDOCUMENTTYPES.WEBOM_DOCTYPE_RPTINTERCOMPANY,
             JournalReport = tagDOCUMENTTYPES.WEBOM_DOCTYPE_RPTJOURNAL,
             Task = tagDOCUMENTTYPES.WEBOM_DOCTYPE_TASK,
             WebForm = tagDOCUMENTTYPES.WEBOM_DOCTYPE_WEBFORM,
             DataGrid = tagDOCUMENTTYPES.WEBOM_DOCTYPE_WEBGRID,
             TaskList = tagDOCUMENTTYPES.WEBOM_DOCTYPE_WORKSPACE
         }
+
 
         /// <summary>
         /// Enumeration of available document file types
@@ -67,6 +70,7 @@ namespace HFM
             Task = tagDOCUMENTFILETYPES.WEBOM_DOCFILETYPE_TASK
         }
 
+
         /// <summary>
         /// Enumeration of possible visibility choices
         /// </summary>
@@ -78,6 +82,10 @@ namespace HFM
         }
 
 
+
+        /// <summary>
+        /// Holds metadata about a document.
+        /// </summary>
         public class DocumentInfo
         {
             public string Name;
@@ -95,20 +103,23 @@ namespace HFM
             public string DefaultFileName
             {
                 get {
-                    switch(DocumentFileType) {
-                        case EDocumentFileType.Folder:
+                    switch(DocumentType) {
+                        case EDocumentType.Folder:
                             return Name;
-                        case EDocumentFileType.WebFormDef:
-                            return Name + ".wdf";
-                        case EDocumentFileType.ReportDefRPT:
+                        case EDocumentType.DataExplorerReport:
+                            return Name + ".hde";
+                        case EDocumentType.IntercompanyMatchByAccount:
+                        case EDocumentType.IntercompanyMatchByTransactionID:
+                        case EDocumentType.IntercompanyMatchingTemplate:
+                        case EDocumentType.IntercompanyTransactionReport:
+                        case EDocumentType.IntercompanyReport:
+                        case EDocumentType.JournalReport:
                             return Name + ".rpt";
-                        case EDocumentFileType.ReportDefXML:
-                            return Name + ".xml";
-                        case EDocumentFileType.ReportDefHTML:
-                            return Name + ".html";
-                        case EDocumentFileType.XML:
-                            return Name + ".xml";
-                        case EDocumentFileType.Task:
+                        case EDocumentType.WebForm:
+                            return Name + ".wdf";
+                        case EDocumentType.Link:
+                        case EDocumentType.TaskList:
+                        case EDocumentType.DataGrid:
                             return Name + ".xml";
                         default:
                             throw new ArgumentException(string.Format(
@@ -129,6 +140,93 @@ namespace HFM
             public bool IsDocumentType(EDocumentType docType)
             {
                 return docType == EDocumentType.All || docType == DocumentType;
+            }
+
+            public DocumentInfo()
+            { }
+
+
+            public DocumentInfo(string filePath)
+            {
+                DocumentType = EDocumentType.Invalid;
+                if(File.ReadAllText(filePath).Trim().StartsWith("<")) {
+                    ParseXML(filePath);
+                }
+                else {
+                    ParseRpt(filePath);
+                }
+            }
+
+
+            /// Determines the document type for Rpt style file
+            protected void ParseRpt(string filePath)
+            {
+                var re = new Regex(@"^(ReportType|ReportLabel|ReportDescription|ReportSecurityClass)=(\w+)", RegexOptions.IgnoreCase);
+                using(StreamReader r = new StreamReader(filePath)) {
+                    while(r.Peek() >= 0) {
+                        var line = r.ReadLine();
+                        var match = re.Match(line);
+                        if(match.Success) {
+                            switch(match.Groups[1].Value.ToUpper()) {
+                                case "REPORTDESCRIPTION":
+                                    Description = match.Groups[2].Value;
+                                    break;
+                                case "REPORTLABEL":
+                                    Name = match.Groups[2].Value;
+                                    break;
+                                case "REPORTSECURITYCLASS":
+                                    // TODO: Fix this... SecurityClass = match.Groups[2].Value;
+                                    break;
+                                case "REPORTTYPE":
+                                    switch(match.Groups[2].Value.ToUpper()) {
+                                        case "INTERCOMPANY":
+                                            DocumentType = EDocumentType.IntercompanyReport;
+                                            break;
+                                        case "JOURNAL":
+                                            DocumentType = EDocumentType.JournalReport;
+                                            break;
+                                        case "WEBFORM":
+                                            DocumentType = EDocumentType.WebForm;
+                                            break;
+                                        case "DATAEXPLORER":
+                                            DocumentType = EDocumentType.DataExplorerReport;
+                                            break;
+                                    }
+                                    break;
+                            }
+                        }
+                    }
+                }
+                if(DocumentType == EDocumentType.Invalid) {
+                    throw new DocumentException("Cannot determine valid document type for file {0}", filePath);
+                }
+                _log.TraceFormat("File {0} has document type {1}", filePath, DocumentType);
+            }
+
+
+            /// Determines the document type for Rpt style file
+            protected void ParseXML(string filePath)
+            {
+                using(XmlTextReader xr = new XmlTextReader(filePath)) {
+                    xr.WhitespaceHandling = WhitespaceHandling.None;
+                    xr.Read(); // read the XML declaration node, advance to next tag
+                    switch(xr.Name.ToLower()) {
+                        case "linkdoc":
+                            DocumentType = EDocumentType.Link;
+                            break;
+                        case "griddef":
+                            DocumentType = EDocumentType.DataGrid;
+                            break;
+                        case "workspace":
+                            DocumentType = EDocumentType.TaskList;
+                            break;
+                        default:
+                            throw new DocumentException("Cannot determine document type for file {0}", filePath);
+                    }
+                    Name = xr.GetAttribute("doc_name");
+                    Description = xr.GetAttribute("doc_description");
+                    // TODO: Fix this... SecurityClass = xr.GetAttribute("doc_secclass");
+                }
             }
         }
 
