@@ -234,6 +234,13 @@ namespace HFMCmd
         /// Number of records output in current table
         protected int _records;
 
+        /// Current progress operation being performed
+        protected string _operation;
+        /// Total number of steps in progress operation
+        protected int _total;
+        /// Currently completed number of progress steps
+        protected int _progress;
+
 
         public virtual void SetHeader(params object[] fields)
         {
@@ -341,7 +348,6 @@ namespace HFMCmd
         protected static readonly ILog _log = LogManager.GetLogger(
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-
         /// Constructor
         public LogOutput()
         {
@@ -387,6 +393,33 @@ namespace HFMCmd
                 _log.InfoFormat("{0} records output", _records);
             }
         }
+
+
+        public override void StartProgress(string operation, int total)
+        {
+            _operation = operation;
+            _total = total;
+            _progress = 0;
+        }
+
+
+        public override bool SetProgress(int progress)
+        {
+            int lastPct = _progress * 100 / _total;
+            int pct = progress * 100 / _total;
+            // Log progress messages for (at most) each 10% of progress
+            // Handle cases where progress appears to go backwards e.g.
+            // due to several passes being made.
+
+            // TODO: Add time check as well, since there is no point 
+            // logging progress on fast operations
+            if (progress < _progress || (pct - lastPct) >= 10) {
+                _log.InfoFormat("{0} {1}% complete", _operation.Trim(), pct);
+                _progress = progress;
+            }
+            return false;
+        }
+
     }
 
 
@@ -402,10 +435,7 @@ namespace HFMCmd
         private static int BAR_SIZE = 50;
 
         private CommandLine.UI _cui;
-        private string _operation;
         private int _spin;
-        private int _total;
-        private int _progress;
 
 
         public ConsoleOutput(CommandLine.UI cui)
@@ -514,9 +544,9 @@ namespace HFMCmd
             return false;
         }
 
+
         public override void EndProgress()
         {
-            _operation = null;
             _cui.ClearLine();
         }
     }
