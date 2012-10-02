@@ -45,7 +45,7 @@ namespace HFMCmd
         /// Instructs the output mechanism to display some form of progress
         /// indicator, if appropriate.
         /// </summary>
-        void StartProgress(string operation, int total);
+        void InitProgress(string operation, int total);
 
         /// <summary>
         /// Update the current progress completion ratio. If the IOutput
@@ -193,6 +193,27 @@ namespace HFMCmd
 
 
     /// <summary>
+    /// Implementation of IOutput that does not output - like a /dev/nul device,
+    /// it ignores output sent to it. Use this when no output is desired, since
+    /// a valid IOutput (non-null) IOutput instance must be supplied to many
+    /// methods. Use of this class prevents methods that take an IOutput from
+    /// having to check it it is non-null.
+    /// </summary>
+    public class NullOutput : IOutput
+    {
+        public static NullOutput Instance = new NullOutput();
+
+        public void SetHeader(params object[] fields) {}
+        public void WriteRecord(params object[] values) {}
+        public void End() {}
+        public void InitProgress(string operation, int total) {}
+        public bool SetProgress(int progress) { return false; }
+        public void EndProgress() {}
+    }
+
+
+
+    /// <summary>
     /// Base class for IOutput implementations that output data in fixed width
     /// format.
     /// </summary>
@@ -318,7 +339,7 @@ namespace HFMCmd
 
 
         // Default no-op implementation
-        public virtual void StartProgress(string operation, int total)
+        public virtual void InitProgress(string operation, int total)
         {
         }
 
@@ -395,7 +416,7 @@ namespace HFMCmd
         }
 
 
-        public override void StartProgress(string operation, int total)
+        public override void InitProgress(string operation, int total)
         {
             _operation = operation;
             _total = total;
@@ -487,7 +508,7 @@ namespace HFMCmd
         }
 
 
-        public override void StartProgress(string operation, int total)
+        public override void InitProgress(string operation, int total)
         {
             _operation = operation;
             _total = total;

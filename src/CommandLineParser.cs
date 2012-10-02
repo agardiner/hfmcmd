@@ -765,6 +765,7 @@ namespace CommandLine
                 var buf = new char[ConsoleWidth - 1];
                 System.Console.CursorLeft = 0;
                 System.Console.Write(buf);
+                System.Console.CursorLeft = 0;
             }
         }
 
