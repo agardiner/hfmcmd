@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -39,6 +40,24 @@ namespace HFMCmd
         /// table.
         /// </summary>
         void End();
+
+        /// <summary>
+        /// Instructs the output mechanism to display some form of progress
+        /// indicator, if appropriate.
+        /// </summary>
+        void StartProgress(string operation, int total);
+
+        /// <summary>
+        /// Update the current progress completion ratio. If the IOutput
+        /// implementation returns false, the operation should be aborted,
+        /// if possible.
+        /// </summary>
+        bool SetProgress(int progress);
+
+        /// <summary>
+        /// Indicates that the operation that was in progress is now complete.
+        /// </summary>
+        void EndProgress();
     }
 
 
@@ -181,9 +200,19 @@ namespace HFMCmd
     {
         /// Maximum width for a line of output
         private int _maxWidth = -1;
+        private int _indentWidth = 0;
+        private string _indentString = "";
 
         /// Level of indentation to use
-        public int IndentWidth = 0;
+        public int IndentWidth
+        {
+            get { return _indentWidth; }
+            set {
+                _indentWidth = value;
+                _indentString = new String(' ', _indentWidth);
+            }
+        }
+        public string IndentString { get { return _indentString; } }
         /// String to use as a field separator
         public string FieldSeparator = " ";
         /// Default field width if no width specified for a field
@@ -240,6 +269,7 @@ namespace HFMCmd
         }
 
 
+        // Default no-op implementation
         public virtual void End()
         {
         }
@@ -279,10 +309,32 @@ namespace HFMCmd
             return lines;
         }
 
+
+        // Default no-op implementation
+        public virtual void StartProgress(string operation, int total)
+        {
+        }
+
+
+        // Default no-op implementation
+        public virtual bool SetProgress(int progress)
+        {
+            return false;
+        }
+
+
+        // Default no-op implementation
+        public virtual void EndProgress()
+        {
+        }
+
     }
 
 
 
+    /// <summary>
+    /// Sends output to the log.
+    /// </summary>
     public class LogOutput : FixedWidthOutput
     {
         // Reference to class logger
@@ -328,11 +380,144 @@ namespace HFMCmd
             ++_records;
         }
 
+
         public override void End()
         {
             if(_widths != null && _widths.Length > 0 && _records > 5) {
                 _log.InfoFormat("{0} records output", _records);
             }
+        }
+    }
+
+
+
+    /// <summary>
+    /// Sends output to the console
+    /// </summary>
+    public class ConsoleOutput : FixedWidthOutput
+    {
+
+        // Characters used to simulate a spinner
+        private static readonly char[] _spinner = new char[] { '|', '/', '-', '\\' };
+        private static int BAR_SIZE = 50;
+
+        private CommandLine.UI _cui;
+        private string _operation;
+        private int _spin;
+        private int _total;
+        private int _progress;
+
+
+        public ConsoleOutput(CommandLine.UI cui)
+        {
+            _cui = cui;
+            IndentWidth = 4;
+            MaxWidth = cui.ConsoleWidth;
+        }
+
+
+        public override void SetHeader(params object[] fields)
+        {
+            base.SetHeader(fields);
+
+            _cui.WriteLine();
+            if(fields.Length > 1) {
+                _cui.WriteLine(string.Format(_format, _fieldNames));
+                _cui.WriteLine(string.Format(_format, _fieldNames.Select(
+                            (field, i) => new String('-', _widths[i])).ToArray()));
+            }
+        }
+
+
+        public override void WriteRecord(params object[] values)
+        {
+            if(_format != null) {
+                foreach(var line in Wrap(values)) {
+                    _cui.WriteLine(line);
+                }
+            }
+            else if(values.Length > 0) {
+                foreach(var line in values) {
+                    _cui.WriteLine(IndentString + line.ToString());
+                }
+            }
+            else {
+                _cui.WriteLine("");
+            }
+            ++_records;
+        }
+
+
+        public override void End()
+        {
+            if(_widths != null && _widths.Length > 0 && _records > 5) {
+                _cui.WriteLine();
+                _cui.WriteLine(IndentString + string.Format("{0} records output", _records));
+            }
+        }
+
+
+        public override void StartProgress(string operation, int total)
+        {
+            _operation = operation;
+            _total = total;
+            _spin = 0;
+        }
+
+
+        public override bool SetProgress(int progress)
+        {
+            _progress = progress;
+            int pct = _progress * 100 / _total;
+
+            // Make sure percentage is within range of 0 to 100
+            if (pct < 0) {
+                pct = 0;
+            }
+            else if (pct > 100) {
+                pct = 100;
+            }
+
+            // Determine which character to display next to simulate spinning
+            char spin = _spinner[_spin++ % _spinner.Length];
+
+            // Build up the progress bar
+            var sb = new StringBuilder(_operation.Length + BAR_SIZE + 10);
+            sb.Append(_operation);
+            sb.Append(' ');
+            sb.Append(spin);
+            sb.Append("  [");
+            var barMid = sb.Length + (BAR_SIZE / 2);
+            for(int i = 1; i <= BAR_SIZE; ++i) {
+                if (i * 100 / BAR_SIZE <= pct) {
+                    sb.Append('=');
+                }
+                else {
+                    sb.Append(' ');
+                }
+            }
+            sb.Append("]  (Esc to cancel)");
+
+            // Now place the percentage complete inside the bar
+            var pctStr = pct.ToString() + "%";
+            if (pctStr.Length > 2) {
+                barMid--;
+            }
+            sb.Remove(barMid, pctStr.Length);
+            sb.Insert(barMid, pctStr);
+
+            // Finally, write the bar to the console
+            _cui.ClearLine();
+            _cui.Write(sb.ToString());
+
+            // TODO: Work out how to determine whether to cancel...
+            return false;
+        }
+
+        public override void EndProgress()
+        {
+            _operation = null;
+            _cui.ClearLine();
         }
     }
 

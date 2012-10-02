@@ -152,7 +152,8 @@ namespace HFMCmd
             // Create a Context for invoking Commands
             _context = new Context(_commands);
             _context.Set(this);
-            _context.Set(new LogOutput());
+            //_context.Set(new LogOutput());
+            _context.Set(new ConsoleOutput(_cmdLine));
 
             // Standard command-line arguments
             ValueArgument arg = _cmdLine.AddPositionalArgument("CommandOrFile",
@@ -272,7 +273,7 @@ namespace HFMCmd
         protected void AddSettingAsArg(ISetting setting)
         {
             if(!setting.IsVersioned || setting.IsCurrent(HFM.HFM.Version)) {
-                var key = char.ToUpper(setting.Name[0]) + setting.Name.Substring(1);
+                var key = setting.Name.Capitalize();
                 _log.DebugFormat("Adding keyword arg {0}", key);
 
                 // Add a keyword argument for this setting
@@ -313,7 +314,7 @@ namespace HFMCmd
             else {
                 // Display help for the requested command
                 var cmd = _commands[command];
-                output.WriteLine(string.Format("Help for command {0}", cmd.Name));
+                output.WriteLine(string.Format("Command: {0}", cmd.Name));
                 output.WriteLine();
                 if(cmd.Description != null) {
                     output.WriteSingleValue(cmd.Description, "Description", 80);
@@ -324,13 +325,13 @@ namespace HFMCmd
                     foreach(var parm in cmd.Parameters) {
                         if(parm.HasParameterAttribute) {
                             if(!parm.IsVersioned || parm.IsCurrent(HFM.HFM.Version)) {
-                                output.WriteRecord(parm.Name, parm.Description);
+                                output.WriteRecord(parm.Name.Capitalize(), parm.Description);
                             }
                         }
                         else if(parm.IsCollection) {
                             foreach(var setting in _commands.GetSettings(parm.ParameterType)) {
                                 if(!parm.IsVersioned || setting.IsCurrent(HFM.HFM.Version)) {
-                                    output.WriteRecord(setting.Name, setting.Description);
+                                    output.WriteRecord(setting.Name.Capitalize(), setting.Description);
                                 }
                             }
                         }
