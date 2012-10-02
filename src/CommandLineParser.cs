@@ -582,9 +582,25 @@ namespace CommandLine
     /// </summary>
     public class UI
     {
+        /// Flag indicating whether console output is redirected
+        private bool _isRedirected = false;
 
         /// The set of possible arguments to be recognised.
         public Definition Definition;
+
+        /// Returns the console width, or -1 if the console is redirected
+        public int ConsoleWidth {
+            get {
+                if(_isRedirected) { return -1; }
+                try {
+                    return System.Console.WindowWidth;
+                }
+                catch(IOException) {
+                    _isRedirected = true;
+                    return -1;
+                }
+            }
+        }
 
 
         /// <summary>
@@ -702,6 +718,54 @@ namespace CommandLine
         public Dictionary<string, object> Parse(string[] args)
         {
             return new Parser(Definition).Parse(new List<string>(args));
+        }
+
+
+        /// <summary>
+        /// Writes a line of text to the console, ensuring lines the same width
+        /// as the console don't output an unnecessary new-line.
+        /// </summary>
+        public void WriteLine(string line)
+        {
+            if(line.Length == ConsoleWidth) {
+                System.Console.Out.Write(line);
+            }
+            else {
+                System.Console.Out.WriteLine(line);
+            }
+        }
+
+
+        /// <summary>
+        /// Writes a line of text to the console, ensuring lines the same width
+        /// as the console don't output an unnecessary new-line.
+        /// </summary>
+        public void WriteLine()
+        {
+            System.Console.Out.WriteLine();
+        }
+
+
+        /// <summary>
+        /// Writes a partial line of text to the console, without moving to the
+        /// next line.
+        /// </summary>
+        public void Write(string line)
+        {
+            System.Console.Out.Write(line);
+        }
+
+
+        /// <summary>
+        /// Clears the current line of the console.
+        /// </summary>
+        public void ClearLine()
+        {
+            if(ConsoleWidth > -1 && System.Console.CursorLeft > 0) {
+                var buf = new char[ConsoleWidth - 1];
+                System.Console.CursorLeft = 0;
+                System.Console.Write(buf);
+            }
         }
 
     }
