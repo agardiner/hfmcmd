@@ -7,6 +7,24 @@ namespace HFMCmd
 {
 
     /// <summary>
+    /// Extension methods for strings.
+    /// </summary>
+    public static class StringUtilities
+    {
+        public static string Capitalize(this string s)
+        {
+            if(char.IsUpper(s[0])) {
+                return s;
+            }
+            else {
+                return char.ToUpper(s[0]) + s.Substring(1);
+            }
+        }
+    }
+
+
+
+    /// <summary>
     /// Utility class providing a collection of static utility methods.
     /// </summary>
     public static class Utilities
