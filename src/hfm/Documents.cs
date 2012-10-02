@@ -98,6 +98,7 @@ namespace HFM
             public int SecurityClass;
             public bool IsPrivate;
             public EDocumentType FolderContentType;
+            public readonly string Content;
 
             public bool IsFolder { get { return DocumentType == EDocumentType.Folder; } }
             public string DefaultFileName
@@ -148,8 +149,10 @@ namespace HFM
 
             public DocumentInfo(string filePath)
             {
+                Name = Path.GetFileNameWithoutExtension(filePath);
                 DocumentType = EDocumentType.Invalid;
-                if(File.ReadAllText(filePath).Trim().StartsWith("<")) {
+                Content = File.ReadAllText(filePath);
+                if(Content.Trim().StartsWith("<")) {
                     ParseXML(filePath);
                 }
                 else {
@@ -161,7 +164,7 @@ namespace HFM
             /// Determines the document type for Rpt style file
             protected void ParseRpt(string filePath)
             {
-                var re = new Regex(@"^(ReportType|ReportLabel|ReportDescription|ReportSecurityClass)=(\w+)", RegexOptions.IgnoreCase);
+                var re = new Regex(@"^(ReportType|ReportLabel|ReportDescription|ReportSecurityClass)=(.*)", RegexOptions.IgnoreCase);
                 using(StreamReader r = new StreamReader(filePath)) {
                     while(r.Peek() >= 0) {
                         var line = r.ReadLine();
@@ -181,15 +184,19 @@ namespace HFM
                                     switch(match.Groups[2].Value.ToUpper()) {
                                         case "INTERCOMPANY":
                                             DocumentType = EDocumentType.IntercompanyReport;
+                                            DocumentFileType = EDocumentFileType.ReportDefRPT;
                                             break;
                                         case "JOURNAL":
                                             DocumentType = EDocumentType.JournalReport;
+                                            DocumentFileType = EDocumentFileType.ReportDefRPT;
                                             break;
                                         case "WEBFORM":
                                             DocumentType = EDocumentType.WebForm;
+                                            DocumentFileType = EDocumentFileType.WebFormDef;
                                             break;
                                         case "DATAEXPLORER":
                                             DocumentType = EDocumentType.DataExplorerReport;
+                                            DocumentFileType = EDocumentFileType.XML;
                                             break;
                                     }
                                     break;
@@ -209,7 +216,8 @@ namespace HFM
             {
                 using(XmlTextReader xr = new XmlTextReader(filePath)) {
                     xr.WhitespaceHandling = WhitespaceHandling.None;
-                    xr.Read(); // read the XML declaration node, advance to next tag
+                    xr.Read(); // Read the XML declaration node, advance to next tag
+                    xr.Read(); // Read the root tag
                     switch(xr.Name.ToLower()) {
                         case "linkdoc":
                             DocumentType = EDocumentType.Link;
@@ -225,6 +233,7 @@ namespace HFM
                     }
                     Name = xr.GetAttribute("doc_name");
                     Description = xr.GetAttribute("doc_description");
+                    DocumentFileType = EDocumentFileType.XML;
                     // TODO: Fix this... SecurityClass = xr.GetAttribute("doc_secclass");
                 }
             }
@@ -554,7 +563,8 @@ namespace HFM
                 EDocumentType documentType,
                 [Parameter("Filter documents to be deleted to public, private or both",
                            DefaultValue = EPublicPrivate.Both)]
-                EPublicPrivate visibility)
+                EPublicPrivate visibility,
+                IOutput output)
         {
             int count = 0;
             List<DocumentInfo> docs = EnumDocuments(path, name, includeSubFolders,
@@ -563,17 +573,21 @@ namespace HFM
 
             var paths = new string[1];
             var names = new string[1];
+            if(docs.Count > 1) {
+                output.InitProgress("Deleting documents", docs.Count);
+            }
             foreach(var doc in docs) {
                 paths[0] = doc.Folder;
                 names[0] = doc.Name;
                 HFM.Try("Deleting document {0}", doc.Name,
                         () => _documents.DeleteDocuments(paths, names, (int)doc.DocumentType,
                                                          (int)doc.DocumentFileType, false));
-                count++;
+                output.SetProgress(count++);
                 if(doc.DocumentType == EDocumentType.Folder) {
                     _documentCache.Remove(AddFolderToPath(doc.Folder, doc.Name));
                 }
             }
+            output.EndProgress();
             // Update cache
             LoadCache(path, includeSubFolders);
             _log.InfoFormat("Successfully deleted {0} documents", count);
@@ -585,9 +599,10 @@ namespace HFM
         [Command("Deletes the specified folder, including all its content and sub-folders")]
         public void DeleteFolder(
                 [Parameter("The path to the folder to delete")]
-                string path)
+                string path,
+                IOutput output)
         {
-            DeleteDocuments(path, "*", true, EDocumentType.All, EPublicPrivate.Both);
+            DeleteDocuments(path, "*", true, EDocumentType.All, EPublicPrivate.Both, output);
 
             if(path.Length > 1) {
                 // Add folder itself to list of items to be deleted
@@ -652,10 +667,8 @@ namespace HFM
                            "target folder with the same names as the sub-directories.",
                            DefaultValue = false)]
                 bool includeSubDirs,
-                [Parameter("The document type being uploaded")]
+                [Parameter("The document type(s) to upload", DefaultValue = EDocumentType.All)]
                 EDocumentType documentType,
-                [Parameter("The document file type being uploaded")]
-                EDocumentFileType documentFileType,
                 [Parameter("The security class to be assigned to the uploaded documents",
                            DefaultValue = "[Default]")]
                 string securityClass,
@@ -664,12 +677,14 @@ namespace HFM
                 bool isPrivate,
                 [Parameter("True to overwrite existing documents, false to leave existing documents unchanged",
                            DefaultValue = false)]
-                bool overwrite)
+                bool overwrite,
+                IOutput output)
         {
             var nameRE = Utilities.ConvertWildcardPatternToRE(name);
 
             if(_depth == 0) {
                 _log.InfoFormat("Loading documents from {0} to {1}", sourceDir, targetFolder);
+                // TODO: Use progress
             }
 
             // Upload documents matching name
@@ -684,8 +699,8 @@ namespace HFM
                     _depth++;
                     try {
                         LoadDocuments(Path.Combine(sourceDir, dir), name, Path.Combine(targetFolder, dir),
-                                      includeSubDirs, documentType, documentFileType, securityClass,
-                                      isPrivate, overwrite);
+                                      includeSubDirs, documentType, securityClass,
+                                      isPrivate, overwrite, output);
                     }
                     finally {
                         _depth--;
@@ -700,11 +715,13 @@ namespace HFM
                 }
                 if(overwrite || !DoesDocumentExist(targetFolder, file,
                                                    EDocumentType.All)) {
-                    _log.FineFormat("Loading {0} to {1}", file, targetFolder);
-                    var content = File.ReadAllText(filePath);
-                    SaveDocument(targetFolder, Path.GetFileNameWithoutExtension(file), "",
-                                 documentType, documentFileType, content,
-                                 securityClass, isPrivate, overwrite);
+                    var doc = new DocumentInfo(filePath);
+                    if(doc.IsDocumentType(documentType)) {
+                        _log.FineFormat("Loading {0} to {1}", file, targetFolder);
+                        SaveDocument(targetFolder, doc.Name, doc.Description,
+                                     doc.DocumentType, doc.DocumentFileType,
+                                     doc.Content, securityClass, isPrivate, overwrite);
+                    }
                 }
             }
         }
@@ -733,16 +750,21 @@ namespace HFM
                 EPublicPrivate visibility,
                 [Parameter("Flag indicating whether existing files should be overwritten",
                            DefaultValue = true)]
-                bool overwrite)
+                bool overwrite,
+                IOutput output)
         {
             string tgtPath, filePath;
-            int extracted = 0;
+            int extracted = 0, count = 0;
 
             var docs = EnumDocuments(path, name, includeSubFolders, documentType,
                                      visibility, null);
+            if(!Directory.Exists(targetDir)) {
+                Directory.CreateDirectory(targetDir);
+            }
+            output.InitProgress("Extracting documents", docs.Count);
             foreach(var doc in docs) {
                 tgtPath = Path.Combine(targetDir,
-                                       Utilities.PathDifference(path, doc.Folder).Substring(1));
+                                       Utilities.PathDifference(path, doc.Folder));
                 filePath = Path.Combine(tgtPath, doc.DefaultFileName);
                 if(doc.IsFolder) {
                     if(!Directory.Exists(filePath)) {
@@ -761,7 +783,11 @@ namespace HFM
                     File.SetLastWriteTime(filePath, doc.Timestamp);
                     extracted++;
                 }
+                if(output.SetProgress(count++)) {
+                    break;
+                }
             }
+            output.EndProgress();
             _log.InfoFormat("Successfully extracted {0} documents to {1}", extracted, targetDir);
         }
 
