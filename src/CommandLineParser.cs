@@ -768,6 +768,23 @@ namespace CommandLine
             }
         }
 
+
+        /// <summary>
+        /// Returns true if escape has been pressed.
+        /// </summary>
+        public bool EscPressed()
+        {
+            bool esc = false;
+
+            if (System.Console.KeyAvailable) {
+                var keyInfo = System.Console.ReadKey();
+                if(keyInfo.Key == System.ConsoleKey.Escape) {
+                    esc = true;
+                }
+            }
+            return esc;
+        }
+
     }
 
 
