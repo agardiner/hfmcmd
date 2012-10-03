@@ -944,7 +944,7 @@ namespace CommandLine
                 if(arg != null) {
                     set = ProcessArgumentValue(result, arg, true, set);
                 }
-                else {
+                else if(!ShowUsage) {
                     _log.WarnFormat("Unknown flag argument '--{0}' has been ignored", key);
                 }
             }
@@ -956,7 +956,7 @@ namespace CommandLine
                 if(arg != null) {
                     set = ProcessArgumentValue(result, arg, val, set);
                 }
-                else {
+                else if(!ShowUsage) {
                     _log.WarnFormat("Unknown positional argument '{0}' has been ignored", val);
                 }
 
@@ -968,7 +968,7 @@ namespace CommandLine
                 if(arg != null) {
                     set = ProcessArgumentValue(result, arg, kv.Value, set);
                 }
-                else {
+                else if(!ShowUsage) {
                     _log.WarnFormat("Unknown keyword argument '{0}' has been ignored", kv.Key);
                 }
             }
@@ -989,13 +989,13 @@ namespace CommandLine
                             result.Add(arg.Key, arg.DefaultValue);
                         }
                     }
-                    else if(arg.IsRequired) {
+                    else if(arg.IsRequired && !ShowUsage) {
                         _log.ErrorFormat("No value was specified for required argument '{0}'", arg.Key);
                         missingArgs++;
                     }
                 }
             }
-            if(missingArgs > 0) {
+            if(missingArgs > 0 && !ShowUsage) {
                 throw new ParseException(string.Format("No value was specified for {0} required argument{1}",
                                          missingArgs, missingArgs > 1 ? "s" : ""));
             }

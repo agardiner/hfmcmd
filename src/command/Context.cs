@@ -316,9 +316,15 @@ namespace Command
             }
 
             // Execute the method corresponding to this command
-            // TODO: This needs to be wrapped in a try-catch
             var ctxt = this[cmd.Type];
-            var result = cmd.MethodInfo.Invoke(ctxt, parms);
+            object result;
+            try {
+                result = cmd.MethodInfo.Invoke(ctxt, parms);
+            }
+            catch(TargetInvocationException ex) {
+                _log.ErrorFormat("Command {0} threw an exception", cmd.Name, ex.InnerException);
+                throw;
+            }
 
             // If the method is a factory method, set the returned object in the context
             if(result != null && cmd.IsFactory) {

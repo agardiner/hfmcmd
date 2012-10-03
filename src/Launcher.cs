@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Text.RegularExpressions;
@@ -171,7 +172,10 @@ namespace HFMCmd
             try {
                 var args = _cmdLine.Parse(Environment.GetCommandLineArgs());
                 if(args != null) {
-                    InvokeCommand(args["CommandOrFile"] as string, args);
+                    var ok = InvokeCommand(args["CommandOrFile"] as string, args);
+                    if(!ok) {
+                        System.Environment.Exit(1);
+                    }
                 }
             }
             catch(ParseException ex) {
@@ -288,9 +292,16 @@ namespace HFMCmd
 
 
         /// Invokes the specified command, passing in the supplied argument values.
-        protected void InvokeCommand(string command, Dictionary<string, object> args)
+        protected bool InvokeCommand(string command, Dictionary<string, object> args)
         {
-            _context.Invoke(command, args);
+            bool ok = true;
+            try {
+                _context.Invoke(command, args);
+            }
+            catch(TargetInvocationException) {
+                ok = false;
+            }
+            return ok;
         }
 
 
