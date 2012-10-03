@@ -4,6 +4,7 @@ using log4net;
 using HSVSESSIONLib;
 using HFMWSESSIONLib;
 using HSVCALCULATELib;
+using HSVSYSTEMINFOLib;
 
 using Command;
 
@@ -15,6 +16,8 @@ namespace HFM
     /// Represents a connection to a single HFM application. The main purpose of
     /// a Session is to obtain references to other functional modules for the
     /// current application.
+    /// Instances of this class are created by a Factory method on the
+    /// Connection class in the Client module.
     /// </summary>
     public class Session
     {
@@ -28,6 +31,8 @@ namespace HFM
 
         // Reference to the Calculate module
         private Calculate _calculate;
+        // Reference to the SystemInfo module
+        private SystemInfo _systemInfo;
 
 
         public Session(HsvSession session)
@@ -47,6 +52,18 @@ namespace HFM
             }
         }
 
+
+        [Factory]
+        public SystemInfo SystemInfo
+        {
+            get {
+                if(_systemInfo == null) {
+                    _systemInfo = new SystemInfo((HsvSystemInfo)HsvSession.SystemInfo);
+                }
+                return _systemInfo;
+            }
+        }
+
     }
 
 
@@ -55,6 +72,8 @@ namespace HFM
     /// Holds a reference to an HFM web session. A web session is needed for
     /// working with documents; most other functionality is obtained through
     /// a Session object.
+    /// Instances of this class are created by a Factory method on the
+    /// Connection class in the Client module.
     /// </summary>
     public class WebSession
     {
