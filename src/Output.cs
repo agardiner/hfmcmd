@@ -188,6 +188,17 @@ namespace HFMCmd
             }
             output.End();
         }
+
+
+        /// <summary>
+        /// Method that can be used by IOutput implementations to determine the
+        /// appropriate value to send for the cancel return value in a call to
+        /// SetProgress.
+        /// </summary>
+        public static bool ShouldCancel()
+        {
+            return Launcher.Interrupted;
+        }
     }
 
 
@@ -438,7 +449,8 @@ namespace HFMCmd
                 _log.InfoFormat("{0} {1}% complete", _operation.Trim(), pct);
                 _progress = progress;
             }
-            return false;
+
+            return OutputHelper.ShouldCancel();
         }
 
     }
@@ -561,8 +573,7 @@ namespace HFMCmd
             _cui.ClearLine();
             _cui.Write(sb.ToString());
 
-            // TODO: Work out how to determine whether to cancel...
-            return false;
+            return OutputHelper.ShouldCancel();
         }
 
 
