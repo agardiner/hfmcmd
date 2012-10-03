@@ -518,58 +518,65 @@ namespace CommandLine
         /// Displays a usgae message, based on the allowed arguments and purpose
         /// represented by this class.
         /// </summary>
-        public void DisplayUsage(string arg0)
+        public void DisplayUsage(string arg0, TextWriter console)
         {
-            Console.Error.WriteLine();
-            Console.Error.WriteLine("Purpose:");
-            Console.Error.WriteLine("    {0}", string.Format(Purpose, Path.GetFileNameWithoutExtension(arg0)).Trim());
+            console.WriteLine();
+            console.WriteLine("Purpose:");
+            console.WriteLine("    {0}", string.Format(Purpose,
+                        Path.GetFileNameWithoutExtension(arg0)).Trim());
 
-            Console.Error.WriteLine();
-            Console.Error.WriteLine("Usage:");
-            Console.Error.Write("    {0}", arg0);
+            console.WriteLine();
+            console.WriteLine("Usage:");
+            console.Write("    {0}", arg0);
             foreach(var arg in PositionalArguments) {
-                Console.Error.Write(arg.IsRequired ? " <{0}>" : " [<{0}>]", arg.Key);
+                console.Write(arg.IsRequired ? " <{0}>" : " [<{0}>]", arg.Key);
             }
             if(KeywordArguments.Count > 0) {
-                Console.Error.Write(" [<Key>:<Value> ...]");
+                console.Write(" [<Key>:<Value> ...]");
             }
             if(FlagArguments.Count > 0) {
-                Console.Error.Write(" [--<Flag> ...]");
+                console.Write(" [--<Flag> ...]");
             }
-            Console.Error.WriteLine();
+            console.WriteLine();
 
             if(PositionalArguments.Count > 0) {
-                Console.Error.WriteLine();
-                Console.Error.WriteLine("Positional Arguments:");
-                PositionalArguments.ForEach(x => OutputArg(x));
+                console.WriteLine();
+                console.WriteLine("Positional Arguments:");
+                PositionalArguments.ForEach(x => OutputArg(x, console));
             }
 
             if(KeywordArguments.Count > 0) {
-                Console.Error.WriteLine();
-                Console.Error.WriteLine("Keyword Arguments:");
-                KeywordArguments.ForEach(x => OutputArg(x));
+                console.WriteLine();
+                console.WriteLine("Keyword Arguments:");
+                KeywordArguments.ForEach(x => OutputArg(x, console));
             }
 
             if(FlagArguments.Count > 0) {
-                Console.Error.WriteLine();
-                Console.Error.WriteLine("Flag Arguments:");
-                foreach(var arg in FlagArguments) {
-                    Console.Error.WriteLine("    --{0,-14}  {1}", arg.Key, arg.Description);
-                }
+                console.WriteLine();
+                console.WriteLine("Flag Arguments:");
+                FlagArguments.ForEach(x => OutputArg(x, console));
             }
 
         }
 
         /// Outputs a single argument definition
-        protected void OutputArg(ValueArgument arg) {
-            Console.Error.Write("    {0,-16}  {1}", arg.Key, arg.Description);
-            if(arg.DefaultValue != null) {
-                Console.Error.Write(" (Default: {0})", arg.DefaultValue);
+        protected void OutputArg(Argument arg, TextWriter console) {
+            if(arg is FlagArgument) {
+                console.Write("    --{0,-14}  {1}", arg.Key, arg.Description);
             }
-            else if(arg.IsRequired) {
-                Console.Error.Write(" (Required)");
+            else {
+                console.Write("    {0,-16}  {1}", arg.Key, arg.Description);
             }
-            Console.Error.WriteLine();
+            var valArg = arg as ValueArgument;
+            if(valArg != null) {
+                if(valArg.DefaultValue != null) {
+                    console.Write(" (Default: {0})", valArg.DefaultValue);
+                }
+                else if(valArg.IsRequired) {
+                    console.Write(" (Required)");
+                }
+            }
+            console.WriteLine();
         }
     }
 
@@ -717,7 +724,16 @@ namespace CommandLine
         /// </summary>
         public Dictionary<string, object> Parse(string[] args)
         {
-            return new Parser(Definition).Parse(new List<string>(args));
+            var parser = new Parser(Definition);
+            var result = parser.Parse(new List<string>(args));
+            if(parser.ShowUsage) {
+                Definition.DisplayUsage(args[0], System.Console.Error);
+                result = null;  // Don't act on what we parsed
+            }
+            else if(parser.ParseException != null) {
+                throw parser.ParseException;
+            }
+            return result;
         }
 
 
@@ -815,7 +831,12 @@ namespace CommandLine
         protected List<string> PositionalValues;
         protected Dictionary<string, string> KeywordValues;
         protected List<string> FlagValues;
-        protected bool ShowUsage = false;
+
+        /// Set to true when the parser encounters a help flag (/? or --help)
+        public bool ShowUsage;
+        /// The parse exception that was thrown if an error was encountered
+        /// during parsing
+        public ParseException ParseException;
 
 
         /// Constructor
@@ -836,7 +857,9 @@ namespace CommandLine
         public Dictionary<string, object> Parse(List<string> args)
         {
             Dictionary<string, object> result = null;
-            ParseException pe = null;
+
+            ShowUsage = false;
+            ParseException = null;
 
             _log.Fine("Parsing command-line arguments...");
 
@@ -847,16 +870,9 @@ namespace CommandLine
                 result = ProcessArguments();
             }
             catch(ParseException ex) {
-                pe = ex;
+                ParseException = ex;
             }
 
-            if(ShowUsage) {
-                Definition.DisplayUsage(args[0]);
-                result = null;  // Don't act on what we parsed
-            }
-            else if(pe != null) {
-                throw pe;
-            }
             return result;
         }
 
@@ -966,7 +982,8 @@ namespace CommandLine
                         _log.TraceFormat("Setting argument {0} to default value '{1}'", arg.Key, arg.DefaultValue);
                         if(Definition.ArgumentMapper != null && arg.Type != typeof(string)) {
                             // Convert argument value to required type
-                            result.Add(arg.Key, Definition.ArgumentMapper.ConvertArgument(arg, arg.DefaultValue, result));
+                            result.Add(arg.Key, Definition.ArgumentMapper.
+                                       ConvertArgument(arg, arg.DefaultValue, result));
                         }
                         else {
                             result.Add(arg.Key, arg.DefaultValue);
