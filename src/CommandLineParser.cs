@@ -924,7 +924,7 @@ namespace CommandLine
 
             // Process flag args
             foreach(var key in FlagValues) {
-                var arg = Definition[key] as FlagArgument;
+                var arg = Definition[key];
                 if(arg != null) {
                     set = ProcessArgumentValue(result, arg, true, set);
                 }
@@ -936,7 +936,7 @@ namespace CommandLine
             // Process positional args
             for(var i = 0; i < PositionalValues.Count; ++i) {
                 var val = PositionalValues[i];
-                var arg = Definition[i] as PositionalArgument;
+                var arg = Definition[i];
                 if(arg != null) {
                     set = ProcessArgumentValue(result, arg, val, set);
                 }
@@ -948,7 +948,7 @@ namespace CommandLine
 
             // Process keyword args
             foreach(var kv in KeywordValues) {
-                var arg = Definition[kv.Key] as KeywordArgument;
+                var arg = Definition[kv.Key];
                 if(arg != null) {
                     set = ProcessArgumentValue(result, arg, kv.Value, set);
                 }
