@@ -380,6 +380,18 @@ namespace HFMCmd
         protected static readonly ILog _log = LogManager.GetLogger(
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
+        /// Minimum interval that must elapse before we will consider logging a
+        /// progress update
+        public static int MIN_LOG_INTERVAL = 15;
+        /// Maximum interval that should pass without logging a progress update
+        public static int MAX_LOG_INTERVAL = 300;
+        /// Minimum progress that must be made before a new log message is generated
+        public static int MIN_PROGRESS_INCREMENT = 10;
+
+        // Time the last progress log message was generated
+        protected DateTime _lastLog;
+
+
         /// Constructor
         public LogOutput()
         {
@@ -432,6 +444,7 @@ namespace HFMCmd
             _operation = operation;
             _total = total;
             _progress = 0;
+            _lastLog = DateTime.MinValue;
         }
 
 
@@ -439,15 +452,19 @@ namespace HFMCmd
         {
             int lastPct = _progress * 100 / _total;
             int pct = progress * 100 / _total;
+
             // Log progress messages for (at most) each 10% of progress
             // Handle cases where progress appears to go backwards e.g.
             // due to several passes being made.
 
-            // TODO: Add time check as well, since there is no point 
-            // logging progress on fast operations
-            if (progress < _progress || (pct - lastPct) >= 10) {
+            // Log progress only if sufficient (but not too much) time
+            // has passed, and sufficient progress has been made
+            if((DateTime.Now.AddSeconds(-MAX_LOG_INTERVAL) > _lastLog) ||
+               (DateTime.Now.AddSeconds(-MIN_LOG_INTERVAL) > _lastLog &&
+                (progress < _progress || (pct - lastPct) >= 10))) {
                 _log.InfoFormat("{0} {1}% complete", _operation.Trim(), pct);
                 _progress = progress;
+                _lastLog = DateTime.Now;
             }
 
             return OutputHelper.ShouldCancel();
