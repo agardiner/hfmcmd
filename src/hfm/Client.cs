@@ -99,7 +99,7 @@ namespace HFM
         [Command("Sets the connection details using an SSO token. An SSO token represents " +
                  "an existing authenticated session, and may been obtained from the GetLogonToken " +
                  "command, or from another Hyperion session."),
-         AlternateFactory]
+         Factory(Alternate = true)]
         public Connection SetLogonToken(
                 [Parameter("An SSO token obtained from an existing Shared Services connection")]
                 string token)

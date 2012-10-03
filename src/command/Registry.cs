@@ -96,12 +96,7 @@ namespace Command
                         }
                         if(attr is FactoryAttribute) {
                             factory = new Factory(mi);
-                            Add(factory);
-                        }
-                        // Add support for alternate factories
-                        if(attr is AlternateFactoryAttribute) {
-                            factory = new Factory(mi);
-                            Add(factory, true);
+                            Add(factory, (attr as FactoryAttribute).Alternate);
                         }
                     }
                     if(cmd != null && factory != null) {

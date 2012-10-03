@@ -37,21 +37,7 @@ namespace Command
      AllowMultiple = false)]
     public class FactoryAttribute : Attribute
     {
-    }
-
-
-
-    /// </summary>
-    /// Define an attribute that can be used to tag a method, property, or
-    /// constructor as an alternate source of new instances of the class returned
-    /// by the member. This information will be used by Context objects to
-    /// determine how to obtain objects of the required type when invoking a
-    /// Command.
-    /// </summary>
-    [AttributeUsage(AttributeTargets.Constructor | AttributeTargets.Method | AttributeTargets.Property,
-     AllowMultiple = false)]
-    public class AlternateFactoryAttribute : Attribute
-    {
+        public bool Alternate = false;
     }
 
 
