@@ -43,6 +43,18 @@ namespace HFMCmd
 
 
         /// <summary>
+        /// Given a path containing wildcards, returns the file(s) that match
+        /// pattern.
+        /// </summary>
+        public static string[] GetMatchingFiles(string pathPattern)
+        {
+            var dir = Path.GetDirectoryName(pathPattern);
+            var pattern = Path.GetFileName(pathPattern);
+            return Directory.GetFiles(dir, pattern);
+        }
+
+
+        /// <summary>
         /// Checks if the specified path exists, throwing an exception if it
         /// doesn't.
         /// </summary>

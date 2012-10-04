@@ -114,35 +114,55 @@ namespace HFM
 
         [Command("Loads data to an HFM application from a text file")]
         public void LoadData(
-                [Parameter("Path to the source data file")]
-                string dataFile,
-                [Parameter("Path to the load log file; if not specified, defaults to same path " +
-                             "and name as the source data file.",
+                [Parameter("Path to the source data file(s). To load multiple files from the same " +
+                           "source directory, use wildcards in the file name")]
+                string dataFiles,
+                [Parameter("Path to the folder in which to create log files; if not specified, defaults to same folder " +
+                           "as the source data file. Log files have the same file name (but with a .log extension) as " +
+                           "the file from which the data is loaded",
                  DefaultValue = null)]
-                string logFile,
+                string logDir,
                 LoadOptions options,
                 SystemInfo si,
                 IOutput output)
         {
             object oErrors = null;
+            bool didError = false;
+            string logFile;
 
-            if(logFile == null || logFile == "") {
-                logFile = Path.ChangeExtension(dataFile, ".log");
+            var paths = Utilities.GetMatchingFiles(dataFiles);
+            if(paths.Length > 1) {
+                _log.InfoFormat("Found {0} data files to process", paths.Length);
+            }
+            foreach(var dataFile in paths) {
+                if(logDir == null || logDir == "") {
+                    logFile = Path.ChangeExtension(dataFile, ".log");
+                }
+                else {
+                    logFile = Path.Combine(logDir, Path.ChangeExtension(
+                                    Path.GetFileName(dataFile), ".log"));
+                }
+
+                // Ensure data file exists and logFile is writeable
+                Utilities.EnsureFileExists(dataFile);
+                Utilities.EnsureFileWriteable(logFile);
+
+                _log.InfoFormat("Loading data from {0}", dataFile);
+                HFM.Try("Loading data", () => {
+                    si.MonitorBlockingTask(output);
+                    oErrors = HsvcDataLoad.Load2(dataFile, logFile);
+                    si.BlockingTaskComplete();
+                });
+
+                if((bool)oErrors) {
+                    _log.WarnFormat("Data load resulted in errors; check log file {0} for details",
+                            Path.GetFileName(logFile));
+                    // TODO:  Should we show the warnings here?
+                    didError = true;
+                }
             }
 
-            // Ensure data file exists and logFile is writeable
-            Utilities.EnsureFileExists(dataFile);
-            Utilities.EnsureFileWriteable(logFile);
-
-            HFM.Try("Loading data", () => {
-                si.MonitorRunningTaskAsync(output);
-                oErrors = HsvcDataLoad.Load2(dataFile, logFile);
-                si.TaskComplete();
-            });
-
-            if((bool)oErrors) {
-                _log.Warn("Data load resulted in errors; check log file for details");
-                // TODO:  Should we show the warnings here?
+            if(didError) {
                 throw new HFMException("One or more errors occurred while loading data");
             }
         }
