@@ -32,6 +32,17 @@ namespace HFMCmd
         protected string _operation;
         // Total number of steps in operation
         protected int _total;
+        // Thread spun up to monitor blocking operations
+        protected Thread _monitorThread;
+
+
+        public string Operation {
+            get { return _operation; }
+            set {
+                _operation = value;
+                _output.Operation = _operation;
+            }
+        }
 
 
         /// <summary>
@@ -43,6 +54,28 @@ namespace HFMCmd
         /// <param name="isRunning">An out parameter to be set by the delegate,
         /// indicating whether the operation is still in progress.</param>
         public delegate int GetProgress(bool cancel, out bool isRunning);
+
+
+        /// <summary>
+        /// Constructs a progress monitor for tracking the progress of a long-
+        /// running operation and updating the progress status via an IOutput
+        /// instance. Progress will be measured in percentage terms.
+        /// </summary>
+        public ProgressMonitor(IOutput output)
+            : this(output, "Operation in progress", 100)
+        {
+        }
+
+
+        /// <summary>
+        /// Constructs a progress monitor for tracking the progress of a long-
+        /// running operation and updating the progress status via an IOutput
+        /// instance. Progress will be measured in percentage terms.
+        /// </summary>
+        public ProgressMonitor(IOutput output, string operation)
+            : this(output, operation, 100)
+        {
+        }
 
 
         /// <summary>
@@ -120,18 +153,27 @@ namespace HFMCmd
         /// <param name="progressFn">A GetProgress delegate that can be called
         /// to determine the completion status of the operation.
         /// </param>
-        public Thread MonitorProgressAsync(GetProgress progressFn)
+        public void MonitorProgressAsync(GetProgress progressFn)
         {
-            Thread thread = new System.Threading.Thread(() => {
+            _monitorThread = new System.Threading.Thread(() => {
                 _log.Trace("Starting progress monitor thread");
                 MonitorProgress(progressFn);
                 _log.Trace("Progress monitor thread finished");
             });
-            thread.Start();
-
-            return thread;
+            _monitorThread.Start();
         }
 
+
+        /// <summary>
+        /// When an async operation is complete, this method should be called
+        /// so that the main thread waits for the monitor thread to end and
+        /// clean up the progress display.
+        /// </summary>
+        public void AsyncComplete()
+        {
+            _monitorThread.Join();
+            _monitorThread = null;
+        }
     }
 
 }

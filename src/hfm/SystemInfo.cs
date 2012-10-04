@@ -144,6 +144,8 @@ namespace HFM
 
         protected readonly HsvSystemInfo _hsvSystemInfo;
 
+        protected ProgressMonitor _progressMonitor;
+
 
         public SystemInfo(HsvSystemInfo si)
         {
@@ -286,24 +288,64 @@ namespace HFM
 
 
         /// <summary>
-        /// Monitors a running task via a separate thread.
+        /// Monitors the progress (via a separate monitor thread) of a blocking
+        /// API call that is about to be run on the main thread. The query to
+        /// get a handle to the blocking task will not be performed for half a
+        /// second, giving the caller time to initiate the blocking task after
+        /// calling this method.
+        /// Note: When the blocking task returns, the caller should immediately
+        /// call the TaskComplete method to wait for the monitor thread to
+        /// complete. Otherwise progress updates can be intermingled with log
+        /// output.
         /// </summary>
-        public void MonitorRunningTaskAsync(IOutput output)
+        public void MonitorBlockingTask(IOutput output)
         {
-            var task = GetRunningTask();
-            var pm = new ProgressMonitor(output, task.TaskType.ToString(), 100);
+            TaskInfo task = null;
+            _progressMonitor = new ProgressMonitor(output);
 
-            pm.MonitorProgressAsync(delegate(bool cancel, out bool isRunning) {
+            _progressMonitor.MonitorProgressAsync(delegate(bool cancel, out bool isRunning) {
                 int progress;
 
-                progress = GetTaskProgress(task);
-                isRunning = task.TaskStatus == ETaskStatus.Running;
-                if(cancel && isRunning) {
-                    CancelRunningTask(task.TaskId);
+                if(task == null) {
+                    // First time through (half a second later), so get task
+                    // which should now be running
+                    task = GetRunningTask();
+                    if(task != null) {
+                        _progressMonitor.Operation = task.TaskType.ToString();
+                    }
                 }
 
+                if(task != null) {
+                    // Check on the task progress
+                    progress = GetTaskProgress(task);
+                    isRunning = task.TaskStatus == ETaskStatus.Running;
+                    if(cancel && isRunning) {
+                        CancelRunningTask(task.TaskId);
+                    }
+                }
+                else {
+                    // No task is running - either it finished already, or there
+                    // was an error launching it; either way, indicate we are done
+                    isRunning = false;
+                    progress = 100;
+                }
                 return progress;
             });
+        }
+
+
+        /// <summary>
+        /// When a blocking API call has completed that has been monitored via
+        /// MonitorBlockingTask, this method should be called so as to wait for
+        /// monitor thread to complete before moving onto other things. E.g.
+        ///     MonitorBlockingTask(output);
+        ///     ... call to blocking API here ...
+        ///     BlockingTaskComplete();
+        /// </summary>
+        public void BlockingTaskComplete()
+        {
+            _progressMonitor.AsyncComplete();
+            _progressMonitor = null;
         }
 
 
@@ -317,7 +359,7 @@ namespace HFM
                                 FirstOrDefault(t => t.TaskId == taskId);
 
             if(task != null) {
-                var pm = new ProgressMonitor(output, task.TaskType.ToString(), 100);
+                var pm = new ProgressMonitor(output, task.TaskType.ToString());
                 pm.MonitorProgress(delegate(bool cancel, out bool isRunning) {
                     int progress;
 
@@ -334,7 +376,6 @@ namespace HFM
                 _log.InfoFormat("No running task was found with task id {0}", taskId);
             }
         }
-
 
     }
 

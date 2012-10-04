@@ -254,11 +254,7 @@ namespace HFMCmd
             _log.TraceFormat("Adding keyword args for {0} command", cmd.Name);
             foreach(var param in cmd.Parameters) {
                 _log.DebugFormat("Processing param {0}", param);
-                if(param.ParameterType == typeof(IOutput)) {
-                    // We don't need to add anything for IOutput params
-                    continue;
-                }
-                else if(param.IsCollection) {
+                if(param.IsCollection) {
                     _log.DebugFormat("Processing collection type {0}", param.ParameterType);
                     // Get individual settings from collection and add them
                     foreach(var setting in _commands.GetSettings(param.ParameterType)) {
@@ -266,7 +262,7 @@ namespace HFMCmd
                         AddSettingAsArg(setting);
                     }
                 }
-                else {
+                else if(param.HasParameterAttribute) {
                     AddSettingAsArg(param);
                 }
             }

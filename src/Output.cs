@@ -18,6 +18,11 @@ namespace HFMCmd
     public interface IOutput
     {
         /// <summary>
+        /// Property for setting the current operation that is in progress.
+        /// </summary>
+        string Operation { get; set; }
+
+        /// <summary>
         /// Called before a table of information is output; identifies the names
         /// of the fields that will be output (and implicitly, how many fields
         /// there will be per record). Defined as an array of objects, since
@@ -218,6 +223,8 @@ namespace HFMCmd
     {
         public static NullOutput Instance = new NullOutput();
 
+        public string Operation { get; set; }
+
         public void SetHeader(params object[] fields) {}
         public void WriteRecord(params object[] values) {}
         public void End() {}
@@ -239,6 +246,8 @@ namespace HFMCmd
         private int _indentWidth = 0;
         private string _indentString = "";
 
+        /// Current operation
+        public string Operation { get; set; }
         /// Level of indentation to use
         public int IndentWidth
         {
@@ -272,8 +281,6 @@ namespace HFMCmd
 
         /// Whether current operation has been cancelled
         protected bool _cancelled;
-        /// Current progress operation being performed
-        protected string _operation;
         /// Total number of steps in progress operation
         protected int _total;
         /// Currently completed number of progress steps
@@ -358,7 +365,7 @@ namespace HFMCmd
         // Default no-op implementation
         public virtual void InitProgress(string operation, int total)
         {
-            _operation = operation;
+            Operation = operation;
             _total = total;
             _cancelled = false;
         }
@@ -375,6 +382,7 @@ namespace HFMCmd
         // Default no-op implementation
         public virtual void EndProgress()
         {
+            Operation = null;
         }
 
     }
@@ -472,7 +480,7 @@ namespace HFMCmd
             if((DateTime.Now.AddSeconds(-MAX_LOG_INTERVAL) > _lastLog) ||
                (DateTime.Now.AddSeconds(-MIN_LOG_INTERVAL) > _lastLog &&
                 (progress < _progress || (pct - lastPct) >= 10))) {
-                _log.InfoFormat("{0} {1}% complete", _operation.Trim(), pct);
+                _log.InfoFormat("{0} {1}% complete", Operation.Trim(), pct);
                 _progress = progress;
                 _lastLog = DateTime.Now;
             }
@@ -575,8 +583,8 @@ namespace HFMCmd
             char spin = _spinner[_spin++ % _spinner.Length];
 
             // Build up the progress bar
-            var sb = new StringBuilder(_operation.Length + BAR_SIZE + 10);
-            sb.Append(_operation);
+            var sb = new StringBuilder(Operation.Length + BAR_SIZE + 20);
+            sb.Append(Operation);
             sb.Append(' ');
             sb.Append(spin);
             sb.Append("  [");

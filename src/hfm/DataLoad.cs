@@ -68,7 +68,6 @@ namespace HFM
                 base(typeof(IHsvLoadExtractOptions), typeof(IHsvLoadExtractOption),
                      typeof(HSV_DATALOAD_OPTION), dl.HsvcDataLoad.LoadOptions)
             {
-                //GetOptionNames();
             }
         }
 
@@ -93,7 +92,6 @@ namespace HFM
                 base(typeof(IHsvLoadExtractOptions), typeof(IHsvLoadExtractOption),
                      typeof(HSV_DATAEXTRACT_OPTION), dl.HsvcDataLoad.ExtractOptions)
             {
-                //GetOptionNames();
             }
         }
 
@@ -122,7 +120,9 @@ namespace HFM
                              "and name as the source data file.",
                  DefaultValue = null)]
                 string logFile,
-                LoadOptions options)
+                LoadOptions options,
+                SystemInfo si,
+                IOutput output)
         {
             object oErrors = null;
 
@@ -134,8 +134,12 @@ namespace HFM
             Utilities.EnsureFileExists(dataFile);
             Utilities.EnsureFileWriteable(logFile);
 
-            HFM.Try("Loading data",
-                    () => oErrors = HsvcDataLoad.Load2(dataFile, logFile));
+            HFM.Try("Loading data", () => {
+                si.MonitorRunningTaskAsync(output);
+                oErrors = HsvcDataLoad.Load2(dataFile, logFile);
+                si.TaskComplete();
+            });
+
             if((bool)oErrors) {
                 _log.Warn("Data load resulted in errors; check log file for details");
                 // TODO:  Should we show the warnings here?
