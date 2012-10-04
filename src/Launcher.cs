@@ -300,6 +300,9 @@ namespace HFMCmd
             }
             catch(TargetInvocationException) {
                 ok = false;
+                if(_log.IsDebugEnabled) {
+                    throw;
+                }
             }
             return ok;
         }

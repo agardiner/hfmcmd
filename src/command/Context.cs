@@ -322,7 +322,8 @@ namespace Command
                 result = cmd.MethodInfo.Invoke(ctxt, parms);
             }
             catch(TargetInvocationException ex) {
-                _log.ErrorFormat("Command {0} threw an exception", cmd.Name, ex.InnerException);
+                _log.ErrorFormat("Command {0} threw an exception", cmd.Name,
+                        ex.InnerException != null ? ex.InnerException : ex);
                 throw;
             }
 
