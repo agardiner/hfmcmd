@@ -255,7 +255,8 @@ namespace Command
                     parms[i++] = this[param.ParameterType];
                 }
                 else {
-                    throw new ContextException(string.Format("No object of type {0} can be obtained from the current context", param.ParameterType));
+                    throw new ContextException(string.Format("No object of type {0} " +
+                                "can be obtained from the current context", param.ParameterType));
                 }
             }
             return ctor.Invoke(parms);
@@ -268,7 +269,8 @@ namespace Command
         protected object InvokeCommand(Command cmd, Dictionary<string, object> args)
         {
             if(!HasObject(cmd.Type)) {
-                throw new ContextException(String.Format("No object of type {0} is available in the current context", cmd.Type));
+                throw new ContextException(String.Format("No object of type {0} " +
+                            "is available in the current context", cmd.Type));
             }
 
             _log.InfoFormat("Executing {0} command {1}...", cmd.Type.Name, cmd.Name);
@@ -306,6 +308,13 @@ namespace Command
                     parms[i++] = param.DefaultValue;
                 }
                 else if(HasObject(param.ParameterType)) {
+                    parms[i++] = this[param.ParameterType];
+                }
+                // If there is a factory to create this type, then try to create it
+                else if(_registry.Contains(param.ParameterType)) {
+                    foreach(var step in FindPathToType(param.ParameterType)) {
+                        Instantiate(step, args);
+                    }
                     parms[i++] = this[param.ParameterType];
                 }
                 else {
