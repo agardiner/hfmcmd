@@ -72,7 +72,11 @@ namespace HFMCmd
     /// </summary>
     public static class OutputHelper
     {
+        // Reference to class logger
+        public static readonly ILog _log = LogManager.GetLogger(
+            System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
+        // Characters at which line breaks can be created
         public static char[] WHITESPACE = new char[] { ' ', '\n', '\t' };
         public static char[] WORDBREAKS = new char[] { '-', ',', '.', ';', '(', ')', '[', ']' };
 
@@ -118,8 +122,8 @@ namespace HFMCmd
             while(sVal.Length > width) {
                 chunk = sVal.Substring(0, width + 1);
                 wsPos = chunk.LastIndexOfAny(WHITESPACE);
-                wbPos = chunk.LastIndexOfAny(WORDBREAKS, width);
-                if(wsPos > 0 && wsPos > wbPos || wbPos - 5 < wsPos) {
+                wbPos = chunk.LastIndexOfAny(WORDBREAKS, width - 1);
+                if(wsPos > 0 && wsPos > wbPos || (wbPos > 5 && wbPos - 5 < wsPos)) {
                     // Break at whitespace
                     lines.Add(sVal.Substring(0, wsPos).Trim());
                     sVal = sVal.Substring(wsPos).Trim();
