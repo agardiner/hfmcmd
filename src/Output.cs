@@ -270,6 +270,8 @@ namespace HFMCmd
         /// Number of records output in current table
         protected int _records;
 
+        /// Whether current operation has been cancelled
+        protected bool _cancelled;
         /// Current progress operation being performed
         protected string _operation;
         /// Total number of steps in progress operation
@@ -356,13 +358,17 @@ namespace HFMCmd
         // Default no-op implementation
         public virtual void InitProgress(string operation, int total)
         {
+            _operation = operation;
+            _total = total;
+            _cancelled = false;
         }
 
 
         // Default no-op implementation
         public virtual bool SetProgress(int progress)
         {
-            return false;
+            _cancelled = _cancelled || OutputHelper.ShouldCancel();
+            return _cancelled;
         }
 
 
@@ -445,8 +451,7 @@ namespace HFMCmd
 
         public override void InitProgress(string operation, int total)
         {
-            _operation = operation;
-            _total = total;
+            base.InitProgress(operation, total);
             _progress = 0;
             _lastLog = DateTime.MinValue;
         }
@@ -454,6 +459,7 @@ namespace HFMCmd
 
         public override bool SetProgress(int progress)
         {
+            _cancelled = _cancelled || OutputHelper.ShouldCancel();
             int lastPct = _progress * 100 / _total;
             int pct = progress * 100 / _total;
 
@@ -471,7 +477,7 @@ namespace HFMCmd
                 _lastLog = DateTime.Now;
             }
 
-            return OutputHelper.ShouldCancel();
+            return _cancelled;
         }
 
     }
@@ -486,9 +492,12 @@ namespace HFMCmd
 
         // Characters used to simulate a spinner
         private static readonly char[] _spinner = new char[] { '|', '/', '-', '\\' };
+        // Size of the progress bar
         private static int BAR_SIZE = 50;
 
+        // Reference to CommandLine.UI, used to render our output
         private CommandLine.UI _cui;
+        // Counter used to cause spinner to animate
         private int _spin;
 
 
@@ -543,14 +552,14 @@ namespace HFMCmd
 
         public override void InitProgress(string operation, int total)
         {
-            _operation = operation;
-            _total = total;
+            base.InitProgress(operation, total);
             _spin = 0;
         }
 
 
         public override bool SetProgress(int progress)
         {
+            _cancelled = _cancelled || _cui.EscPressed() || OutputHelper.ShouldCancel();
             _progress = progress;
             int pct = _progress * 100 / _total;
 
@@ -580,7 +589,13 @@ namespace HFMCmd
                     sb.Append(' ');
                 }
             }
-            sb.Append("]  (Esc to cancel)");
+            sb.Append("]  ");
+            if(_cancelled) {
+                sb.Append("Cancelling...");
+            }
+            else {
+                sb.Append("(Esc to cancel)");
+            }
 
             // Now place the percentage complete inside the bar
             var pctStr = pct.ToString() + "%";
@@ -594,7 +609,7 @@ namespace HFMCmd
             _cui.ClearLine();
             _cui.Write(sb.ToString());
 
-            return OutputHelper.ShouldCancel();
+            return _cancelled;
         }
 
 

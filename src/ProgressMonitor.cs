@@ -102,6 +102,10 @@ namespace HFMCmd
             while(isRunning && !cancelNotified);
 
             _output.EndProgress();
+
+            if(cancel) {
+                _log.InfoFormat("{0} cancelled", _operation);
+            }
         }
 
 
