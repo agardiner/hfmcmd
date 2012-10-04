@@ -108,7 +108,7 @@ namespace HFM
         /// </summary>
         public static T[] Object2Array<T>(object retVal)
         {
-            return Array.ConvertAll((object[])retVal, o => (T)o);
+            return retVal != null ? Array.ConvertAll((object[])retVal, o => (T)o) : (T[])retVal;
         }
 
     }
