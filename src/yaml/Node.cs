@@ -4,8 +4,6 @@ using System.Collections.Generic;
 using System.Text;
 using System.Linq;
 
-using log4net;
-
 
 namespace YAML
 {
@@ -41,11 +39,6 @@ namespace YAML
                 : base(msg)
             { }
         }
-
-
-        // Reference to class logger
-        protected static readonly ILog _log = LogManager.GetLogger(
-            System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
 
         /// The internal List object used to hold the children of this Node.
