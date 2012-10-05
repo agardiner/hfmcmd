@@ -49,6 +49,7 @@ namespace Command
     {
         protected object _defaultValue = null;
         protected bool   _hasDefaultValue = false;
+        protected string _uda;
 
         /// Description of the setting
         public string Description { get; set; }
@@ -74,10 +75,25 @@ namespace Command
         public string Deprecated { get; set; }
         /// Returns true if there is a Since or Deprecated attribute
         public bool IsVersioned { get { return Since != null || Deprecated != null; } }
+        /// User-defined attribute; can be used to store additional information
+        /// about the setting.
+        public string Uda {
+            get {
+                return _uda;
+            }
+            set {
+                if(_uda == null) {
+                    _uda = value;
+                }
+                else {
+                    _uda += "|" + value;
+                }
+            }
+        }
 
 
         /// Checks if the setting is current for a specified version, based on
-        // the Since and/or Deprecated settings.
+        /// the Since and/or Deprecated settings.
         public bool IsCurrent(string version)
         {
             bool current = true;
@@ -100,6 +116,20 @@ namespace Command
                 verNum = verNum * 100 + (i < parts.Length ? int.Parse(parts[i]) : 0);
             }
             return verNum;
+        }
+
+
+        /// <summary>
+        /// Returns true if this setting is tagged with the specified user-
+        /// defined attribute.
+        /// </summary>
+        public bool HasUda(string uda)
+        {
+            bool hasUda = false;
+            if(_uda != null) {
+                hasUda = _uda.Split('|').Contains(uda, StringComparer.OrdinalIgnoreCase);
+            }
+            return hasUda;
         }
 
     }

@@ -251,14 +251,13 @@ namespace HFMCmd
         /// Add additional arguments needed by the command
         protected void AddCommandParamsAsArgs(Command.Command cmd)
         {
-            _log.TraceFormat("Adding keyword args for {0} command", cmd.Name);
+            _log.TraceFormat("Adding command-line args for {0} command", cmd.Name);
             foreach(var param in cmd.Parameters) {
                 _log.DebugFormat("Processing param {0}", param);
                 if(param.IsCollection) {
                     _log.DebugFormat("Processing collection type {0}", param.ParameterType);
                     // Get individual settings from collection and add them
                     foreach(var setting in _commands.GetSettings(param.ParameterType)) {
-                        // TODO: Only add if valid for this version of HFM and not deprecated
                         AddSettingAsArg(setting);
                     }
                 }
@@ -274,10 +273,13 @@ namespace HFMCmd
         {
             if(!setting.IsVersioned || setting.IsCurrent(HFM.HFM.Version)) {
                 var key = setting.Name.Capitalize();
-                _log.DebugFormat("Adding keyword arg {0}", key);
+                _log.DebugFormat("Adding command-line arg {0}", key);
 
                 // Add a keyword argument for this setting
-                var arg = _cmdLine.AddKeywordArgument(key, setting.Description, setting.ParameterType);
+                ValueArgument arg = setting.HasUda("PositionalArg") ?
+                    (ValueArgument)_cmdLine.AddPositionalArgument(key, setting.Description, setting.ParameterType) :
+                    (ValueArgument)_cmdLine.AddKeywordArgument(key, setting.Description, setting.ParameterType);
+
                 arg.IsRequired = !setting.HasDefaultValue;
                 arg.IsSensitive = setting.IsSensitive;
                 if(setting.HasDefaultValue && setting.DefaultValue != null) {
@@ -308,7 +310,7 @@ namespace HFMCmd
         [Command("Displays help information")]
         public void Help(
                 [Parameter("The name of a command for which to display detailed help",
-                 DefaultValue = null)]
+                 DefaultValue = null, Uda = "PositionalArg")]
                 string command,
                 IOutput output)
         {

@@ -92,6 +92,8 @@ namespace Command
 
         /// Is the setting current for the specified version?
         bool IsCurrent(string version);
+        /// Returns true if the setting has been tagged with the specified UDA
+        bool HasUda(string uda);
     }
 
 
@@ -158,6 +160,11 @@ namespace Command
         public bool IsCurrent(string version)
         {
             return _paramAttribute != null ? _paramAttribute.IsCurrent(version) : true;
+        }
+        /// Returns true if the parameter is tagged with the Uda
+        public bool HasUda(string uda)
+        {
+            return _paramAttribute != null ? _paramAttribute.HasUda(uda) : false;
         }
 
 
