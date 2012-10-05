@@ -1,6 +1,5 @@
 using System;
 using System.Reflection;
-using System.Collections.Generic;
 using System.Linq;
 
 using log4net;
@@ -10,68 +9,21 @@ namespace Command
 {
 
     /// <summary>
-    /// Define an attribute which will be used to tag methods that can be
-    /// invoked from a script or command file.
+    /// Base class of Command, Parameter, and Setting attributes.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
-    public class CommandAttribute : Attribute
+    public abstract class VersionedAttribute : Attribute
     {
         /// Description of the command (mandatory)
-        public readonly string Description;
-
-        public CommandAttribute(string desc) {
-            Description = desc;
-        }
-    }
-
-
-
-    /// </summary>
-    /// Define an attribute that can be used to tag a method, property, or
-    /// constructor as a source of new instances of the class returned by
-    /// the member. This information will be used by Context objects to
-    /// determine how to obtain objects of the required type when invoking a
-    /// Command.
-    /// </summary>
-    [AttributeUsage(AttributeTargets.Constructor | AttributeTargets.Method | AttributeTargets.Property,
-     AllowMultiple = false)]
-    public class FactoryAttribute : Attribute
-    {
-        public bool Alternate = false;
-    }
-
-
-
-    /// <summary>
-    /// Abstract base class for Parameter and Setting attributes.
-    /// </summary>
-    public abstract class AbstractSettingAttribute : Attribute
-    {
-        protected object _defaultValue = null;
-        protected bool   _hasDefaultValue = false;
+        protected string _description;
+        /// Holds the UDA(s) this item has been tagged with, as a | delimited
+        /// string.
         protected string _uda;
 
-        /// Description of the setting
-        public string Description { get; set; }
-        /// Whether the parameter has a DefaultValue (since the default may be null)
-        public bool   HasDefaultValue { get { return _hasDefaultValue; } }
-        /// Default value for parameter
-        public object DefaultValue {
-            get {
-                return _defaultValue;
-            }
-            set {
-                _defaultValue = value;
-                _hasDefaultValue = true;
-            }
-        }
-        /// Whether the setting has a DefaultValue; settings default to true
-        public bool   IsSensitive { get; set; }
-        /// The constant prefix of all values in the enum which can be omitted
-        public string EnumPrefix { get; set; }
-        /// Version in which the setting was introduced
+        /// Description of command or setting
+        public string Description { get { return _description; } }
+        /// Version in which the command was introduced
         public string Since { get; set; }
-        /// Version in which the setting was deprecated
+        /// Version in which the command was deprecated
         public string Deprecated { get; set; }
         /// Returns true if there is a Since or Deprecated attribute
         public bool IsVersioned { get { return Since != null || Deprecated != null; } }
@@ -92,6 +44,13 @@ namespace Command
         }
 
 
+        /// Constructor; forces description to be mandatory
+        public VersionedAttribute(string desc)
+        {
+            _description = desc;
+        }
+
+
         /// Checks if the setting is current for a specified version, based on
         /// the Since and/or Deprecated settings.
         public bool IsCurrent(string version)
@@ -107,6 +66,9 @@ namespace Command
         }
 
 
+        /// Function for converting a version to an 8-digit number that can be
+        /// compared with another version string (after conversion) to determine
+        /// which is newer.
         private int ConvertVersionStringToNumber(string ver)
         {
             var parts = ver.Split('.');
@@ -131,7 +93,71 @@ namespace Command
             }
             return hasUda;
         }
+    }
 
+
+    /// <summary>
+    /// Define an attribute which will be used to tag methods that can be
+    /// invoked from a script or command file.
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
+    public class CommandAttribute : VersionedAttribute
+    {
+        public CommandAttribute(string desc)
+            : base(desc)
+        { }
+    }
+
+
+
+    /// </summary>
+    /// Define an attribute that can be used to tag a method, property, or
+    /// constructor as a source of new instances of the class returned by
+    /// the member. This information will be used by Context objects to
+    /// determine how to obtain objects of the required type when invoking a
+    /// Command.
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Constructor | AttributeTargets.Method | AttributeTargets.Property,
+     AllowMultiple = false)]
+    public class FactoryAttribute : Attribute
+    {
+        public bool Alternate = false;
+    }
+
+
+
+    /// <summary>
+    /// Abstract base class for Parameter and Setting attributes.
+    /// </summary>
+    public abstract class ValueAttribute : VersionedAttribute
+    {
+        /// The default value (if any) for this setting
+        protected object _defaultValue = null;
+        /// A flag indicating whether the attribute has a default value, since
+        /// checking for null is not sufficient (the default value may be null).
+        protected bool _hasDefaultValue = false;
+
+        /// Whether the parameter has a DefaultValue (since the default may be null)
+        public bool HasDefaultValue { get { return _hasDefaultValue; } }
+        /// Default value for parameter
+        public object DefaultValue {
+            get {
+                return _defaultValue;
+            }
+            set {
+                _defaultValue = value;
+                _hasDefaultValue = true;
+            }
+        }
+        /// Whether the setting is a sensitive value that should not be logged
+        public bool   IsSensitive { get; set; }
+        /// The constant part of the enum label that can be omitted
+        public string EnumPrefix { get; set; }
+
+        /// Constructor; forces description to be mandatory
+        public ValueAttribute(string desc)
+            : base(desc)
+        { }
     }
 
 
@@ -148,11 +174,11 @@ namespace Command
     /// they can appear (only at the end of the list of parameters).
     /// </remarks>
     [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false)]
-    public class ParameterAttribute : AbstractSettingAttribute
+    public class ParameterAttribute : ValueAttribute
     {
-        public ParameterAttribute(string desc) {
-            Description = desc;
-        }
+        public ParameterAttribute(string desc)
+            : base(desc)
+        { }
     }
 
 
@@ -163,7 +189,7 @@ namespace Command
     /// Since and Deprecated arguments are supported.
     /// </summary>
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
-    public class SettingAttribute : AbstractSettingAttribute, ISetting
+    public class SettingAttribute : ValueAttribute, ISetting
     {
         /// Name of the setting
         public string Name { get; set; }
@@ -173,11 +199,13 @@ namespace Command
         public string InternalName { get; set; }
 
 
+        /// Constructor; name and description are mandatory, type defaults to
+        /// boolean, default value to null (false)
         public SettingAttribute(string name, string desc)
+            : base(desc)
         {
             Name = name;
             InternalName = name;
-            Description = desc;
             ParameterType = typeof(bool);
             _hasDefaultValue = true;
         }

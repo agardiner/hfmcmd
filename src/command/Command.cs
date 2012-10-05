@@ -19,10 +19,12 @@ namespace Command
 
         // Fields
 
-        /// The MethodInfo object describing the underlying method.
-        internal readonly MethodInfo MethodInfo;
         /// The class on which this Command is found.
         public readonly Type Type;
+        /// The MethodInfo object describing the underlying method.
+        internal readonly MethodInfo MethodInfo;
+        /// The CommandAttribute that tagged this as a Command.
+        public readonly CommandAttribute CommandAttribute;
         /// List of CommandParamter definitions describing the parameters to
         /// this command.
         public readonly List<CommandParameter> Parameters = new List<CommandParameter>();
@@ -30,7 +32,9 @@ namespace Command
         /// Factory.
         protected internal Factory _factory;
         /// The Command description
-        public string Description;
+        public string Description { get { return CommandAttribute.Description; } }
+        /// The Command description
+        public bool IsVersioned { get { return CommandAttribute.IsVersioned; } }
 
         // Properties
 
@@ -49,7 +53,7 @@ namespace Command
         {
             this.MethodInfo = mi;
             this.Type = t;
-            this.Description = attr.Description;
+            this.CommandAttribute = attr;
 
             _log.DebugFormat("Found command {0}", this.Name);
 
@@ -58,6 +62,12 @@ namespace Command
                 _log.DebugFormat("Found parameter {0}", param);
                 this.Parameters.Add(param);
             }
+        }
+
+
+        public bool IsCurrent(string ver)
+        {
+            return CommandAttribute.IsCurrent(ver);
         }
 
 
