@@ -86,7 +86,7 @@ namespace log4net
             for (; ex != null; ex = ex.InnerException) {
                 if (ex is COMException && ex.Message.StartsWith("<?xml")) {
                     writer.Write("HFMException message XML contents:");
-                    writer.Write(ex);
+                    writer.Write(YAML.XML.ConvertXML(ex.Message));
                 }
                 else {
                     writer.Write(ex.GetType().Name);
