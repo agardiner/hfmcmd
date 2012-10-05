@@ -206,7 +206,7 @@ namespace HFMCmd
         /// </summary>
         public static bool ShouldCancel()
         {
-            return Launcher.Interrupted;
+            return CommandLine.UI.Interrupted;
         }
     }
 

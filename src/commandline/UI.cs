@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,12 +12,85 @@ namespace CommandLine
 {
 
     /// <summary>
+    /// Enumeration of interrupt events that might be received by the process
+    /// via a ConsoleCtrlHandler callback.
+    /// </summary>
+    public enum EInterruptTypes
+    {
+        Ctrl_C = 0,
+        Ctrl_Break = 1,
+        Close = 2,
+        Logoff = 5,
+        Shutdown = 6
+    }
+
+
+
+    /// <summary>
+    /// Class to hold definition of external SetConsoleCtrlHandler routine.
+    /// </summary>
+    public class Win32
+    {
+        public delegate bool Handler(EInterruptTypes ctrlType);
+
+        [DllImport("Kernel32")]
+        public static extern bool SetConsoleCtrlHandler(Handler handler, bool Add);
+    }
+
+
+
+    /// <summary>
     /// Main class for interacting via the command-line. Handles the definition
     /// and parsing of command-line arguments, and the display of usage and help
     /// messages.
     /// </summary>
     public class UI
     {
+        // Reference to class logger
+        protected static readonly ILog _log = LogManager.GetLogger(
+            System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
+
+        /// <summary>
+        /// Static public flag indicating that the application is to terminate
+        /// immediately, e.g. in response to a Ctrl-C or Logoff event. Any long-
+        /// running command should check this flag periodically and attempt to
+        /// abort gracefully.
+        /// </summary>
+        public static bool Interrupted = false;
+
+
+        /// <summary>
+        /// This method registers this class as a handler for Ctrl-C etc events
+        /// in the console. It returns a handle to the handler, which should be
+        /// referenced via the following at the end of the program Main method:
+        ///     GC.KeepAlive(hr);
+        /// </summary>
+        public static Win32.Handler RegisterCtrlHandler()
+        {
+            // Hook up CtrlHandler to handle breaks, logoffs, etc
+            Win32.Handler hr = new Win32.Handler(UI.CtrlHandler);
+            Win32.SetConsoleCtrlHandler(hr, true);
+            return hr;
+        }
+
+
+        /// <summary>
+        /// Handler to receive control events, such as Ctrl-C and logoff and
+        /// shutdown events. As a minimum, this logs the event, so that a record
+        /// of why the process exited is maintained.
+        /// </summary>
+        /// <param name="ctrlType">The type of event that occurred.</param>
+        /// <returns>True, indicating we have handled the event.</returns>
+        static bool CtrlHandler(EInterruptTypes ctrlType)
+        {
+            _log.Warn("An interrupt [" + ctrlType + "] has been received");
+            Interrupted = true;
+
+            return true;
+        }
+
+
         /// Flag indicating whether console output is redirected
         private bool _isRedirected = false;
 

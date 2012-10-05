@@ -17,61 +17,20 @@ using CommandLine;
 
 namespace HFMCmd
 {
-    /// <summary>
-    /// Enumeration of interrupt events that might be received by the process
-    /// via a ConsoleCtrlHandler callback.
-    /// </summary>
-    public enum EInterruptTypes
-    {
-        Ctrl_C = 0,
-        Ctrl_Break = 1,
-        Close = 2,
-        Logoff = 5,
-        Shutdown = 6
-    }
-
-
-    /// <summary>
-    /// Class to hold definition of external SetConsoleCtrlHandler routine.
-    /// </summary>
-    class Win32
-    {
-        public delegate bool Handler(EInterruptTypes ctrlType);
-
-        [DllImport("Kernel32")]
-        public static extern bool SetConsoleCtrlHandler(Handler handler, bool Add);
-    }
-
-
 
     /// <summary>
     /// Main class used to launch the application.
     /// </summary>
     public class Launcher
     {
-        // Reference to class logger
-        protected static readonly ILog _log = LogManager.GetLogger(
-            System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-
-
-        /// <summary>
-        /// Static public flag indicating that the application is to terminate
-        /// immediately, e.g. in response to a Ctrl-C or Logoff event. Any long-
-        /// running command should check this flag periodically and attempt to
-        /// abort gracefully.
-        /// </summary>
-        public static bool Interrupted = false;
-
-
 
         /// <summary>
         /// Main program entry point
         /// </summary>
         public static void Main()
         {
-            // Hook up CtrlHandler to handle breaks, logoffs, etc
-            Win32.Handler hr = new Win32.Handler(CtrlHandler);
-            Win32.SetConsoleCtrlHandler(hr, true);
+            // Register handler for Ctrl-C etc
+            var hr = UI.RegisterCtrlHandler();
 
             // Run the application
             new Application().Run();
@@ -81,23 +40,8 @@ namespace HFMCmd
             GC.KeepAlive(hr);
         }
 
-
-        /// <summary>
-        /// Handler to receive control events, such as Ctrl-C and logoff and
-        /// shutdown events. As a minimum, this logs the event, so that a record
-        /// of why the process exited is maintained.
-        /// </summary>
-        /// <param name="ctrlType">The type of event that occurred.</param>
-        /// <returns>True, indicating we have handled the event.</returns>
-        static bool CtrlHandler(EInterruptTypes ctrlType)
-        {
-            _log.Warn("An interrupt [" + ctrlType + "] has been received");
-            Interrupted = true;
-
-            return true;
-        }
-
     }
+
 
 
     /// <summary>
