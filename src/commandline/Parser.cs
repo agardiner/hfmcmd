@@ -148,6 +148,10 @@ namespace CommandLine
                 if(arg != null) {
                     set = ProcessArgumentValue(result, arg, true, set);
                 }
+                else if(Definition.IncludeUnrecognisedFlagArgs) {
+                    _log.TraceFormat("Unrecognised flag argument '--{0}' has been set", key);
+                    result[key] = true;
+                }
                 else if(!ShowUsage) {
                     _log.WarnFormat("Unknown flag argument '--{0}' has been ignored", key);
                 }
@@ -171,6 +175,10 @@ namespace CommandLine
                 var arg = Definition[kv.Key];
                 if(arg != null) {
                     set = ProcessArgumentValue(result, arg, kv.Value, set);
+                }
+                else if(Definition.IncludeUnrecognisedKeywordArgs) {
+                    _log.TraceFormat("Unrecognised keyword argument '{0}' has been set", kv.Key);
+                    result[kv.Key] = kv.Value;
                 }
                 else if(!ShowUsage) {
                     _log.WarnFormat("Unknown keyword argument '{0}' has been ignored", kv.Key);

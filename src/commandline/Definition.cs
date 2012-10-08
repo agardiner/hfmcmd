@@ -32,6 +32,12 @@ namespace CommandLine
 
         /// Purpose of the program whose command-line arguments we are parsing.
         public string Purpose { get; set; }
+        /// Flag governing whether unknown keyword args should be included in
+        /// the parse results
+        public bool IncludeUnrecognisedKeywordArgs = false;
+        /// Flag governing whether unknown flag args should be included in the
+        /// parse results
+        public bool IncludeUnrecognisedFlagArgs = false;
 
         /// An IArgumentMapper implementation to handle conversion of parsed
         /// string values to Argument.Type instances.
