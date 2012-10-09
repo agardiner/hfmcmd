@@ -30,7 +30,18 @@ namespace Command
 
 
         /// Return the Command object corresponding to the requested name.
-        public Command this[string cmdName] { get { return _commands[cmdName]; } }
+        public Command this[string cmdName] {
+            get {
+                if(_commands.ContainsKey(cmdName)) {
+                    return _commands[cmdName];
+                }
+                else {
+                    throw new KeyNotFoundException(string.Format(
+                                "No command named '{0}' has been registered",
+                                cmdName));
+                }
+            }
+        }
 
 
         /// Constructor
