@@ -116,7 +116,15 @@ namespace HFMCmd
             try {
                 var args = _cmdLine.Parse(Environment.GetCommandLineArgs());
                 if(args != null) {
-                    var ok = InvokeCommand(args["CommandOrFile"] as string, args);
+                    string cmdOrFile = args["CommandOrFile"] as string;
+                    bool ok;
+                    if(_commands.Contains(cmdOrFile)) {
+                        ok = InvokeCommand(cmdOrFile, args);
+                    }
+                    else {
+                        ok = ProcessCommandFile(cmdOrFile, args);
+                    }
+
                     if(!ok) {
                         System.Environment.Exit(1);
                     }
@@ -187,6 +195,12 @@ namespace HFMCmd
             }
             else {
                 ok = File.Exists(argVal);
+                if(ok) {
+                    // Instruct parser to include unrecognised args, since these
+                    // will be treated as variable assignments
+                    _cmdLine.Definition.IncludeUnrecognisedKeywordArgs = true;
+                    _cmdLine.Definition.IncludeUnrecognisedFlagArgs = true;
+                }
             }
             return ok;
         }
@@ -244,6 +258,30 @@ namespace HFMCmd
                 ok = false;
                 if(_log.IsDebugEnabled) {
                     throw;
+                }
+            }
+            return ok;
+        }
+
+
+        protected bool ProcessCommandFile(string fileName, Dictionary<string, object> args)
+        {
+            bool ok = true;
+            YAML.Parser parser = new YAML.Parser();
+            YAML.Node root = parser.ParseFile(fileName, args);
+            Console.WriteLine(root);
+            foreach(var cmdNode in root) {
+                if(_commands.Contains(cmdNode.Key)) {
+                    var cmdArgs = cmdNode.ToDictionary();
+                    // TODO: Handle argument mapping
+                    ok = ok && InvokeCommand(cmdNode.Key, cmdArgs);
+                }
+                else {
+                    throw new ArgumentException(string.Format("Unknown command '{0}' encountered in command file {1}",
+                                cmdNode.Key, fileName));
+                }
+                if(!ok) {
+                    break;
                 }
             }
             return ok;
