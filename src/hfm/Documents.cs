@@ -265,7 +265,7 @@ namespace HFM
 
 
         [Factory]
-        public Documents(WebSession session)
+        public Documents(Session session)
         {
             _documents = new HFMwManageDocuments();
             _documents.SetWebSession(session.HFMwSession);

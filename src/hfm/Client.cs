@@ -5,9 +5,7 @@ using System.Runtime.InteropServices;
 using log4net;
 using HSXCLIENTLib;
 using HSXSERVERLib;
-using HSVSESSIONLib;
 using HFMWAPPLICATIONSLib;
-using HFMWSESSIONLib;
 
 using Command;
 using HFMCmd;
@@ -54,7 +52,7 @@ namespace HFM
 
 
         // Reference to HFM HsxClient COM object
-        protected readonly HsxClient _client;
+        private readonly HsxClient _hsxClient;
 
 
         // Constructor
@@ -63,7 +61,7 @@ namespace HFM
         {
             _log.Trace("Creating HsxClient instance");
             try {
-                _client = new HsxClient();
+                _hsxClient = new HsxClient();
             }
             catch(COMException ex) {
                 unchecked {
@@ -91,7 +89,7 @@ namespace HFM
                 [Parameter("The password to login with", IsSensitive = true)]
                 string password)
         {
-            return new Connection(_client, domain, userName, password);
+            return new Connection(_hsxClient, domain, userName, password);
         }
 
 
@@ -104,7 +102,7 @@ namespace HFM
                 [Parameter("An SSO token obtained from an existing Shared Services connection")]
                 string token)
         {
-            return new Connection(_client, token);
+            return new Connection(_hsxClient, token);
         }
 
 
@@ -113,7 +111,7 @@ namespace HFM
         {
             object server = null;
             HFM.Try("Retrieving HsxServer instance",
-                    () => server = _client.GetServerOnCluster(clusterName));
+                    () => server = _hsxClient.GetServerOnCluster(clusterName));
             return new Server((HsxServer)server);
         }
 
@@ -124,7 +122,7 @@ namespace HFM
             string[] clusters = null;
 
             HFM.Try("Retrieving names of registered clusters / servers",
-                    () => clusters = _client.EnumRegisteredClusterNames() as string[]);
+                    () => clusters = _hsxClient.EnumRegisteredClusterNames() as string[]);
             if(output != null && clusters != null) {
                 output.SetHeader("Cluster");
                 foreach(var cluster in clusters) {
@@ -147,7 +145,7 @@ namespace HFM
             string clusterName = null;
             // TODO: This seems to always throw an exception!?
             HFM.Try("Obtaining cluster information for server",
-                    () => _client.GetClusterInfo(serverName, loadBalanced, out clusterName));
+                    () => _hsxClient.GetClusterInfo(serverName, loadBalanced, out clusterName));
             if(output != null && clusterName != null) {
                 output.WriteSingleValue(clusterName, "Cluster Name");
             }
@@ -159,7 +157,7 @@ namespace HFM
         {
             string domain = null, userid = null;
             HFM.Try("Determining current logged on Windows user",
-                    () => _client.DetermineWindowsLoggedOnUser(out domain, out userid));
+                    () => _hsxClient.DetermineWindowsLoggedOnUser(out domain, out userid));
             if(output != null) {
                 output.SetHeader("Domain", "User Name", 30);
                 output.WriteRecord(domain, userid);
@@ -178,8 +176,8 @@ namespace HFM
             // TODO: Implement me!
         }
 
-
     }
+
 
 
     /// <summary>
@@ -193,32 +191,49 @@ namespace HFM
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
 
-        protected HsxClient _client;
-        protected HFMwManageApplications _manageApps;
+        private HsxClient _hsxClient;
+        private HFMwManageApplications _hfmwManageApps;
+
         private string _domain;
         private string _userName;
         private string _password;
         private string _token;
         protected bool _appOpened;
 
+        internal HsxClient HsxClient { get { return _hsxClient; } }
+        internal HFMwManageApplications HFMwManageApplications
+        {
+            get {
+                if(_hfmwManageApps == null) {
+                    _log.Trace("Creating HFMwManageApplications instance");
+                    _hfmwManageApps = new HFMwManageApplications();
+                    HFM.Try("Setting logon info for web application",
+                            () => _hfmwManageApps.SetLogonInfoSSO(_domain, _userName,
+                                                                  _token, _password));
+                }
+                return _hfmwManageApps;
+            }
+        }
+
+
 
         internal Connection(HsxClient client, string domain, string userName, string password)
         {
-            _client = client;
+            _hsxClient = client;
             _domain = domain;
             _userName = userName;
             _password = password;
             HFM.Try("Setting logon credentials via username and password",
-                    () => _client.SetLogonInfoSSO(domain, userName, null, password));
+                    () => _hsxClient.SetLogonInfoSSO(domain, userName, null, password));
         }
 
 
         internal Connection(HsxClient client, string token)
         {
-            _client = client;
+            _hsxClient = client;
             _token = token;
             HFM.Try("Setting logon credentials via SSO token",
-                    () => _client.SetLogonInfoSSO(null, null, token, null));
+                    () => _hsxClient.SetLogonInfoSSO(null, null, token, null));
         }
 
 
@@ -232,7 +247,7 @@ namespace HFM
             string domain = null, user = null, token = null;
 
             HFM.Try("Retrieving logon info",
-                () => token = _client.GetLogonInfoSSO(out domain, out user));
+                () => token = _hsxClient.GetLogonInfoSSO(out domain, out user));
             if(!_appOpened) {
                 _log.Warn("SSO token cannot be retrieved until an application has been opened");
             }
@@ -254,37 +269,8 @@ namespace HFM
                 [Parameter("The name of the application to open")]
                 string appName)
         {
-            object hsxServer = null, hsvSession = null;
-            HFM.Try(string.Format("Opening application {0} on {1}", appName, clusterName),
-                    () => _client.OpenApplication(clusterName, "Financial Management", appName,
-                            out hsxServer, out hsvSession));
             _appOpened = true;
-            return new Session((HsvSession)hsvSession);
-        }
-
-
-        /// Opens the named application, and returns a Session object for
-        /// interacting with it.
-        [Factory,
-         Command("Open an HFM web application and establish a session.")]
-        public WebSession OpenWebApplication(
-                [Parameter("The name of the cluster on which to open the application")]
-                string clusterName,
-                [Parameter("The name of the application to open")]
-                string appName)
-        {
-            object hfmwSession = null;
-
-            if(_manageApps == null) {
-                _log.Trace("Creating HFMwManageApplications instance");
-                _manageApps = new HFMwManageApplications();
-                HFM.Try("Setting logon info for web application",
-                        () => _manageApps.SetLogonInfoSSO(_domain, _userName, _token, _password));
-            }
-
-            HFM.Try(string.Format("Opening web application {0} on {1}", appName, clusterName),
-                    () => hfmwSession = _manageApps.OpenApplication(clusterName, appName));
-            return new WebSession((HFMwSession)hfmwSession);
+            return new Session(this, clusterName, appName);
         }
 
 
@@ -296,7 +282,7 @@ namespace HFM
         {
             string[] projects = null;
             HFM.Try("Retrieving names of provisioning projects",
-                    () => projects = _client.EnumProvisioningProjects(clusterName) as string[]);
+                    () => projects = _hsxClient.EnumProvisioningProjects(clusterName) as string[]);
             if(output != null && projects != null) {
                 output.WriteEnumerable(projects, "Project", 40);
             }
@@ -326,7 +312,7 @@ namespace HFM
             byte[] profile = File.ReadAllBytes(profilePath);
 
             HFM.Try(string.Format("Creating application {0} on {1}", appName, clusterName),
-                    () => _client.CreateApplicationCAS(clusterName, "Financial Management",
+                    () => _hsxClient.CreateApplicationCAS(clusterName, "Financial Management",
                             appName, appDesc, "", profile, null, null, null, null,
                             sharedServicesProject, appWebServerUrl));
         }
@@ -341,7 +327,7 @@ namespace HFM
                 string appName)
         {
             HFM.Try(string.Format("Deleting application {0} on {1}", appName, clusterName),
-                    () => _client.DeleteApplication(clusterName, "Financial Management", appName));
+                    () => _hsxClient.DeleteApplication(clusterName, "Financial Management", appName));
         }
 
 
@@ -353,7 +339,7 @@ namespace HFM
         {
             bool hasAccess = false;
             HFM.Try("Checking if user has CreateApplication rights",
-                    () => _client.DoesUserHaveCreateApplicationRights(clusterName, out hasAccess));
+                    () => _hsxClient.DoesUserHaveCreateApplicationRights(clusterName, out hasAccess));
             if(output != null) {
                 output.SetHeader("Cluster", "Create Application Rights", 28);
                 output.WriteSingleRecord(clusterName, hasAccess ? "Yes" : "No");
@@ -370,7 +356,7 @@ namespace HFM
         {
             bool hasAdmin = false;
             HFM.Try("Checking if user has SystemAdmin rights",
-                    () => _client.DoesUserHaveSystemAdminRights(clusterName, out hasAdmin));
+                    () => _hsxClient.DoesUserHaveSystemAdminRights(clusterName, out hasAdmin));
             if(output != null) {
                 output.SetHeader("Cluster", "System Admin Rights");
                 output.WriteSingleRecord(clusterName, hasAdmin ? "Yes" : "No");
