@@ -19,12 +19,6 @@ namespace CommandLine
         public string Key { get; set; }
         /// The argument description
         public string Description { get; set; }
-        /// The type the argument should be converted to after parsing. Default
-        /// behaviour is to leave argument values as strings. To change this,
-        /// argument definitions should specify the desired Type values should
-        /// be converted to, and register an ArgumentMapper instance that can
-        /// handle the conversion from strings to objects of this Type.
-        public Type Type { get; set; }
         /// The name of the argument set this argument belongs to (if any)
         public string Set { get; set; }
         /// A callback to be called when the argument has been parsed successfully

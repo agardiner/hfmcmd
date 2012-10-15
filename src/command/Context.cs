@@ -283,7 +283,7 @@ namespace Command
                 if(args.ContainsKey(param.Name)) {
                     _log.DebugFormat("Setting {0} to '{1}'", param.Name,
                             param.IsSensitive ? "******" : args[param.Name]);
-                    parms[i++] = args[param.Name];
+                    parms[i++] = ConvertSetting(args[param.Name], param);
                 }
                 else if(param.IsCollection) {
                     // Attempt to create an instance of the collection class if necessary
@@ -296,7 +296,7 @@ namespace Command
                     var coll = this[param.ParameterType] as ISettingsCollection;
                     foreach(var setting in GetSettings(param.ParameterType)) {
                         if(args.ContainsKey(setting.Name)) {
-                            coll[setting.InternalName] = args[setting.Name];
+                            coll[setting.InternalName] = ConvertSetting(args[setting.Name], setting);
                         }
                     }
                     parms[i++] = coll;
@@ -342,6 +342,22 @@ namespace Command
             }
 
             return result;
+        }
+
+
+        /// Ensures a value to be passed as a setting is of the right ParameterType
+        protected object ConvertSetting(object val, ISetting setting)
+        {
+            if(setting.ParameterType.IsAssignableFrom(val.GetType())) {
+                return val;
+            }
+            else if(val is string) {
+                return _registry.TypeConverter.ConvertTo(val as string, setting.ParameterType);
+            }
+            else {
+                throw new ArgumentException(string.Format("Unable to convert {0} to {1}",
+                            val.GetType().Name, setting.ParameterType.Name));
+            }
         }
 
     }

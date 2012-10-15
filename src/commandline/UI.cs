@@ -116,16 +116,9 @@ namespace CommandLine
         /// Constructor; requires a purpose for the program whose args we are
         /// parsing.
         /// </summary>
-        public UI(string purpose) : this(purpose, null) {}
-
-
-        /// <summary>
-        /// Constructor; requires a purpose for the program whose args we are
-        /// parsing.
-        /// </summary>
-        public UI(string purpose, IArgumentMapper argMap)
+        public UI(string purpose)
         {
-            Definition = new Definition { Purpose = purpose, ArgumentMapper = argMap };
+            Definition = new Definition { Purpose = purpose };
         }
 
 
@@ -134,32 +127,16 @@ namespace CommandLine
         /// </summary>
         public PositionalArgument AddPositionalArgument(string key, string desc)
         {
-            return AddPositionalArgument(key, desc, typeof(string), null);
+            return AddPositionalArgument(key, desc, null);
         }
 
         /// <summary>
         /// Convenience method for defining a new positional argument.
         /// </summary>
-        public PositionalArgument AddPositionalArgument(string key, string desc, Type type)
-        {
-            return AddPositionalArgument(key, desc, type, null);
-        }
-
-        /// <summary>
-        /// Convenience method for defining a new positional argument.
-        /// </summary>
-        public PositionalArgument AddPositionalArgument(string key, string desc, Argument.OnParseHandler onParse)
-        {
-            return AddPositionalArgument(key, desc, typeof(string), onParse);
-        }
-
-        /// <summary>
-        /// Convenience method for defining a new positional argument.
-        /// </summary>
-        public PositionalArgument AddPositionalArgument(string key, string desc, Type type,
+        public PositionalArgument AddPositionalArgument(string key, string desc,
                 Argument.OnParseHandler onParse)
         {
-            var arg = new PositionalArgument { Key = key, Description = desc, Type = type };
+            var arg = new PositionalArgument { Key = key, Description = desc };
             arg.OnParse += onParse;
             return (PositionalArgument)Definition.AddArgument(arg);
         }
@@ -169,32 +146,16 @@ namespace CommandLine
         /// </summary>
         public KeywordArgument AddKeywordArgument(string key, string desc)
         {
-            return AddKeywordArgument(key, desc, typeof(string), null);
+            return AddKeywordArgument(key, desc, null);
         }
 
         /// <summary>
         /// Convenience method for defining a new keyword argument.
         /// </summary>
-        public KeywordArgument AddKeywordArgument(string key, string desc, Type type)
-        {
-            return AddKeywordArgument(key, desc, type, null);
-        }
-
-        /// <summary>
-        /// Convenience method for defining a new keyword argument.
-        /// </summary>
-        public KeywordArgument AddKeywordArgument(string key, string desc, Argument.OnParseHandler onParse)
-        {
-            return AddKeywordArgument(key, desc, typeof(string), onParse);
-        }
-
-        /// <summary>
-        /// Convenience method for defining a new keyword argument.
-        /// </summary>
-        public KeywordArgument AddKeywordArgument(string key, string desc, Type type,
+        public KeywordArgument AddKeywordArgument(string key, string desc,
                 Argument.OnParseHandler onParse)
         {
-            var arg = new KeywordArgument { Key = key, Description = desc, Type = type };
+            var arg = new KeywordArgument { Key = key, Description = desc };
             arg.OnParse += onParse;
             return (KeywordArgument)Definition.AddArgument(arg);
         }
@@ -214,7 +175,7 @@ namespace CommandLine
         public FlagArgument AddFlagArgument(string key, string desc,
                 Argument.OnParseHandler onParse)
         {
-            var arg = new FlagArgument { Key = key, Description = desc, Type = typeof(bool) };
+            var arg = new FlagArgument { Key = key, Description = desc };
             arg.OnParse += onParse;
             return (FlagArgument)Definition.AddArgument(arg);
         }

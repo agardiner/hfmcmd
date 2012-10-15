@@ -192,14 +192,7 @@ namespace CommandLine
                     _log.DebugFormat("No value was specified for argument {0}", arg.Key);
                     if(arg.DefaultValue != null) {
                         _log.TraceFormat("Setting argument {0} to default value '{1}'", arg.Key, arg.DefaultValue);
-                        if(Definition.ArgumentMapper != null && arg.Type != typeof(string)) {
-                            // Convert argument value to required type
-                            result.Add(arg.Key, Definition.ArgumentMapper.
-                                       ConvertArgument(arg, arg.DefaultValue, result));
-                        }
-                        else {
-                            result.Add(arg.Key, arg.DefaultValue);
-                        }
+                        result.Add(arg.Key, arg.DefaultValue);
                     }
                     else if(arg.IsRequired && !ShowUsage) {
                         _log.ErrorFormat("No value was specified for required argument '{0}'", arg.Key);
@@ -249,11 +242,6 @@ namespace CommandLine
                     _log.TraceFormat("Argument {0} validated", valArg.Key);
                 }
                 _log.TraceFormat("Setting {0} to '{1}'", arg.Key, valArg.IsSensitive ? "******" : val);
-
-                if(Definition.ArgumentMapper != null && arg.Type != typeof(string)) {
-                    // Convert argument value to required type
-                    val = Definition.ArgumentMapper.ConvertArgument(arg, sVal, result);
-                }
             }
             else {
                 _log.TraceFormat("Setting flag {0} to true", arg.Key);

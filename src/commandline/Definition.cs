@@ -24,8 +24,6 @@ namespace CommandLine
         internal Dictionary<string, Argument> Arguments = new Dictionary<string, Argument>();
         /// List identifying the insertion order of positional arguments.
         private List<string> _positionalArgumentOrder = new List<string>();
-        /// Reference to IArgumentMapper used to convert arguments to required types
-        private IArgumentMapper _argumentMapper;
 
 
         // Properties
@@ -38,21 +36,6 @@ namespace CommandLine
         /// Flag governing whether unknown flag args should be included in the
         /// parse results
         public bool IncludeUnrecognisedFlagArgs = false;
-
-        /// An IArgumentMapper implementation to handle conversion of parsed
-        /// string values to Argument.Type instances.
-        public IArgumentMapper ArgumentMapper
-        {
-            get {
-                return _argumentMapper;
-            }
-            set {
-                _argumentMapper = value;
-                foreach(var arg in ValueArguments) {
-                    ValidateArgType(arg);
-                }
-            }
-        }
 
 
         /// Returns a list of the positional arguments
@@ -114,26 +97,6 @@ namespace CommandLine
         }
 
 
-        /// Validates argument type conversion is possible.
-        private void ValidateArgType(Argument arg)
-        {
-            if(arg is ValueArgument && arg.Type != typeof(string)) {
-                if(_argumentMapper != null) {
-                    if(!_argumentMapper.CanConvert(arg.Type)) {
-                        throw new ArgumentException(string.Format(
-                                "ArgumentMapper cannot handle conversion of strings to {0}",
-                                arg.Type));
-                    }
-                }
-                else {
-                    throw new ArgumentException(string.Format(
-                            "No ArgumentMapper is registered, and argument {0} specifies a Type of {1}",
-                            arg.Key, arg.Type));
-                }
-            }
-        }
-
-
         /// <summary>
         /// Adds an Argument definition to the list of arguments this command-line
         /// supports.
@@ -144,7 +107,6 @@ namespace CommandLine
             if(arg is PositionalArgument) {
                 _positionalArgumentOrder.Add(arg.Key.ToLower());
             }
-            ValidateArgType(arg);
             return arg;
         }
 

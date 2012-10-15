@@ -209,11 +209,7 @@ namespace Command
         /// <summary>
         /// Gets or sets a single setting in the settings collection.
         /// </summary>
-        object this[string key]
-        {
-            get;
-            set;
-        }
+        object this[string key] { get; set; }
 
         /// <summary>
         /// Returns the default value for a single setting in the collection.

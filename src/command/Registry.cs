@@ -43,6 +43,9 @@ namespace Command
             }
         }
 
+        /// Property for accessing the TypeConverter
+        public ITypeConverter TypeConverter { get; set; }
+
 
         /// Constructor
         public Registry()
@@ -51,6 +54,7 @@ namespace Command
             _factories = new Dictionary<Type, Factory>();
             _settings = new Dictionary<Type, List<SettingAttribute>>();
             _alternates = new List<Factory>();
+            TypeConverter = new PluggableTypeConverter();
         }
 
 

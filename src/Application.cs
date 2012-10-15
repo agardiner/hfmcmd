@@ -59,9 +59,6 @@ namespace HFMCmd
         private Context _context;
         /// Reference to the command-line interface/parser
         private UI _cmdLine;
-        /// Reference to the argument mapper used to convert command-line args
-        /// to objects
-        private PluggableArgumentMapper _argumentMapper;
         /// Reference to the log4net repository
         private ILoggerRepository _logRepository;
         /// Reference to the logger hierarchy
@@ -81,9 +78,6 @@ namespace HFMCmd
         {
             ConfigureLogging();
 
-            // TODO: Add means to get/process flag args from command-line before doing anything else
-            //_logHierarchy.Root.Level = _logRepository.LevelMap["DEBUG"];
-
             // Register commands
             _log.Fine("Loading available commands...");
             _commands = new Registry();
@@ -91,8 +85,7 @@ namespace HFMCmd
             _commands.RegisterNamespace("HFM");
 
             // Define command-line UI
-            _argumentMapper = new PluggableArgumentMapper();
-            _cmdLine = new UI(HFMCmd.Resource.Help.Purpose, _argumentMapper);
+            _cmdLine = new UI(HFMCmd.Resource.Help.Purpose);
 
             // Create a Context for invoking Commands
             _context = new Context(_commands);
@@ -235,8 +228,8 @@ namespace HFMCmd
 
                 // Add a keyword argument for this setting
                 ValueArgument arg = setting.HasUda("PositionalArg") ?
-                    (ValueArgument)_cmdLine.AddPositionalArgument(key, setting.Description, setting.ParameterType) :
-                    (ValueArgument)_cmdLine.AddKeywordArgument(key, setting.Description, setting.ParameterType);
+                    (ValueArgument)_cmdLine.AddPositionalArgument(key, setting.Description) :
+                    (ValueArgument)_cmdLine.AddKeywordArgument(key, setting.Description);
 
                 arg.IsRequired = !setting.HasDefaultValue;
                 arg.IsSensitive = setting.IsSensitive;
