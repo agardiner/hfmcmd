@@ -218,15 +218,17 @@ namespace YAML
         public Dictionary<string, object> ToDictionary()
         {
             var dict = new Dictionary<string, object>(this.Count, StringComparer.OrdinalIgnoreCase);
-            foreach(var node in this) {
-                if(node.IsLeaf) {
-                    dict.Add(node.Key, node.Value);
-                }
-                else if(node.IsList) {
-                    dict.Add(node.Key, node.ToList());
-                }
-                else if(node.IsDictionary) {
-                    dict.Add(node.Key, node.ToDictionary());
+            if(_children != null) {
+                foreach(var node in this) {
+                    if(node.IsLeaf) {
+                        dict.Add(node.Key, node.Value);
+                    }
+                    else if(node.IsList) {
+                        dict.Add(node.Key, node.ToList());
+                    }
+                    else if(node.IsDictionary) {
+                        dict.Add(node.Key, node.ToDictionary());
+                    }
                 }
             }
             return dict;
@@ -239,15 +241,17 @@ namespace YAML
         public List<object> ToList()
         {
             var list = new List<object>();
-            foreach(var node in this) {
-                if(node.IsLeaf) {
-                    list.Add(node.Value);
-                }
-                else if(node.IsList) {
-                    list.Add(node.ToList());
-                }
-                else if(node.IsDictionary) {
-                    list.Add(node.ToDictionary());
+            if(_children != null) {
+                foreach(var node in this) {
+                    if(node.IsLeaf) {
+                        list.Add(node.Value);
+                    }
+                    else if(node.IsList) {
+                        list.Add(node.ToList());
+                    }
+                    else if(node.IsDictionary) {
+                        list.Add(node.ToDictionary());
+                    }
                 }
             }
             return list;
