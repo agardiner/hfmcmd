@@ -37,7 +37,9 @@ namespace Command
         public static bool ContainsRequiredValuesForCommand(this Dictionary<string, object> args, Command cmd)
         {
             foreach(var param in cmd.Parameters) {
-                if(!(args.ContainsKey(param.Name) || param.HasDefaultValue)) {
+                if(!(args.ContainsKey(param.Name) ||
+                     (param.HasAlias && args.ContainsKey(param.Alias)) ||
+                     param.HasDefaultValue)) {
                     return false;
                 }
             }
@@ -285,7 +287,12 @@ namespace Command
                             param.IsSensitive ? "******" : args[param.Name]);
                     parms[i++] = ConvertSetting(args[param.Name], param);
                 }
-                else if(param.IsCollection) {
+                else if(param.HasAlias && args.ContainsKey(param.Alias)) {
+                    _log.DebugFormat("Setting {0} to '{1}'", param.Alias,
+                            param.IsSensitive ? "******" : args[param.Alias]);
+                    parms[i++] = ConvertSetting(args[param.Alias], param);
+                }
+                else if(param.IsSettingsCollection) {
                     // Attempt to create an instance of the collection class if necessary
                     if(!HasObject(param.ParameterType)) {
                         foreach(var step in FindPathToType(param.ParameterType)) {
@@ -297,6 +304,9 @@ namespace Command
                     foreach(var setting in GetSettings(param.ParameterType)) {
                         if(args.ContainsKey(setting.Name)) {
                             coll[setting.InternalName] = ConvertSetting(args[setting.Name], setting);
+                        }
+                        else if(setting.HasAlias && args.ContainsKey(setting.Alias)) {
+                            coll[setting.InternalName] = ConvertSetting(args[setting.Alias], setting);
                         }
                     }
                     parms[i++] = coll;
@@ -355,8 +365,8 @@ namespace Command
                 return _registry.TypeConverter.ConvertTo(val as string, setting.ParameterType);
             }
             else {
-                throw new ArgumentException(string.Format("Unable to convert {0} to {1}",
-                            val.GetType().Name, setting.ParameterType.Name));
+                throw new ArgumentException(string.Format("Unable to convert {0} to {1} for {2}",
+                            val.GetType().Name, setting.ParameterType.Name, setting.Name));
             }
         }
 

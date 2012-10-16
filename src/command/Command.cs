@@ -91,6 +91,8 @@ namespace Command
         Type ParameterType { get; }
         /// Description for the setting
         string Description { get; }
+        /// Returns true if the setting has an alternate name
+        bool HasAlias { get; }
         /// Whether the setting value is sensitive, and hence should be masked
         bool IsSensitive { get; }
         /// Whether the setting has a default value (since null may be that default)
@@ -134,6 +136,18 @@ namespace Command
                 return _paramAttribute != null ? _paramAttribute.Description : null;
             }
         }
+        /// Returns the alternate name of the parameter
+        public string Alias {
+            get {
+                return _paramAttribute != null ? _paramAttribute.Alias : null;
+            }
+        }
+        /// Returns true if this parameter has an alias
+        public bool HasAlias {
+            get {
+                return _paramAttribute != null ? _paramAttribute.HasAlias : false;
+            }
+        }
         /// Returns true if this parameter has a default value
         public bool HasDefaultValue {
             get {
@@ -153,7 +167,7 @@ namespace Command
             }
         }
         /// Returns true if this parameter is an ISettingsCollection
-        public bool IsCollection
+        public bool IsSettingsCollection
         {
             get { return typeof(ISettingsCollection).IsAssignableFrom(ParameterType); }
         }

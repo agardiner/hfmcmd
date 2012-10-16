@@ -205,7 +205,7 @@ namespace HFMCmd
             _log.TraceFormat("Adding command-line args for {0} command", cmd.Name);
             foreach(var param in cmd.Parameters) {
                 _log.DebugFormat("Processing param {0}", param);
-                if(param.IsCollection) {
+                if(param.IsSettingsCollection) {
                     _log.DebugFormat("Processing collection type {0}", param.ParameterType);
                     // Get individual settings from collection and add them
                     foreach(var setting in _commands.GetSettings(param.ParameterType)) {
@@ -315,7 +315,7 @@ namespace HFMCmd
                                 output.WriteRecord(parm.Name.Capitalize(), parm.Description);
                             }
                         }
-                        else if(parm.IsCollection) {
+                        else if(parm.IsSettingsCollection) {
                             foreach(var setting in _commands.GetSettings(parm.ParameterType)) {
                                 if(!parm.IsVersioned || setting.IsCurrent(HFM.HFM.Version)) {
                                     output.WriteRecord(setting.Name.Capitalize(), setting.Description);

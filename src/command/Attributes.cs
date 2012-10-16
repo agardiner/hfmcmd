@@ -141,6 +141,8 @@ namespace Command
         /// referenced. Typically used for settings that may be singular or
         /// plural.
         public string Alias { get; set; }
+        /// True if the setting has an alternate name
+        public bool HasAlias { get { return Alias != null; } }
         /// Whether the parameter has a DefaultValue (since the default may be null)
         public bool HasDefaultValue { get { return _hasDefaultValue; } }
         /// Default value for parameter
