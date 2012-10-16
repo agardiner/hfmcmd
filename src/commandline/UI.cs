@@ -190,7 +190,7 @@ namespace CommandLine
             var parser = new Parser(Definition);
             var result = parser.Parse(new List<string>(args));
             if(parser.ShowUsage) {
-                Definition.DisplayUsage(args[0], System.Console.Error);
+                Definition.DisplayUsage(args[0], System.Console.Error, result);
                 result = null;  // Don't act on what we parsed
             }
             else if(parser.ParseException != null) {

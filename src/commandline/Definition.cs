@@ -21,7 +21,8 @@ namespace CommandLine
 
         /// Collection of Argument objects, defining the permitted/expected
         /// arguments this program takes.
-        internal Dictionary<string, Argument> Arguments = new Dictionary<string, Argument>();
+        internal Dictionary<string, Argument> Arguments =
+                new Dictionary<string, Argument>(StringComparer.OrdinalIgnoreCase);
         /// List identifying the insertion order of positional arguments.
         private List<string> _positionalArgumentOrder = new List<string>();
 
@@ -78,13 +79,19 @@ namespace CommandLine
             }
         }
 
-        /// Access an argument by key, or alternatively by index for positional
+        /// Access an argument by key, alias, or alternatively by index for positional
         /// arguments (only).
         public Argument this[object key] {
             get {
                 if(key is string) {
                     var sKey = key as string;
-                    return Arguments.ContainsKey(sKey.ToLower()) ? Arguments[sKey.ToLower()] : null;
+                    if(Arguments.ContainsKey(sKey)) {
+                        return Arguments[sKey];
+                    }
+                    else {
+                        return Arguments.Values.FirstOrDefault(a =>
+                                string.Compare(sKey, a.Alias, StringComparison.OrdinalIgnoreCase) == 0);
+                    }
                 }
                 else if(key is int) {
                     var iKey = (int)key;
@@ -103,9 +110,9 @@ namespace CommandLine
         /// </summary>
         public Argument AddArgument(Argument arg)
         {
-            Arguments.Add(arg.Key.ToLower(), arg);
+            Arguments.Add(arg.Key, arg);
             if(arg is PositionalArgument) {
-                _positionalArgumentOrder.Add(arg.Key.ToLower());
+                _positionalArgumentOrder.Add(arg.Key);
             }
             return arg;
         }
@@ -115,18 +122,31 @@ namespace CommandLine
         /// Displays a usgae message, based on the allowed arguments and purpose
         /// represented by this class.
         /// </summary>
-        public void DisplayUsage(string arg0, TextWriter console)
+        public void DisplayUsage(string arg0, TextWriter console, Dictionary<string, object> args)
         {
+            string exe = Path.GetFileNameWithoutExtension(arg0);
+
             console.WriteLine();
             console.WriteLine("Purpose:");
-            console.WriteLine("    {0}", string.Format(Purpose,
-                        Path.GetFileNameWithoutExtension(arg0)).Trim());
+            console.WriteLine("    {0}", string.Format(Purpose, exe).Trim());
 
             console.WriteLine();
             console.WriteLine("Usage:");
-            console.Write("    {0}", arg0);
+            console.Write("    {0}", exe);
+
+            var posArgs = PositionalArguments.ToList();
+            var i = 0;
             foreach(var arg in PositionalArguments) {
-                console.Write(arg.IsRequired ? " <{0}>" : " [<{0}>]", arg.Key);
+                if(arg.IsCommand && (args.ContainsKey(arg.Key) ||
+                   (arg.Alias != null && args.ContainsKey(arg.Alias)))) {
+                    console.Write(arg.IsRequired ? " {0}" : " [{0}]",
+                            args.ContainsKey(arg.Key) ? args[arg.Key] : args[arg.Alias]);
+                    posArgs.RemoveAt(i);
+                }
+                else {
+                    console.Write(arg.IsRequired ? " <{0}>" : " [<{0}>]", arg.Key);
+                }
+                i++;
             }
             if(KeywordArguments.Count > 0) {
                 console.Write(" [<Key>:<Value> ...]");
@@ -136,10 +156,10 @@ namespace CommandLine
             }
             console.WriteLine();
 
-            if(PositionalArguments.Count > 0) {
+            if(posArgs.Count > 0) {
                 console.WriteLine();
                 console.WriteLine("Positional Arguments:");
-                PositionalArguments.ForEach(x => OutputArg(x, console));
+                posArgs.ForEach(x => OutputArg(x, console));
             }
 
             if(KeywordArguments.Count > 0) {

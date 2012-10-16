@@ -191,8 +191,7 @@ namespace Command
 
     /// <summary>
     /// Used to define the possible settings that can appear in an
-    /// ISettingsCollection subclass. These often change between versions, so
-    /// Since and Deprecated arguments are supported.
+    /// ISettingsCollection subclass.
     /// </summary>
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
     public class SettingAttribute : ValueAttribute, ISetting

@@ -234,7 +234,7 @@ namespace CommandLine
                 if(valArg.Validate != null && sVal != null) {
                     _log.DebugFormat("Validating argument {0}", valArg.Key);
                     foreach(ValueArgument.ValidateHandler validate in valArg.Validate.GetInvocationList()) {
-                        if(!validate(sVal, out errorMsg)) {
+                        if(!validate(arg, sVal, out errorMsg)) {
                             throw new ParseException(string.Format("The value '{0}' for argument {1} is not valid. {2}.",
                                                      sVal, arg.Key, errorMsg));
                         }
@@ -251,7 +251,7 @@ namespace CommandLine
 
             // Call OnParse event, if handler specified
             if(arg.OnParse != null) {
-                arg.OnParse(arg.Key, val as string);
+                arg.OnParse(arg, val as string);
             }
             return set;
         }

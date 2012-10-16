@@ -24,7 +24,7 @@ namespace CommandLine
         /// <param name="errorMsg">An optional out parameter for returning
         /// additional details on the reason for failure if an argument fails
         /// validation.</param>
-        bool IsValid(string value, out string errorMsg);
+        bool IsValid(Argument arg, string value, out string errorMsg);
     }
 
 
@@ -50,7 +50,7 @@ namespace CommandLine
             Expression = re;
         }
 
-        public bool IsValid(string value, out string errorMsg) {
+        public bool IsValid(Argument arg, string value, out string errorMsg) {
             errorMsg = null;
             if(Expression == null) {
                 return true;
@@ -89,7 +89,7 @@ namespace CommandLine
             Values = new List<string>(values);
         }
 
-        public bool IsValid(string value, out string errorMsg) {
+        public bool IsValid(Argument arg, string value, out string errorMsg) {
             var ok = true;
             errorMsg = null;
             if(Values != null) {
@@ -129,7 +129,7 @@ namespace CommandLine
             Max = max;
         }
 
-        public bool IsValid(string value, out string errorMsg) {
+        public bool IsValid(Argument arg, string value, out string errorMsg) {
             int iVal = int.Parse(value);
             errorMsg = null;
             if(Min != null && Max != null) {

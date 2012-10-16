@@ -99,11 +99,11 @@ namespace HFMCmd
             arg.IsRequired = true;
             arg.Validate = ValidateCommand;
             arg = _cmdLine.AddKeywordArgument("LogLevel", "Set logging to the specified level",
-                    (key, val) => Log(val, null));
+                    (_, val) => Log(val, null));
             arg.AddValidator(new ListValidator("NONE", "SEVERE", "ERROR", "WARN",
                     "INFO", "FINE", "TRACE", "DEBUG"));
             _cmdLine.AddFlagArgument("Debug", "Enable debug logging",
-                    (key, val) => Log("DEBUG", null));
+                    (_, val) => Log("DEBUG", null));
 
             // Process command-line arguments
             try {
@@ -165,12 +165,15 @@ namespace HFMCmd
         /// If it is a command, we dynamically update our command-line definition
         /// to include any additional parameters needed by the specified command.
         /// </summary>
-        protected bool ValidateCommand(string argVal, out string errorMsg)
+        protected bool ValidateCommand(Argument arg, string argVal, out string errorMsg)
         {
             bool ok;
             errorMsg = String.Format("Command file '{0}' not found", argVal);
             if(_commands.Contains(argVal)) {
                 ok = true;
+
+                // Mark the argument as a command
+                ((PositionalArgument)arg).IsCommand = true;
 
                 // Add command arguments as keyword args
                 Command.Command cmd = _commands[argVal];
