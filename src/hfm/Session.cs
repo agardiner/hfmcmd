@@ -3,8 +3,6 @@ using System;
 using log4net;
 using HSVSESSIONLib;
 using HFMWSESSIONLib;
-using HSVCALCULATELib;
-using HSVSYSTEMINFOLib;
 
 using Command;
 
@@ -37,10 +35,6 @@ namespace HFM
         private HsvSession _hsvSession;
         // Reference to a WebSession
         private HFMwSession _hfmwSession;
-        // Reference to the Calculate module
-        private Calculate _calculate;
-        // Reference to the SystemInfo module
-        private SystemInfo _systemInfo;
 
 
 
@@ -79,30 +73,6 @@ namespace HFM
                     _hfmwSession = (HFMwSession)hfmwSession;
                 }
                 return _hfmwSession;
-            }
-        }
-
-
-        [Factory]
-        public Calculate Calculate
-        {
-            get {
-                if(_calculate == null) {
-                    _calculate = new Calculate((HsvCalculate)HsvSession.Calculate);
-                }
-                return _calculate;
-            }
-        }
-
-
-        [Factory]
-        public SystemInfo SystemInfo
-        {
-            get {
-                if(_systemInfo == null) {
-                    _systemInfo = new SystemInfo((HsvSystemInfo)HsvSession.SystemInfo);
-                }
-                return _systemInfo;
             }
         }
 

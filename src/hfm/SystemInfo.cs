@@ -6,6 +6,7 @@ using System.Linq;
 using log4net;
 
 using HFMCONSTANTSLib;
+using HSVSESSIONLib;
 using HSVSYSTEMINFOLib;
 
 using Command;
@@ -147,9 +148,10 @@ namespace HFM
         protected ProgressMonitor _progressMonitor;
 
 
-        public SystemInfo(HsvSystemInfo si)
+        [Factory]
+        public SystemInfo(HsvSession session)
         {
-            _hsvSystemInfo = si;
+            _hsvSystemInfo = (HsvSystemInfo)session.SystemInfo;
         }
 
 
