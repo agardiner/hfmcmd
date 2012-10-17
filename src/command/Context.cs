@@ -1,6 +1,7 @@
 using System;
 using System.Reflection;
 using System.Collections.Generic;
+using System.Text;
 using System.Linq;
 
 using log4net;
@@ -135,7 +136,7 @@ namespace Command
         /// <exception>Throws ContextException if an object of the desired type
         /// cannot be created from the current context.
         /// </exception>
-        public Stack<Factory> FindPathToType(Type t)
+        public Stack<Factory> FindPathToType(Type t, Command cmd)
         {
             var steps = new Stack<Factory>();
             _log.TraceFormat("Determining steps needed to create an instance of {0}", t);
@@ -164,7 +165,8 @@ namespace Command
                     }
                     else {
                         throw new ContextException(string.Format("No method, property, or constructor " +
-                                    "is registered as a Factory for {0} objects", type));
+                                    "is registered as a Factory for {0} objects, which are required by " +
+                                    "{1}", type, cmd.Name));
                     }
                 }
             };
@@ -192,7 +194,7 @@ namespace Command
         {
             Command cmd = _registry[command];
 
-            foreach(var step in FindPathToType(cmd.Type)) {
+            foreach(var step in FindPathToType(cmd.Type, cmd)) {
                 Instantiate(step, args);
             }
             return InvokeCommand(cmd, args);
@@ -275,63 +277,13 @@ namespace Command
                             "is available in the current context", cmd.Type));
             }
 
-            _log.InfoFormat("Executing {0} command {1}...", cmd.Type.Name, cmd.Name);
-
-            // Create an array of parameters in the order expected
-            var parms = new object[cmd.Parameters.Count];
-            var i = 0;
-            foreach(var param in cmd.Parameters) {
-                _log.DebugFormat("Processing parameter {0}", param.Name);
-                if(args.ContainsKey(param.Name)) {
-                    _log.DebugFormat("Setting {0} to '{1}'", param.Name,
-                            param.IsSensitive ? "******" : args[param.Name]);
-                    parms[i++] = ConvertSetting(args[param.Name], param);
-                }
-                else if(param.HasAlias && args.ContainsKey(param.Alias)) {
-                    _log.DebugFormat("Setting {0} to '{1}'", param.Alias,
-                            param.IsSensitive ? "******" : args[param.Alias]);
-                    parms[i++] = ConvertSetting(args[param.Alias], param);
-                }
-                else if(param.IsSettingsCollection) {
-                    // Attempt to create an instance of the collection class if necessary
-                    if(!HasObject(param.ParameterType)) {
-                        foreach(var step in FindPathToType(param.ParameterType)) {
-                            Instantiate(step, args);
-                        }
-                    }
-                    // Set each setting that has a value in the supplied args
-                    var coll = this[param.ParameterType] as ISettingsCollection;
-                    foreach(var setting in GetSettings(param.ParameterType)) {
-                        if(args.ContainsKey(setting.Name)) {
-                            coll[setting.InternalName] = ConvertSetting(args[setting.Name], setting);
-                        }
-                        else if(setting.HasAlias && args.ContainsKey(setting.Alias)) {
-                            coll[setting.InternalName] = ConvertSetting(args[setting.Alias], setting);
-                        }
-                    }
-                    parms[i++] = coll;
-                }
-                else if(param.HasDefaultValue) {
-                    // Deal with missing arg values, default values, etc
-                    _log.DebugFormat("No value supplied for {0}; using default value '{1}'",
-                            param.Name, param.DefaultValue);
-                    parms[i++] = param.DefaultValue;
-                }
-                else if(HasObject(param.ParameterType)) {
-                    parms[i++] = this[param.ParameterType];
-                }
-                // If there is a factory to create this type, then try to create it
-                else if(_registry.Contains(param.ParameterType)) {
-                    foreach(var step in FindPathToType(param.ParameterType)) {
-                        Instantiate(step, args);
-                    }
-                    parms[i++] = this[param.ParameterType];
-                }
-                else {
-                    throw new ArgumentException(
-                            String.Format("No value was specified for the required argument '{0}' to command '{1}'",
-                            param.Name, cmd.Name));
-                }
+            string paramLog;
+            object[] parms = PrepareCommandArguments(cmd, args, out paramLog);
+            if(paramLog.Length > 0) {
+                _log.InfoFormat("Executing {0} command {1}:{2}", cmd.Type.Name, cmd.Name, paramLog);
+            }
+            else {
+                _log.InfoFormat("Executing {0} command {1}...", cmd.Type.Name, cmd.Name);
             }
 
             // Execute the method corresponding to this command
@@ -341,8 +293,14 @@ namespace Command
                 result = cmd.MethodInfo.Invoke(ctxt, parms);
             }
             catch(TargetInvocationException ex) {
-                _log.ErrorFormat("Command {0} threw an exception", cmd.Name,
-                        ex.InnerException != null ? ex.InnerException : ex);
+                if(ex.InnerException == null || _log.IsDebugEnabled) {
+                    _log.Error(string.Format("Command {0} thre an exception:", cmd.Name),
+                            ex);
+                }
+                else {
+                    _log.Error(string.Format("Command {0} threw an exception:", cmd.Name),
+                            ex.InnerException);
+                }
                 throw;
             }
 
@@ -352,6 +310,88 @@ namespace Command
             }
 
             return result;
+        }
+
+
+        /// Prepares the parameters to be passed to a command.
+        protected object[] PrepareCommandArguments(Command cmd, Dictionary<string, object> args, out string paramLog)
+        {
+            // Create an array of parameters in the order expected
+            var parms = new object[cmd.Parameters.Count];
+            var sb = new StringBuilder();
+            Action<ISetting, object> logParam = (p, v) => {
+                if(v != null) {
+                    sb.AppendFormat("\n          {0}{1,-18}: {2}",
+                          char.ToUpper(p.Name[0]),
+                          p.Name.Substring(1),
+                          p.IsSensitive ? "******" : v);
+                }
+            };
+            var i = 0;
+
+            foreach(var param in cmd.Parameters) {
+                _log.TraceFormat("Processing parameter {0}", param.Name);
+                if(args.ContainsKey(param.Name)) {
+                    parms[i] = ConvertSetting(args[param.Name], param);
+                    logParam(param, parms[i]);
+                }
+                else if(param.HasAlias && args.ContainsKey(param.Alias)) {
+                    parms[i] = ConvertSetting(args[param.Alias], param);
+                    logParam(param, parms[i]);
+                }
+                else if(param.IsSettingsCollection) {
+                    // Attempt to create an instance of the collection class if necessary
+                    if(!HasObject(param.ParameterType)) {
+                        foreach(var step in FindPathToType(param.ParameterType, cmd)) {
+                            Instantiate(step, args);
+                        }
+                    }
+                    // Set each setting that has a value in the supplied args
+                    var coll = this[param.ParameterType] as ISettingsCollection;
+                    foreach(var setting in GetSettings(param.ParameterType)) {
+                        if(args.ContainsKey(setting.Name)) {
+                            coll[setting.InternalName] = ConvertSetting(args[setting.Name], setting);
+                            logParam(setting, coll[setting.InternalName]);
+                        }
+                        else if(setting.HasAlias && args.ContainsKey(setting.Alias)) {
+                            coll[setting.InternalName] = ConvertSetting(args[setting.Alias], setting);
+                            logParam(setting, coll[setting.InternalName]);
+                        }
+                    }
+                    parms[i] = coll;
+                }
+                else if(param.HasDefaultValue) {
+                    // Deal with missing arg values, default values, etc
+                    _log.DebugFormat("No value supplied for {0}; using default value '{1}'",
+                            param.Name, param.DefaultValue);
+                    parms[i] = param.DefaultValue;
+                    logParam(param, parms[i]);
+                }
+                else if(HasObject(param.ParameterType)) {
+                    parms[i] = this[param.ParameterType];
+                    if(param.HasParameterAttribute) {
+                        logParam(param, parms[i]);
+                    }
+                }
+                // If there is a factory to create this type, then try to create it
+                else if(_registry.Contains(param.ParameterType)) {
+                    foreach(var step in FindPathToType(param.ParameterType, cmd)) {
+                        Instantiate(step, args);
+                    }
+                    parms[i] = this[param.ParameterType];
+                    if(param.HasParameterAttribute) {
+                        logParam(param, parms[i]);
+                    }
+                }
+                else {
+                    throw new ArgumentException(
+                            String.Format("No value was specified for the required argument '{0}' to command '{1}'",
+                            param.Name, cmd.Name));
+                }
+                i++;
+            }
+            paramLog = sb.ToString();
+            return parms;
         }
 
 

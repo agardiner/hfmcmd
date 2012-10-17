@@ -76,6 +76,8 @@ namespace HFMCmd
         /// </summary>
         public void Run()
         {
+            int rc = 0;
+
             ConfigureLogging();
 
             // Register commands
@@ -119,13 +121,21 @@ namespace HFMCmd
                     }
 
                     if(!ok) {
-                        System.Environment.Exit(1);
+                        rc = 1;
                     }
                 }
             }
             catch(ParseException ex) {
                 _log.Error(ex);
+                rc = 99;
             }
+            if(rc == 0) {
+                _log.Info("Exiting with status code 0");
+            }
+            else {
+                _log.FatalFormat("Exiting with status code {0}", rc);
+            }
+            System.Environment.Exit(rc);
         }
 
 
@@ -144,12 +154,12 @@ namespace HFMCmd
             // Create a console logger
             ConsoleAppender ca = new ConsoleAppender();
             ca.Layout = new log4net.Layout.PatternLayout(
-                "%date{HH:mm:ss} %-5level  %message%newline");
+                //"%date{HH:mm:ss} %-5level  %message%newline");
+                "%-5level  %message%newline");
             ca.ActivateOptions();
 
             // Configure exception renderers
             _logHierarchy.RendererMap.Put(typeof(Exception), new ExceptionMessageRenderer());
-            //logHier.RendererMap.Put(typeof(HFM.HFMException), new ExceptionMessageRenderer());
 
             // Configure log4net to use this, with other default settings
             log4net.Config.BasicConfigurator.Configure(ca);
@@ -180,7 +190,7 @@ namespace HFMCmd
 
                 // First, add any args for commands that must be invoked before the
                 // requested command, such as SetLogonInfo, OpenApplication, etc
-                foreach(var i in _context.FindPathToType(cmd.Type)) {
+                foreach(var i in _context.FindPathToType(cmd.Type, cmd)) {
                     if(i.IsCommand) {
                         AddCommandParamsAsArgs(i.Command);
                     }
@@ -233,7 +243,7 @@ namespace HFMCmd
                 ValueArgument arg = setting.HasUda("PositionalArg") ?
                     (ValueArgument)_cmdLine.AddPositionalArgument(key, setting.Description) :
                     (ValueArgument)_cmdLine.AddKeywordArgument(key, setting.Description);
-
+                arg.Alias = setting.Alias;
                 arg.IsRequired = !setting.HasDefaultValue;
                 arg.IsSensitive = setting.IsSensitive;
                 if(setting.HasDefaultValue && setting.DefaultValue != null) {
@@ -252,9 +262,6 @@ namespace HFMCmd
             }
             catch(TargetInvocationException) {
                 ok = false;
-                if(_log.IsDebugEnabled) {
-                    throw;
-                }
             }
             return ok;
         }
@@ -263,13 +270,13 @@ namespace HFMCmd
         protected bool ProcessCommandFile(string fileName, Dictionary<string, object> args)
         {
             bool ok = true;
+            _log.InfoFormat("Processing command file {0}", fileName);
             YAML.Parser parser = new YAML.Parser();
             YAML.Node root = parser.ParseFile(fileName, args);
             Console.WriteLine(root);
             foreach(var cmdNode in root) {
                 if(_commands.Contains(cmdNode.Key)) {
                     var cmdArgs = cmdNode.ToDictionary();
-                    // TODO: Handle argument mapping
                     ok = ok && InvokeCommand(cmdNode.Key, cmdArgs);
                 }
                 else {

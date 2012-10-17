@@ -87,6 +87,8 @@ namespace Command
     {
         /// Name of the setting
         string Name { get; }
+        /// Alternate name for the setting (e.g. plural)
+        string Alias { get; }
         /// Type of the setting values
         Type ParameterType { get; }
         /// Description for the setting
