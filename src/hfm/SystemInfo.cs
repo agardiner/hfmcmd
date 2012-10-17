@@ -149,9 +149,9 @@ namespace HFM
 
 
         [Factory]
-        public SystemInfo(HsvSession session)
+        public SystemInfo(Session session)
         {
-            _hsvSystemInfo = (HsvSystemInfo)session.SystemInfo;
+            _hsvSystemInfo = (HsvSystemInfo)session.HsvSession.SystemInfo;
         }
 
 
