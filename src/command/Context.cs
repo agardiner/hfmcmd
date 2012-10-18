@@ -321,10 +321,18 @@ namespace Command
             var sb = new StringBuilder();
             Action<ISetting, object> logParam = (p, v) => {
                 if(v != null) {
-                    sb.AppendFormat("\n          {0}{1,-18}: {2}",
-                          char.ToUpper(p.Name[0]),
-                          p.Name.Substring(1),
-                          p.IsSensitive ? "******" : v);
+                    if(v.GetType().IsArray) {
+                        sb.AppendFormat("\n          {0}{1,-18}: {2}",
+                              char.ToUpper(p.Name[0]),
+                              p.Name.Substring(1),
+                              string.Join(", ", ((object[])v).Select(o => o.ToString()).ToArray()));
+                    }
+                    else {
+                        sb.AppendFormat("\n          {0}{1,-18}: {2}",
+                              char.ToUpper(p.Name[0]),
+                              p.Name.Substring(1),
+                              p.IsSensitive ? "******" : v);
+                    }
                 }
             };
             var i = 0;

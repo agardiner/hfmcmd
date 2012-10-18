@@ -216,8 +216,7 @@ namespace CommandLine
 
 
         /// <summary>
-        /// Writes a line of text to the console, ensuring lines the same width
-        /// as the console don't output an unnecessary new-line.
+        /// Writes a blank line to the console.
         /// </summary>
         public void WriteLine()
         {

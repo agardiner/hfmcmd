@@ -130,7 +130,7 @@ namespace HFMCmd
                 }
 
                 // Update progress status
-                cancel = _output.SetProgress(progress);
+                cancel = !_output.SetProgress(progress);
             }
             while(isRunning && !cancelNotified);
 

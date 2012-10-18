@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Linq;
 
 
 namespace HFMCmd
@@ -20,6 +21,7 @@ namespace HFMCmd
                 return char.ToUpper(s[0]) + s.Substring(1);
             }
         }
+
     }
 
 

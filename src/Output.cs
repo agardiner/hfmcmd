@@ -485,7 +485,7 @@ namespace HFMCmd
                 _lastLog = DateTime.Now;
             }
 
-            return _cancelled;
+            return !_cancelled;
         }
 
     }
