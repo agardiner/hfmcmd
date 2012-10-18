@@ -225,10 +225,12 @@ namespace HFM
         [Command("Performs a consolidation")]
         public void Consolidate(
                 Metadata metadata,
-                [Parameter("The scenario in which to perform the consolidation")]
-                string[] scenario,
-                [Parameter("The year for which to perform the consolidation")]
-                string[] year,
+                [Parameter("The scenario(s) in which to perform the consolidation",
+                           Alias = "Scenario")]
+                string[] scenarios,
+                [Parameter("The year(s) for which to perform the consolidation",
+                           Alias = "Year")]
+                string[] years,
                 [Parameter("The first period over which the consolidation should be performed",
                            Alias = "Period")]
                 string startPeriod,
@@ -244,8 +246,8 @@ namespace HFM
                 SystemInfo si,
                 IOutput output)
         {
-            var scenMembers = metadata["Scenario"].GetMembers(scenario);
-            var yearMembers = metadata["Year"].GetMembers(year);
+            var scenMembers = metadata["Scenario"].GetMembers(scenarios);
+            var yearMembers = metadata["Year"].GetMembers(years);
             var startPeriodId = metadata["Period"].GetId(startPeriod);
             var endPeriodId = endPeriod != null ? metadata["Period"].GetId(endPeriod) : -2;
             var entityMembers = metadata["Entity"].GetMembers(entities);
@@ -278,6 +280,32 @@ namespace HFM
                 }
                 si.BlockingTaskComplete();
             }
+        }
+
+
+        [Command("Performs an Equity Pick-up calculation",
+                 Since = "11.1.2.2")]
+        public void CalcEPU(
+                Metadata metadata,
+                [Parameter("The scenario in which to perform the equity pick-up")]
+                string scenario,
+                [Parameter("The year for which to perform the equity pick-up")]
+                string year,
+                [Parameter("The period over which the equity pick-up should be performed")]
+                string period,
+                [Parameter("Flag indicating whether to force an equity pick-up when not needed",
+                           DefaultValue = false)]
+                bool force,
+                IOutput output)
+        {
+            var scenId = metadata["Scenario"].GetId(scenario);
+            var yearId = metadata["Year"].GetId(year);
+            var periodId = metadata["Period"].GetId(period);
+
+            _log.InfoFormat("Equity Pick-Up for Scenario: {0}, Year: {1}",
+                    scenario, year);
+            HFM.Try("Equity Pick-Up for {0}:{1}", scenario, year,
+                    () => HsvCalculate.CalcEPU(scenId, yearId, periodId, force));
         }
 
     }
