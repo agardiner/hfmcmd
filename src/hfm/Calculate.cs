@@ -210,7 +210,7 @@ namespace HFM
                     if(endPeriod == null) {
                         HFM.Try("Translating",
                                 () => HsvCalculate.Translate(scenario.Id, year.Id, startPeriodId,
-                                                             entity.Id, entity.ParentId, value.Id, force, false));
+                                                             entity.Id, entity.ParentId, value.Id, force, true));
                     }
                     else {
                         HFM.Try("Translating",
