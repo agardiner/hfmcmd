@@ -283,6 +283,8 @@ namespace HFM
         }
 
 
+        // TODO: Determine if this should loop over scenarios, years, period
+        // ranges like other calc commands
         [Command("Performs an Equity Pick-up calculation",
                  Since = "11.1.2.2")]
         public void CalcEPU(

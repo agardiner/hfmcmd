@@ -294,7 +294,8 @@ namespace HFMCmd
                 var total = IndentWidth;
                 for(var i = 0; i < _widths.Length; total += _widths[i++] + FieldSeparator.Length) {
                     // Last field gets special treatment
-                    if(i == _widths.Length - 1 && MaxWidth > 0 && total < MaxWidth) {
+                    if(i == _widths.Length - 1 && MaxWidth > 0 && total < MaxWidth &&
+                       (_widths[i] == 0 ||_widths[i] > (MaxWidth - total))) {
                         _widths[i] = MaxWidth - total;
                     }
                     else if(_widths[i] == 0) {
@@ -512,7 +513,7 @@ namespace HFMCmd
         public ConsoleOutput(CommandLine.UI cui)
         {
             _cui = cui;
-            IndentWidth = 4;
+            IndentWidth = 7;
             MaxWidth = cui.ConsoleWidth;
         }
 
