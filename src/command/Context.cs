@@ -294,7 +294,7 @@ namespace Command
             }
             catch(TargetInvocationException ex) {
                 if(ex.InnerException == null || _log.IsDebugEnabled) {
-                    _log.Error(string.Format("Command {0} thre an exception:", cmd.Name),
+                    _log.Error(string.Format("Command {0} threw an exception:", cmd.Name),
                             ex);
                 }
                 else {

@@ -434,6 +434,10 @@ namespace HFM
     /// </summary>
     public class MemberList : IEnumerable<Member>
     {
+        // Reference to class logger
+        protected static readonly ILog _log = LogManager.GetLogger(
+            System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
         // TODO: Make these regexes more correct
         /// Regular expression for matching a member list specification.
         /// These must be enclosed in { and }.
@@ -479,7 +483,11 @@ namespace HFM
         {
             _dimension = dimension;
             _memberSpecs = memberSpecs;
+            if(memberSpecs == null) {
+                throw new ArgumentException("A null value cannot be used as a member specification");
+            }
             foreach(var spec in _memberSpecs) {
+                _log.InfoFormat("spec = {0}", spec);
                 if(MEMBER_LIST_RE.IsMatch(spec)) {
                     AddItemIdsForMemberList(spec);
                 }
