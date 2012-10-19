@@ -284,8 +284,8 @@ namespace HFM
         /// Cancels a running task
         protected void CancelRunningTask(int taskId)
         {
-            HFM.Try("Cancelling running task",
-                () => _hsvSystemInfo.StopRunningTask(taskId));
+            HFM.Try("Cancelling running task {0}", taskId,
+                    () => _hsvSystemInfo.StopRunningTask(taskId));
         }
 
 

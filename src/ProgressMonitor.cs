@@ -49,10 +49,6 @@ namespace HFMCmd
         /// Define a delegate for a function that will return the current
         /// progress of an operation.
         /// </summary>
-        /// <param name="cancel">If set, indicates to the callback that it
-        /// should attempt to cancel the operation.</param>
-        /// <param name="isRunning">An out parameter to be set by the delegate,
-        /// indicating whether the operation is still in progress.</param>
         public delegate int GetProgress(bool cancel, out bool isRunning);
 
 
@@ -101,11 +97,6 @@ namespace HFMCmd
         /// cancelled, e.g. because the user hits the Escape key.
         /// For a non-blocking alternative, use MonitorProgressAsync.
         /// </summary>
-        /// <param name="progressFn">A GetProgress delegate that can be called
-        /// to determine the current progress of the operation.
-        /// </param>
-        /// <returns>True if the operation was cancelled while in progress.
-        /// </returns>
         public void MonitorProgress(GetProgress progressFn)
         {
             int progress = 0;
@@ -130,7 +121,7 @@ namespace HFMCmd
                 }
 
                 // Update progress status
-                cancel = !_output.SetProgress(progress);
+                cancel = _output.SetProgress(progress);
             }
             while(isRunning && !cancelNotified);
 
@@ -150,9 +141,6 @@ namespace HFMCmd
         /// to monitor the progress of a long-running, blocking operation. Be
         /// sure to call this method immediately prior to invoking the operation.
         /// </summary>
-        /// <param name="progressFn">A GetProgress delegate that can be called
-        /// to determine the completion status of the operation.
-        /// </param>
         public void MonitorProgressAsync(GetProgress progressFn)
         {
             _monitorThread = new System.Threading.Thread(() => {

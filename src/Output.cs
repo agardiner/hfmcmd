@@ -54,7 +54,7 @@ namespace HFMCmd
 
         /// <summary>
         /// Update the current progress completion ratio. If the IOutput
-        /// implementation returns false, the operation should be aborted,
+        /// implementation returns true, the operation should be aborted,
         /// if possible.
         /// </summary>
         bool SetProgress(int progress);
@@ -486,7 +486,7 @@ namespace HFMCmd
                 _lastLog = DateTime.Now;
             }
 
-            return !_cancelled;
+            return _cancelled;
         }
 
     }
