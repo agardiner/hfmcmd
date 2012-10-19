@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using System.Linq;
 
 using log4net;
 using HSVSESSIONLib;
@@ -162,6 +163,8 @@ namespace HFM
         protected IHsvTreeInfo _hsvTreeInfo;
         protected string _name;
 
+        public const int MEMBER_LIST_ALL_HIERARCHY = 0;
+        public const int TREE_ROOT = -1;
 
         // Properties
 
@@ -287,6 +290,22 @@ namespace HFM
             return new MemberList(this, memberSpecs);
         }
 
+
+        public Member CreateMember(int id)
+        {
+            return CreateMember(id, Member.ID_NOT_SPECIFIED);
+        }
+
+        public Member CreateMember(int id, int parentId)
+        {
+            if(IsEntity) {
+                return new Entity(this, id, parentId);
+            }
+            else {
+                return new Member(this, id, parentId);
+            }
+        }
+
     }
 
 
@@ -302,15 +321,19 @@ namespace HFM
     /// <summary>
     public class Member
     {
+        public const int ID_NOT_SPECIFIED = -2;
+
         protected Dimension _dimension;
         protected string _name;
-        protected int _id = -2;
+        protected int _id = ID_NOT_SPECIFIED;
+        protected string _parentName = null;
+        protected int _parentId = ID_NOT_SPECIFIED;
 
         /// The internal id for the member
         public int Id
         {
             get {
-                if(_id == -2) {
+                if(_id == ID_NOT_SPECIFIED) {
                     _id = _dimension.GetId(_name);
                 }
                 return _id;
@@ -324,6 +347,63 @@ namespace HFM
                     _name = _dimension.GetLabel(_id);
                 }
                 return _name;
+            }
+        }
+        /// Returns the parent id for this entity
+        public int ParentId
+        {
+            get {
+                if(_parentId == ID_NOT_SPECIFIED) {
+                    if(_parentName != null) {
+                        _parentId = _dimension.GetId(_parentName);
+                    }
+                    else {
+                        HFM.Try("Retrieving default parent id",
+                                () => _dimension.HsvTreeInfo.GetDefaultParent(Id, out _parentId));
+                    }
+                }
+                return _parentId;
+            }
+        }
+        /// Returns the parent name for this entity
+        public string ParentName
+        {
+            get {
+                if(_parentName == null) {
+                    _parentName = _dimension.GetLabel(_parentId);
+                }
+                return _parentName;
+            }
+        }
+        /// The position of the member in the default hierarchy (as per the
+        /// [Hierarchy] tree representation)
+        public int DefaultHierarchyPosition
+        {
+            get {
+                int pos = -1;
+                HFM.Try("Retrieving default hierarchy position for {0}", Name,
+                        () => _dimension.HsvTreeInfo.GetDefaultHierarchyPosition(Id, out pos));
+                return pos;
+            }
+        }
+        /// The generation of the member (below its default parent)
+        public int Generation
+        {
+            get {
+                int gen = -1;
+                HFM.Try("Retrieving generation for {0}", Name,
+                        () => _dimension.HsvTreeInfo.GetItemLevel(Id, out gen));
+                return gen;
+            }
+        }
+        /// The level of the member (below its default parent)
+        public int Level
+        {
+            get {
+                int level = -1;
+                HFM.Try("Retrieving level for {0}", Name,
+                        () => _dimension.HsvTreeInfo.GetItemLevel(Id, out level));
+                return level;
             }
         }
 
@@ -340,7 +420,19 @@ namespace HFM
             if(name == null || name.Length == 0) {
                 throw new ArgumentException("Member name cannot be null or empty");
             }
-            _name = name;
+
+            int pos;
+            if((pos = name.IndexOf('.')) >= 0) {
+                _parentName = name.Substring(0, pos).Trim();
+                pos++;
+                if(pos >= name.Length) {
+                    throw new ArgumentException("No member name was specified after the .");
+                }
+                _name = name.Substring(pos).Trim();
+            }
+            else {
+                _name = name;
+            }
         }
 
 
@@ -348,6 +440,14 @@ namespace HFM
         {
             _dimension = dimension;
             _id = id;
+        }
+
+
+        public Member(Dimension dimension, int id, int parentId)
+        {
+            _dimension = dimension;
+            _id = id;
+            _parentId = parentId;
         }
 
 
@@ -364,60 +464,25 @@ namespace HFM
     /// <summary>
     public class Entity : Member
     {
-        protected string _parentName = null;
-        protected int _parentId = -2;
-        protected int _defaultCurrencyId = -1;
-
-        public int ParentId
-        {
+        /// Returns the default currency id for this entity
+        public int DefaultCurrencyId {
             get {
-                if(_parentId == -2) {
-                    _id = _dimension.GetId(_parentName);
-                }
-                return _parentId;
+                int currId = -1;
+                HFM.Try("Retrieving default currency",
+                        () => ((HsvEntities)_dimension.HsvTreeInfo).GetDefaultValueID(Id, out currId));
+                return currId;
             }
         }
-        public string ParentName
-        {
-            get {
-                if(_parentName == null) {
-                    _parentName = _dimension.GetLabel(_parentId);
-                }
-                return _parentName;
-            }
-        }
-        public int DefaultCurrencyId { get { return _defaultCurrencyId; } }
 
 
         public Entity(Dimension dimension, string name)
-            : base(dimension)
-        {
-            int pos;
+            : base(dimension, name)
+        { }
 
-            name = name.Trim();
-            if(name == null || name.Length == 0) {
-                throw new ArgumentException("Entity member name cannot be null or empty");
-            }
-
-            if((pos = name.IndexOf('.')) >= 0) {
-                _parentName = name.Substring(0, pos).Trim();
-                pos++;
-                if(pos >= name.Length) {
-                    throw new ArgumentException("Entity name must be specified after the .");
-                }
-                _name = name.Substring(pos).Trim();
-            }
-            else {
-                _name = name;
-            }
-        }
 
         public Entity(Dimension dimension, int id, int parentId)
-            : base(dimension)
-        {
-            _id = id;
-            _parentId = parentId;
-        }
+            : base(dimension, id, parentId)
+        { }
 
 
         public override string ToString()
@@ -442,6 +507,8 @@ namespace HFM
         /// Regular expression for matching a member list specification.
         /// These must be enclosed in { and }.
         protected static Regex MEMBER_LIST_RE = new Regex(@"^\{(?:([^.]+)\.)?([^.]+)\}$");
+        /// Regular expression for matching a member range specification.
+        protected static Regex MEMBER_RANGE_RE = new Regex(@"^([^-.\[\]{}]+)\s*\-\s*([^-.\[\]{}]+)$");
         /// Regular expression for matching a member list specification.
         protected static Regex MEMBER_RE = new Regex(@"^(?:([^.{}]+)\.)?([^.{}]+)$");
 
@@ -449,6 +516,8 @@ namespace HFM
         Dimension _dimension;
         /// The member selection criteria
         IEnumerable<string> _memberSpecs;
+        /// Count of the number of specs in _memberSpecs
+        int _specCount;
         /// Member ids
         int[] _members;
         /// Parent ids
@@ -465,6 +534,32 @@ namespace HFM
         /// Returns the parent ids of the members corresponding to the member
         /// specification.
         public int[] ParentIds { get { return _parents; } }
+        /// Returns the first member in the list
+        public Member FirstMember
+        {
+            get {
+                return _dimension.CreateMember(_members[0],
+                            _parents != null ? _parents[0] : Member.ID_NOT_SPECIFIED);
+            }
+        }
+        /// Returns the last member in the list
+        public Member LastMember
+        {
+            get {
+                if(_specCount > 1) {
+                    throw new InvalidOperationException("LastMember cannot be called on ranges cannot be combined with other member selections");
+                }
+                else {
+                    var last = _members.Length - 1;
+                    if(_dimension.IsEntity) {
+                        return new Entity(_dimension, _members[last], _parents[last]);
+                    }
+                    else {
+                        return new Member(_dimension, _members[last]);
+                    }
+                }
+            }
+        }
 
 
         /// <summary>
@@ -481,15 +576,22 @@ namespace HFM
         /// </summary>
         protected internal MemberList(Dimension dimension, IEnumerable<string> memberSpecs)
         {
+            bool rangeUsed = false;
+
             _dimension = dimension;
             _memberSpecs = memberSpecs;
             if(memberSpecs == null) {
                 throw new ArgumentException("A null value cannot be used as a member specification");
             }
+            _specCount = 0;
             foreach(var spec in _memberSpecs) {
-                _log.InfoFormat("spec = {0}", spec);
+                ++_specCount;
                 if(MEMBER_LIST_RE.IsMatch(spec)) {
                     AddItemIdsForMemberList(spec);
+                }
+                else if(MEMBER_RANGE_RE.IsMatch(spec)) {
+                    AddItemIdsForMemberRange(spec);
+                    rangeUsed = true;
                 }
                 else if(MEMBER_RE.IsMatch(spec)) {
                     AddItemIdsForMember(spec);
@@ -499,17 +601,17 @@ namespace HFM
                                 "The member specification '{0}' is not valid", spec));
                 }
             }
+            if(rangeUsed && _specCount > 1) {
+                throw new InvalidOperationException("Member ranges cannot be combined with other member selections");
+            }
         }
+
 
         public IEnumerator<Member> GetEnumerator()
         {
             for(var i = 0; i < _members.Length; ++i) {
-                if(_dimension.IsEntity) {
-                    yield return new Entity(_dimension, _members[i], _parents[i]);
-                }
-                else {
-                    yield return new Member(_dimension, _members[i]);
-                }
+                yield return _dimension.CreateMember(_members[i],
+                        _parents != null ? _parents[i] : Member.ID_NOT_SPECIFIED);
             }
         }
 
@@ -524,13 +626,12 @@ namespace HFM
         /// specification.
         protected void AddItemIdsForMemberList(string listName)
         {
-            string parent, list;
             int topId = -1, listId;
             object members = null, parents = null;
 
             var match = MEMBER_LIST_RE.Match(listName);
-            parent = match.Groups[1].Value;
-            list = match.Groups[2].Value;
+            var parent = match.Groups[1].Value;
+            var list = match.Groups[2].Value;
             if(parent.Length > 0) {
                 topId = _dimension.GetId(parent);
             }
@@ -541,13 +642,78 @@ namespace HFM
         }
 
 
+        /// Retrieves member ids for all members in a range
+        protected void AddItemIdsForMemberRange(string range)
+        {
+            var match = MEMBER_RANGE_RE.Match(range);
+            var first = new Member(_dimension, match.Groups[1].Value);
+            var last = new Member(_dimension, match.Groups[2].Value);
+            var firstPos = first.DefaultHierarchyPosition;
+            var lastPos = last.DefaultHierarchyPosition;
+            bool useLevel;
+            int rangeGenLevel;
+
+            // Find the first and last members
+            if(lastPos < firstPos) {
+                throw new ArgumentException(string.Format("Range {0} is invalid; try swapping the order of the members", range));
+            }
+            if(first.Level != last.Level && first.Generation == last.Generation) {
+                throw new ArgumentException(string.Format("Range {0} is invalid; the members at the " +
+                            "start and end of the range must be of the same level or generation", range));
+            }
+            else {
+                useLevel = first.Level == last.Level;
+                rangeGenLevel = useLevel ? first.Level : first.Generation;
+            }
+
+            // Next sort members into hierarchy order
+            object oIds = null, oParentIds = null, oSortedIds = null, oSortedParentIds = null;
+            HFM.Try("Retrieving member ids", () => {
+                _dimension.HsvTreeInfo.EnumAllParentAndChildIDs(out oIds, out oParentIds);
+                _dimension.HsvTreeInfo.SortMembersBasedOnList(Dimension.MEMBER_LIST_ALL_HIERARCHY,
+                    Dimension.TREE_ROOT, true, oIds, oParentIds, out oSortedIds, out oSortedParentIds);
+            });
+            int[] sortedIds = (int[])oSortedIds;
+            int[] sortedParentIds = (int[])oSortedParentIds;
+
+
+            // Now filter the sorted list of members by those between the first
+            // and last member that are also on the same level / generation
+            bool inRange = false;
+            var mbrs = sortedIds.Select((id, i) => new Member(_dimension, id, sortedParentIds[i]))
+                                .Where(mbr => {
+                                    bool include = false;
+                                    if(mbr.Id == first.Id) {
+                                        inRange = true;
+                                    }
+                                    if(inRange) {
+                                        include = useLevel ?
+                                                    mbr.Level == rangeGenLevel :
+                                                    mbr.Generation == rangeGenLevel;
+                                    }
+                                    if(mbr.Id == last.Id) {
+                                        inRange = false;
+                                    }
+                                    return include;
+                                }).ToArray();
+
+            // Finally, copy the member and parent ids
+            _members = new int[mbrs.Length];
+            _parents = new int[mbrs.Length];
+            for(int i = 0; i < mbrs.Length; ++i) {
+                _members[i] = mbrs[i].Id;
+                _parents[i] = mbrs[i].ParentId;
+            }
+        }
+
+
         /// Retrieves member and parent ids for the a single member spec, such
         /// as "Mar" or "FOO.BAR".
         protected void AddItemIdsForMember(string member)
         {
             string parent = null;
             int topId = -1;
-            int id = -2;
+            int id = -1;
 
             if(member.Contains(".") | _dimension.IsEntity) {
                 // Member has or requires a parent node

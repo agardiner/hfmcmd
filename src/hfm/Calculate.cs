@@ -41,8 +41,8 @@ namespace HFM
 
         internal HsvCalculate HsvCalculate { get { return _hsvCalculate; } }
 
-        protected delegate void CalcOp(Member scenario, Member year, int startPeriodId,
-                             int endPeriodId, Entity entity, Member value);
+        protected delegate void CalcOp(Member scenario, Member year, Member period,
+                                       Member entity, Member value);
 
 
         [Factory]
@@ -53,15 +53,14 @@ namespace HFM
 
 
         /// Generic method for performing a calculation operation over a series
-        /// of scenario, year, entity, and value members.
-        protected void DoCalcOp(string op, Metadata metadata,
-                string[] scenarios, string[] years, string startPeriod, string endPeriod,
-                string[] entities, string[] values, IOutput output, CalcOp calcOp)
+        /// of scenario, year, period, entity, and value members.
+        protected void DoCalcOp(string op, Metadata metadata, string[] scenarios,
+                string[] years, string[] periods, string[] entities, string[] values,
+                IOutput output, CalcOp calcOp)
         {
             var scenMembers = metadata["Scenario"].GetMembers(scenarios);
             var yearMembers = metadata["Year"].GetMembers(years);
-            var startPeriodId = metadata["Period"].GetId(startPeriod);
-            var endPeriodId = endPeriod != null ? metadata["Period"].GetId(endPeriod) : -2;
+            var periodMembers = metadata["Period"].GetMembers(periods);
             var entityMembers = metadata["Entity"].GetMembers(entities);
             var valueMembers = metadata["Value"].GetMembers(values);
 
@@ -71,17 +70,18 @@ namespace HFM
               from y in yearMembers
               from e in entityMembers
               from v in valueMembers
-              select new { Scenario = s, Year = y, Entity = e as Entity, Value = v };
+              from p in periodMembers
+              select new { Scenario = s, Year = y, Period = p, Entity = e, Value = v };
 
-            // TODO: Calculate number of iterations, and measure progress
+            // Calculate number of iterations, and measure progress
             var members = loop.ToArray();
 
             output.InitProgress(op, members.Length);
             var complete = 0;
             foreach(var i in members) {
-                _log.FineFormat("{0} Scenario: {1}, Year: {2}, Entity: {3}, Value: {4}",
-                                op, i.Scenario.Name, i.Year.Name, i.Entity.Name, i.Value.Name);
-                calcOp(i.Scenario, i.Year, startPeriodId, endPeriodId, i.Entity, i.Value);
+                _log.FineFormat("{0} Scenario: {1}, Year: {2}, Period: {3}, Entity: {4}, Value: {5}",
+                                op, i.Scenario.Name, i.Year.Name, i.Period.Name, i.Entity.Name, i.Value.Name);
+                calcOp(i.Scenario, i.Year, i.Period, i.Entity, i.Value);
                 if(output.SetProgress(++complete)) {
                     break;
                 }
@@ -99,12 +99,9 @@ namespace HFM
                 [Parameter("The year(s) for which to perform the allocation",
                            Alias = "Year")]
                 string[] years,
-                [Parameter("The first period over which the allocation should be performed",
+                [Parameter("The period(s) over which the allocation should be performed",
                            Alias = "Period")]
-                string startPeriod,
-                [Parameter("The last period over which the allocation should be performed",
-                           DefaultValue = null)]
-                string endPeriod,
+                string[] periods,
                 [Parameter("The entity member(s) for which the allocation should be performed",
                            Alias = "Entity")]
                 string[] entities,
@@ -113,20 +110,12 @@ namespace HFM
                 string[] values,
                 IOutput output)
         {
-            DoCalcOp("Allocating", metadata, scenarios, years, startPeriod, endPeriod,
-                     entities, values, output,
-                     (scenario, year, startPeriodId, endPeriodId, entity, value) =>
+            DoCalcOp("Allocating", metadata, scenarios, years, periods, entities, values, output,
+                     (scenario, year, period, entity, value) =>
                 {
-                    if(endPeriod == null) {
-                        HFM.Try("Allocating",
-                                () => HsvCalculate.Allocate(scenario.Id, year.Id, startPeriodId,
-                                                            entity.Id, entity.ParentId, value.Id));
-                    }
-                    else {
-                        HFM.Try("Allocating",
-                                () => HsvCalculate.Allocate2(scenario.Id, year.Id, startPeriodId, endPeriodId,
-                                                             entity.Id, entity.ParentId, value.Id));
-                    }
+                    HFM.Try("Allocating",
+                            () => HsvCalculate.Allocate(scenario.Id, year.Id, period.Id,
+                                                        entity.Id, entity.ParentId, value.Id));
                 }
             );
         }
@@ -141,12 +130,9 @@ namespace HFM
                 [Parameter("The year(s) for which to perform the calculation",
                            Alias = "Year")]
                 string[] years,
-                [Parameter("The first period over which the calculation should be performed",
+                [Parameter("The period(s) over which the calculation should be performed",
                            Alias = "Period")]
-                string startPeriod,
-                [Parameter("The last period over which the calculation should be performed",
-                           DefaultValue = null)]
-                string endPeriod,
+                string[] periods,
                 [Parameter("The entities for which the calculation should be performed",
                            Alias = "Entity")]
                 string[] entities,
@@ -158,20 +144,13 @@ namespace HFM
                 bool force,
                 IOutput output)
         {
-            DoCalcOp("Caclulating", metadata, scenarios, years, startPeriod, endPeriod,
-                     entities, values, output,
-                     (scenario, year, startPeriodId, endPeriodId, entity, value) =>
+            DoCalcOp("Caclulating", metadata, scenarios, years, periods, entities, values, output,
+                     (scenario, year, period, entity, value) =>
                 {
-                    if(endPeriod == null) {
-                        HFM.Try("Calculating",
-                                () => HsvCalculate.ChartLogic(scenario.Id, year.Id, startPeriodId,
-                                                              entity.Id, entity.ParentId, value.Id, force));
-                    }
-                    else {
-                        HFM.Try("Calculating",
-                                () => HsvCalculate.ChartLogic2(scenario.Id, year.Id, startPeriodId, endPeriodId,
-                                                               entity.Id, entity.ParentId, value.Id, force));
-                    }
+                    HFM.Try("Calculating",
+                            () => HsvCalculate.ChartLogic(scenario.Id, year.Id, period.Id,
+                                                          entity.Id, entity.ParentId, value.Id,
+                                                          force));
                 }
             );
         }
@@ -186,12 +165,9 @@ namespace HFM
                 [Parameter("The year(s) for which to perform the translation",
                            Alias = "Year")]
                 string[] years,
-                [Parameter("The first period over which the translation should be performed",
+                [Parameter("The period(s) over which the translation should be performed",
                            Alias = "Period")]
-                string startPeriod,
-                [Parameter("The last period over which the translation should be performed",
-                           DefaultValue = null)]
-                string endPeriod,
+                string[] periods,
                 [Parameter("The entities for which the translation should be performed",
                            Alias = "Entity")]
                 string[] entities,
@@ -203,20 +179,13 @@ namespace HFM
                 bool force,
                 IOutput output)
         {
-            DoCalcOp("Translating", metadata, scenarios, years, startPeriod, endPeriod,
-                     entities, values, output,
-                     (scenario, year, startPeriodId, endPeriodId, entity, value) =>
+            DoCalcOp("Translating", metadata, scenarios, years, periods, entities, values, output,
+                     (scenario, year, period, entity, value) =>
                 {
-                    if(endPeriod == null) {
-                        HFM.Try("Translating",
-                                () => HsvCalculate.Translate(scenario.Id, year.Id, startPeriodId,
-                                                             entity.Id, entity.ParentId, value.Id, force, true));
-                    }
-                    else {
-                        HFM.Try("Translating",
-                                () => HsvCalculate.Translate2(scenario.Id, year.Id, startPeriodId, endPeriodId,
-                                                              entity.Id, entity.ParentId, value.Id, force));
-                    }
+                    HFM.Try("Translating",
+                            () => HsvCalculate.Translate(scenario.Id, year.Id, period.Id,
+                                                         entity.Id, entity.ParentId, value.Id,
+                                                         force, true));
                 }
             );
         }
@@ -231,12 +200,9 @@ namespace HFM
                 [Parameter("The year(s) for which to perform the consolidation",
                            Alias = "Year")]
                 string[] years,
-                [Parameter("The first period over which the consolidation should be performed",
+                [Parameter("The period(s) over which the consolidation should be performed",
                            Alias = "Period")]
-                string startPeriod,
-                [Parameter("The last period over which the consolidation should be performed",
-                           DefaultValue = null)]
-                string endPeriod,
+                string[] periods,
                 [Parameter("The entities for which the consolidation should be performed",
                            Alias = "Entity")]
                 string[] entities,
@@ -248,8 +214,7 @@ namespace HFM
         {
             var scenMembers = metadata["Scenario"].GetMembers(scenarios);
             var yearMembers = metadata["Year"].GetMembers(years);
-            var startPeriodId = metadata["Period"].GetId(startPeriod);
-            var endPeriodId = endPeriod != null ? metadata["Period"].GetId(endPeriod) : -2;
+            var periodMembers = metadata["Period"].GetMembers(periods);
             var entityMembers = metadata["Entity"].GetMembers(entities);
 
             // Cross-join the selections for scenario, year, and entity
@@ -257,57 +222,70 @@ namespace HFM
               from s in scenMembers
               from y in yearMembers
               from e in entityMembers
-              select new { Scenario = s, Year = y, Entity = e as Entity };
+              from p in periodMembers
+              select new { Scenario = s, Year = y, Period = p, Entity = e };
 
             foreach(var i in loop) {
                 if(CommandLine.UI.Interrupted) {
                     break;
                 }
-                _log.InfoFormat("Consolidating Scenario: {0}, Year: {1}, Entity: {2}",
-                        i.Scenario.Name, i.Year.Name, i.Entity.Name);
+                _log.InfoFormat("Consolidating Scenario: {0}, Year: {1}, Period: {2}, Entity: {3}",
+                        i.Scenario.Name, i.Year.Name, i.Period.Name, i.Entity.Name);
                 si.MonitorBlockingTask(output);
-                if(endPeriod == null) {
-                    HFM.Try("Consolidating {0}:{1}:{2}", i.Scenario.Name, i.Year.Name, i.Entity.Name,
-                            () => HsvCalculate.Consolidate(i.Scenario.Id, i.Year.Id, startPeriodId,
-                                                           i.Entity.Id, i.Entity.ParentId,
-                                                           (short)consolidationType));
-                }
-                else {
-                    HFM.Try("Consolidating {0}:{1}:{2}", i.Scenario.Name, i.Year.Name, i.Entity.Name,
-                            () => HsvCalculate.Consolidate2(i.Scenario.Id, i.Year.Id, startPeriodId, endPeriodId,
-                                                            i.Entity.Id, i.Entity.ParentId,
-                                                            (short)consolidationType));
-                }
+                HFM.Try("Consolidating {0}:{1}:{2}:{3}", i.Scenario.Name, i.Year.Name, i.Period.Name,
+                        i.Entity.Name,
+                        () => HsvCalculate.Consolidate(i.Scenario.Id, i.Year.Id, i.Period.Id,
+                                                       i.Entity.Id, i.Entity.ParentId,
+                                                       (short)consolidationType));
                 si.BlockingTaskComplete();
             }
         }
 
 
-        // TODO: Determine if this should loop over scenarios, years, period
-        // ranges like other calc commands
-        [Command("Performs an Equity Pick-up calculation",
+        [Command("Performs an Equity Pick-up adjustment calculation",
                  Since = "11.1.2.2")]
         public void CalcEPU(
                 Metadata metadata,
-                [Parameter("The scenario in which to perform the equity pick-up")]
-                string scenario,
-                [Parameter("The year for which to perform the equity pick-up")]
-                string year,
-                [Parameter("The period over which the equity pick-up should be performed")]
-                string period,
-                [Parameter("Flag indicating whether to force an equity pick-up when not needed",
+                [Parameter("The scenario in which to perform the equity pick-up",
+                           Alias = "Scenario")]
+                string[] scenarios,
+                [Parameter("The year for which to perform the equity pick-up",
+                           Alias = "Year")]
+                string[] years,
+                [Parameter("The period(s) over which the equity pick-up should be performed",
+                           Alias = "Period")]
+                string[] periods,
+                [Parameter("Flag indicating whether to recalculate equity pick-up for all owner-owned pairs, " +
+                           "or only those pairs that have been impacted",
                            DefaultValue = false)]
                 bool force,
                 IOutput output)
         {
-            var scenId = metadata["Scenario"].GetId(scenario);
-            var yearId = metadata["Year"].GetId(year);
-            var periodId = metadata["Period"].GetId(period);
+            var scenMembers = metadata["Scenario"].GetMembers(scenarios);
+            var yearMembers = metadata["Year"].GetMembers(years);
+            var periodMembers = metadata["Period"].GetMembers(periods);
 
-            _log.InfoFormat("Equity Pick-Up for Scenario: {0}, Year: {1}",
-                    scenario, year);
-            HFM.Try("Equity Pick-Up for {0}:{1}", scenario, year,
-                    () => HsvCalculate.CalcEPU(scenId, yearId, periodId, force));
+            var loop =
+              from s in scenMembers
+              from y in yearMembers
+              from p in periodMembers
+              select new { Scenario = s, Year = y, Period = p };
+
+            // Calculate number of iterations, and measure progress
+            var members = loop.ToArray();
+
+            output.InitProgress("Equity Pick-Up", members.Length);
+            var complete = 0;
+            foreach(var m in members) {
+                _log.InfoFormat("Equity Pick-Up for Scenario: {0}, Year: {1}, Period: {2}",
+                        m.Scenario, m.Year, m.Period);
+                HFM.Try("Equity Pick-Up for {0}:{1}:{2}", m.Scenario.Name, m.Year.Name, m.Period.Name,
+                        () => HsvCalculate.CalcEPU(m.Scenario.Id, m.Year.Id, m.Period.Id, force));
+                if(output.SetProgress(++complete)) {
+                    break;
+                }
+            }
+            output.EndProgress();
         }
 
     }
