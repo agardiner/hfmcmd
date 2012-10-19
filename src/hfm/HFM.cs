@@ -105,7 +105,7 @@ namespace HFM
         public static void Try(string action, Action op, Action<HFMException> handler)
         {
             if (action != null) {
-                _log.Fine(action);
+                _log.Trace(action);
             }
             try {
                 op();

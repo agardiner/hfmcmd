@@ -293,13 +293,13 @@ namespace Command
                 result = cmd.MethodInfo.Invoke(ctxt, parms);
             }
             catch(TargetInvocationException ex) {
-                if(ex.InnerException == null || _log.IsDebugEnabled) {
+                if(ex.InnerException != null) {
                     _log.Error(string.Format("Command {0} threw an exception:", cmd.Name),
-                            ex);
+                            ex.InnerException);
                 }
                 else {
                     _log.Error(string.Format("Command {0} threw an exception:", cmd.Name),
-                            ex.InnerException);
+                            ex);
                 }
                 throw;
             }

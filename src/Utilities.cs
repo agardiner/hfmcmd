@@ -1,5 +1,7 @@
 using System;
+using System.Collections;
 using System.IO;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Linq;
 
@@ -22,6 +24,18 @@ namespace HFMCmd
             }
         }
 
+
+        public static string Join(IEnumerable items, string separator)
+        {
+            var sb = new StringBuilder();
+            var addSep = false;
+            foreach(object item in items) {
+                if(addSep) { sb.Append(separator); }
+                sb.Append(item);
+                addSep = true;
+            }
+            return sb.ToString();
+        }
     }
 
 
