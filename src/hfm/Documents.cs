@@ -582,7 +582,8 @@ namespace HFM
                 HFM.Try("Deleting document {0}", doc.Name,
                         () => _documents.DeleteDocuments(paths, names, (int)doc.DocumentType,
                                                          (int)doc.DocumentFileType, false));
-                output.SetProgress(count++);
+                count++;
+                output.IterationComplete();
                 if(doc.DocumentType == EDocumentType.Folder) {
                     _documentCache.Remove(AddFolderToPath(doc.Folder, doc.Name));
                 }
@@ -754,7 +755,7 @@ namespace HFM
                 IOutput output)
         {
             string tgtPath, filePath;
-            int extracted = 0, count = 0;
+            int extracted = 0;
 
             var docs = EnumDocuments(path, name, includeSubFolders, documentType,
                                      visibility, null);
@@ -783,7 +784,7 @@ namespace HFM
                     File.SetLastWriteTime(filePath, doc.Timestamp);
                     extracted++;
                 }
-                if(output.SetProgress(count++)) {
+                if(output.IterationComplete()) {
                     break;
                 }
             }

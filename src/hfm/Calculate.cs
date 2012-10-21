@@ -77,12 +77,11 @@ namespace HFM
             var members = loop.ToArray();
 
             output.InitProgress(op, members.Length);
-            var complete = 0;
             foreach(var i in members) {
                 _log.FineFormat("{0} Scenario: {1}, Year: {2}, Period: {3}, Entity: {4}, Value: {5}",
                                 op, i.Scenario.Name, i.Year.Name, i.Period.Name, i.Entity.Name, i.Value.Name);
                 calcOp(i.Scenario, i.Year, i.Period, i.Entity, i.Value);
-                if(output.SetProgress(++complete)) {
+                if(output.IterationComplete()) {
                     break;
                 }
             }
@@ -225,20 +224,25 @@ namespace HFM
               from p in periodMembers
               select new { Scenario = s, Year = y, Period = p, Entity = e };
 
-            foreach(var i in loop) {
+            // Calculate number of iterations, and measure progress
+            var members = loop.ToArray();
+
+            output.InitProgress("Consolidating", members.Length);
+            foreach(var m in members) {
                 if(CommandLine.UI.Interrupted) {
                     break;
                 }
                 _log.InfoFormat("Consolidating Scenario: {0}, Year: {1}, Period: {2}, Entity: {3}",
-                        i.Scenario.Name, i.Year.Name, i.Period.Name, i.Entity.Name);
+                        m.Scenario.Name, m.Year.Name, m.Period.Name, m.Entity.Name);
                 si.MonitorBlockingTask(output);
-                HFM.Try("Consolidating {0}:{1}:{2}:{3}", i.Scenario.Name, i.Year.Name, i.Period.Name,
-                        i.Entity.Name,
-                        () => HsvCalculate.Consolidate(i.Scenario.Id, i.Year.Id, i.Period.Id,
-                                                       i.Entity.Id, i.Entity.ParentId,
+                HFM.Try("Consolidating {0}:{1}:{2}:{3}", m.Scenario.Name, m.Year.Name, m.Period.Name,
+                        m.Entity.Name,
+                        () => HsvCalculate.Consolidate(m.Scenario.Id, m.Year.Id, m.Period.Id,
+                                                       m.Entity.Id, m.Entity.ParentId,
                                                        (short)consolidationType));
                 si.BlockingTaskComplete();
             }
+            output.EndProgress();
         }
 
 
@@ -275,13 +279,12 @@ namespace HFM
             var members = loop.ToArray();
 
             output.InitProgress("Equity Pick-Up", members.Length);
-            var complete = 0;
             foreach(var m in members) {
                 _log.InfoFormat("Equity Pick-Up for Scenario: {0}, Year: {1}, Period: {2}",
                         m.Scenario, m.Year, m.Period);
                 HFM.Try("Equity Pick-Up for {0}:{1}:{2}", m.Scenario.Name, m.Year.Name, m.Period.Name,
                         () => HsvCalculate.CalcEPU(m.Scenario.Id, m.Year.Id, m.Period.Id, force));
-                if(output.SetProgress(++complete)) {
+                if(output.IterationComplete()) {
                     break;
                 }
             }

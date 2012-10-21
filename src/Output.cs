@@ -48,16 +48,22 @@ namespace HFMCmd
 
         /// <summary>
         /// Instructs the output mechanism to display some form of progress
-        /// indicator, if appropriate.
+        /// indicator, if appropriate. Progress will be measured in units up to
+        /// total, which will be repeated iterations times.
         /// </summary>
-        void InitProgress(string operation, int total);
+        void InitProgress(string operation, int iterations, int total);
 
         /// <summary>
-        /// Update the current progress completion ratio. If the IOutput
-        /// implementation returns true, the operation should be aborted,
-        /// if possible.
+        /// Update the current progress completion ratio for the current
+        /// iteration. If the IOutput implementation returns true, the
+        /// operation should be aborted, if possible.
         /// </summary>
         bool SetProgress(int progress);
+
+        /// <summary>
+        /// Update the current progress iteration.
+        /// </summary>
+        bool IterationComplete();
 
         /// <summary>
         /// Indicates that the operation that was in progress is now complete.
@@ -200,6 +206,26 @@ namespace HFMCmd
 
 
         /// <summary>
+        /// Helper method for initiating an operation whose progress will be
+        /// monitored. Provides defaults for iteration (1) and total (100).
+        /// </summary>
+        public static void InitProgress(this IOutput output, string operation)
+        {
+            output.InitProgress(operation, 1, 100);
+        }
+
+
+        /// <summary>
+        /// Helper method for initiating an operation whose progress will be
+        /// monitored. Provides default for total (100).
+        /// </summary>
+        public static void InitProgress(this IOutput output, string operation, int iterations)
+        {
+            output.InitProgress(operation, iterations, 100);
+        }
+
+
+        /// <summary>
         /// Method that can be used by IOutput implementations to determine the
         /// appropriate value to send for the cancel return value in a call to
         /// SetProgress.
@@ -225,12 +251,14 @@ namespace HFMCmd
 
         public string Operation { get; set; }
 
-        public void SetHeader(params object[] fields) {}
-        public void WriteRecord(params object[] values) {}
-        public void End() {}
-        public void InitProgress(string operation, int total) {}
-        public bool SetProgress(int progress) { return false; }
-        public void EndProgress() {}
+        public void SetHeader(params object[] fields) { }
+        public void WriteRecord(params object[] values) { }
+        public void End() { }
+        public void InitProgress(string operation, int iterations) { }
+        public void InitProgress(string operation, int iterations, int total) { }
+        public bool SetProgress(int progress) { return OutputHelper.ShouldCancel(); }
+        public bool IterationComplete() { return OutputHelper.ShouldCancel(); }
+        public void EndProgress() { }
     }
 
 
@@ -281,9 +309,13 @@ namespace HFMCmd
 
         /// Whether current operation has been cancelled
         protected bool _cancelled;
-        /// Total number of steps in progress operation
+        /// Total number of iterations of progress operation to be completed
+        protected int _totalIterations;
+        /// Completed iterations
+        protected int _iteration;
+        /// Total number of steps in a single iteration of the progress operation
         protected int _total;
-        /// Currently completed number of progress steps
+        /// Currently completed number of progress steps in the current iteration
         protected int _progress;
 
 
@@ -363,27 +395,51 @@ namespace HFMCmd
         }
 
 
-        // Default no-op implementation
-        public virtual void InitProgress(string operation, int total)
+        public virtual void InitProgress(string operation, int iterations, int total)
         {
             Operation = operation;
+            _totalIterations = iterations;
+            _iteration = 0;
             _total = total;
+            _progress = 0;
             _cancelled = false;
         }
 
 
-        // Default no-op implementation
         public virtual bool SetProgress(int progress)
         {
+            if(Operation == null) {
+                throw new InvalidOperationException("SetProgress called when no operation was supposed to be in progress");
+            }
+            _progress = progress;
             _cancelled = _cancelled || OutputHelper.ShouldCancel();
             return _cancelled;
         }
 
 
-        // Default no-op implementation
+        public virtual bool IterationComplete()
+        {
+            if(Operation == null) {
+                throw new InvalidOperationException("IterationComplete called when no operation was supposed to be in progress");
+            }
+            _iteration++;
+            _progress = 0;
+            _cancelled = _cancelled || OutputHelper.ShouldCancel();
+            if(_iteration >= _totalIterations) {
+                Operation = null;
+            }
+            return _cancelled;
+        }
+
+
         public virtual void EndProgress()
         {
-            Operation = null;
+        }
+
+
+        protected virtual int CompletionPct()
+        {
+            return (_iteration * _total + _progress) * 100 / (_totalIterations * _total);
         }
 
     }
@@ -458,37 +514,50 @@ namespace HFMCmd
         }
 
 
-        public override void InitProgress(string operation, int total)
+        public override void InitProgress(string operation, int iterations, int total)
         {
-            base.InitProgress(operation, total);
-            _progress = 0;
+            base.InitProgress(operation, iterations, total);
             _lastLog = DateTime.MinValue;
+        }
+
+
+        public override bool IterationComplete()
+        {
+            int lastPct = CompletionPct();
+            base.IterationComplete();
+            UpdateCompletion(lastPct);
+
+            return _cancelled;
         }
 
 
         public override bool SetProgress(int progress)
         {
-            _cancelled = _cancelled || OutputHelper.ShouldCancel();
-            int lastPct = _progress * 100 / _total;
-            int pct = progress * 100 / _total;
+            int lastPct = CompletionPct();
+            base.SetProgress(progress);
+            int pct = CompletionPct();
+            UpdateCompletion(lastPct);
 
+            return _cancelled;
+        }
+
+
+        protected void UpdateCompletion(int lastPct)
+        {
+            int pct = CompletionPct();
             // Log progress messages for (at most) each 10% of progress
             // Handle cases where progress appears to go backwards e.g.
-            // due to several passes being made.
+            // due to several passes being made in an EA extract.
 
             // Log progress only if sufficient (but not too much) time
             // has passed, and sufficient progress has been made
             if((DateTime.Now.AddSeconds(-MAX_LOG_INTERVAL) > _lastLog) ||
                (DateTime.Now.AddSeconds(-MIN_LOG_INTERVAL) > _lastLog &&
-                (progress < _progress || (pct - lastPct) >= 10))) {
+                (pct < lastPct || (pct - lastPct) >= 10))) {
                 _log.InfoFormat("{0} {1}% complete", Operation.Trim(), pct);
-                _progress = progress;
                 _lastLog = DateTime.Now;
             }
-
-            return _cancelled;
         }
-
     }
 
 
@@ -559,9 +628,9 @@ namespace HFMCmd
         }
 
 
-        public override void InitProgress(string operation, int total)
+        public override void InitProgress(string operation, int iterations, int total)
         {
-            base.InitProgress(operation, total);
+            base.InitProgress(operation, iterations, total);
             _spin = 0;
         }
 

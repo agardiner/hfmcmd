@@ -303,8 +303,8 @@ namespace HFM
         public void MonitorBlockingTask(IOutput output)
         {
             TaskInfo task = null;
-            _progressMonitor = new ProgressMonitor(output);
 
+            _progressMonitor = new ProgressMonitor(output);
             _progressMonitor.MonitorProgressAsync(delegate(bool cancel, out bool isRunning) {
                 int progress;
 
@@ -312,8 +312,8 @@ namespace HFM
                     // First time through (half a second later), so get task
                     // which should now be running
                     task = GetRunningTask();
-                    if(task != null) {
-                        _progressMonitor.Operation = task.TaskType.ToString();
+                    if(task != null && output.Operation == null) {
+                        output.Operation = task.TaskType.ToString();
                     }
                 }
 
@@ -361,7 +361,8 @@ namespace HFM
                                 FirstOrDefault(t => t.TaskId == taskId);
 
             if(task != null) {
-                var pm = new ProgressMonitor(output, task.TaskType.ToString());
+                output.InitProgress(task.TaskType.ToString());
+                var pm = new ProgressMonitor(output);
                 pm.MonitorProgress(delegate(bool cancel, out bool isRunning) {
                     int progress;
 
@@ -373,6 +374,7 @@ namespace HFM
 
                     return progress;
                 });
+                output.EndProgress();
             }
             else {
                 _log.InfoFormat("No running task was found with task id {0}", taskId);

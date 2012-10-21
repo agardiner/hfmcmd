@@ -28,21 +28,8 @@ namespace HFMCmd
 
         // Reference to the IOutput used to display the progress status
         protected IOutput _output;
-        // Operation to be monitored
-        protected string _operation;
-        // Total number of steps in operation
-        protected int _total;
         // Thread spun up to monitor blocking operations
         protected Thread _monitorThread;
-
-
-        public string Operation {
-            get { return _operation; }
-            set {
-                _operation = value;
-                _output.Operation = _operation;
-            }
-        }
 
 
         /// <summary>
@@ -58,32 +45,8 @@ namespace HFMCmd
         /// instance. Progress will be measured in percentage terms.
         /// </summary>
         public ProgressMonitor(IOutput output)
-            : this(output, "Operation in progress", 100)
-        {
-        }
-
-
-        /// <summary>
-        /// Constructs a progress monitor for tracking the progress of a long-
-        /// running operation and updating the progress status via an IOutput
-        /// instance. Progress will be measured in percentage terms.
-        /// </summary>
-        public ProgressMonitor(IOutput output, string operation)
-            : this(output, operation, 100)
-        {
-        }
-
-
-        /// <summary>
-        /// Constructs a progress monitor for tracking the progress of a long-
-        /// running operation and updating the progress status via an IOutput
-        /// instance.
-        /// </summary>
-        public ProgressMonitor(IOutput output, string operation, int total)
         {
             _output = output;
-            _operation = operation;
-            _total = total;
         }
 
 
@@ -105,8 +68,6 @@ namespace HFMCmd
             bool cancelNotified = false;
             bool isRunning = true;
 
-            _output.InitProgress(_operation, _total);
-
             do {
                 // Sleep for half a second
                 // Note: the initial delay before displaying a progress bar the first time is deliberate
@@ -125,10 +86,10 @@ namespace HFMCmd
             }
             while(isRunning && !cancelNotified);
 
-            _output.EndProgress();
+            _output.IterationComplete();
 
             if(cancel) {
-                _log.InfoFormat("{0} cancelled", _operation);
+                _log.Info("Operation cancelled");
             }
         }
 
