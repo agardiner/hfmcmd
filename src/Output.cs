@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.Linq;
 
 using log4net;
+using log4net.Core;
+using log4net.Appender;
 
 
 
@@ -21,6 +23,12 @@ namespace HFMCmd
         /// Property for setting the current operation that is in progress.
         /// </summary>
         string Operation { get; set; }
+
+        /// <summary>
+        /// Write a line of text, using string.Format to combine multiple
+        /// values into a line of text.
+        /// </summary>
+        void WriteLine(string format, params object[] values);
 
         /// <summary>
         /// Called before a table of information is output; identifies the names
@@ -158,13 +166,11 @@ namespace HFMCmd
 
         /// <summary>
         /// Eases use of the IOutput interface for cases where we just want to
-        /// output a single line of text.
+        /// output a blank line.
         /// </summary>
-        public static void WriteLine(this IOutput output, params object[] values)
+        public static void WriteLine(this IOutput output)
         {
-            output.SetHeader();
-            output.WriteRecord(values);
-            output.End();
+            output.WriteLine("");
         }
 
 
@@ -251,6 +257,7 @@ namespace HFMCmd
 
         public string Operation { get; set; }
 
+        public void WriteLine(string format, params object[] values) { }
         public void SetHeader(params object[] fields) { }
         public void WriteRecord(params object[] values) { }
         public void End() { }
@@ -319,9 +326,12 @@ namespace HFMCmd
         protected int _progress;
 
 
+        public abstract void WriteLine(string format, params object[] values);
+
+
         public virtual void SetHeader(params object[] fields)
         {
-            if(fields.Length > 0) {
+            if(fields != null && fields.Length > 0) {
                 _fieldNames = OutputHelper.GetFieldNamesAndWidths(fields, out _widths);
                 var total = IndentWidth;
                 for(var i = 0; i < _widths.Length; total += _widths[i++] + FieldSeparator.Length) {
@@ -474,6 +484,13 @@ namespace HFMCmd
         }
 
 
+        public override void WriteLine(string format, params object[] values)
+        {
+            _log.InfoFormat(format, values);
+        }
+
+
+
         public override void SetHeader(params object[] fields)
         {
             base.SetHeader(fields);
@@ -587,6 +604,17 @@ namespace HFMCmd
         }
 
 
+        public override void WriteLine(string format, params object[] values)
+        {
+            if(values.Length == 0) {
+                _cui.WriteLine(format);
+            }
+            else {
+                _cui.WriteLine(string.Format(format, values));
+            }
+        }
+
+
         public override void SetHeader(params object[] fields)
         {
             base.SetHeader(fields);
@@ -696,5 +724,29 @@ namespace HFMCmd
             _cui.ClearLine();
         }
     }
+
+
+
+    /// <summary>
+    /// A more intelligent ConsoleAppender, which takes account of the
+    /// console width and wraps messages at word breaks. Also integrates
+    /// better with progress monitoring.
+    /// </summary>
+    public class ConsoleAppender : AppenderSkeleton
+    {
+        ConsoleOutput _console;
+
+        public ConsoleAppender(ConsoleOutput co)
+        {
+            _console = co;
+        }
+
+        protected override void Append(LoggingEvent logEvent)
+        {
+            _console.WriteLine(RenderLoggingEvent(logEvent));
+        }
+    }
+
+
 
 }

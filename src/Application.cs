@@ -59,6 +59,8 @@ namespace HFMCmd
         private Context _context;
         /// Reference to the command-line interface/parser
         private UI _cmdLine;
+        /// Reference to the console output
+        private ConsoleOutput _console;
         /// Reference to the log4net repository
         private ILoggerRepository _logRepository;
         /// Reference to the logger hierarchy
@@ -78,6 +80,10 @@ namespace HFMCmd
         {
             int rc = 0;
 
+            // Define command-line UI
+            _cmdLine = new UI(HFMCmd.Resource.Help.Purpose);
+            _console = new ConsoleOutput(_cmdLine);
+
             ConfigureLogging();
 
             // Register commands
@@ -86,14 +92,11 @@ namespace HFMCmd
             _commands.RegisterNamespace("HFMCmd");
             _commands.RegisterNamespace("HFM");
 
-            // Define command-line UI
-            _cmdLine = new UI(HFMCmd.Resource.Help.Purpose);
-
             // Create a Context for invoking Commands
             _context = new Context(_commands);
             _context.Set(this);
             //_context.Set(new LogOutput());
-            _context.Set(new ConsoleOutput(_cmdLine));
+            _context.Set(_console);
 
             // Standard command-line arguments
             ValueArgument arg = _cmdLine.AddPositionalArgument("CommandOrFile",
@@ -152,17 +155,13 @@ namespace HFMCmd
             _logRepository.LevelMap.Add(new log4net.Core.Level(10000, "DEBUG"));
 
             // Create a console logger
-            ConsoleAppender ca = new ConsoleAppender();
-            ca.Layout = new log4net.Layout.PatternLayout(
-                //"%date{HH:mm:ss} %-5level  %message%newline");
-                "%-5level  %message%newline");
+            ConsoleAppender ca = new HFMCmd.ConsoleAppender(_console);
+            ca.Layout = new log4net.Layout.PatternLayout("%-5level  %message");
             ca.ActivateOptions();
+            log4net.Config.BasicConfigurator.Configure(ca);
 
             // Configure exception renderers
             _logHierarchy.RendererMap.Put(typeof(Exception), new ExceptionMessageRenderer());
-
-            // Configure log4net to use this, with other default settings
-            log4net.Config.BasicConfigurator.Configure(ca);
 
             // Set default log level
             _logHierarchy.Root.Level = _logRepository.LevelMap["INFO"];
