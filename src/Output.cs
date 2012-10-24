@@ -449,7 +449,14 @@ namespace HFMCmd
 
         protected virtual int CompletionPct()
         {
-            return (_iteration * _total + _progress) * 100 / (_totalIterations * _total);
+            int pct = (_iteration * _total + _progress) * 100 / (_totalIterations * _total);
+            if (pct < 0) {
+                pct = 0;
+            }
+            else if (pct > 100) {
+                pct = 100;
+            }
+            return pct;
         }
 
     }
@@ -606,11 +613,18 @@ namespace HFMCmd
 
         public override void WriteLine(string format, params object[] values)
         {
+            if(Operation != null && _spin > 0) {
+                _cui.ClearLine();
+            }
             if(values.Length == 0) {
                 _cui.WriteLine(format);
             }
             else {
                 _cui.WriteLine(string.Format(format, values));
+            }
+
+            if(Operation != null && _spin > 0) {
+                RenderProgressBar();
             }
         }
 
@@ -667,18 +681,31 @@ namespace HFMCmd
         {
             _cancelled = _cancelled || _cui.EscPressed() || OutputHelper.ShouldCancel();
             _progress = progress;
-            int pct = _progress * 100 / _total;
 
-            // Make sure percentage is within range of 0 to 100
-            if (pct < 0) {
-                pct = 0;
-            }
-            else if (pct > 100) {
-                pct = 100;
-            }
 
+            // Finally, write the bar to the console
+            _cui.ClearLine();
+            RenderProgressBar();
+
+            return _cancelled;
+        }
+
+
+        public override void EndProgress()
+        {
+            Operation = null;
+            _spin = 0;
+            _cui.ClearLine();
+        }
+
+
+        protected void RenderProgressBar()
+        {
             // Determine which character to display next to simulate spinning
             char spin = _spinner[_spin++ % _spinner.Length];
+
+            // Make sure percentage is within range of 0 to 100
+            int pct = CompletionPct();
 
             // Build up the progress bar
             var sb = new StringBuilder(Operation.Length + BAR_SIZE + 20);
@@ -711,18 +738,9 @@ namespace HFMCmd
             sb.Remove(barMid, pctStr.Length);
             sb.Insert(barMid, pctStr);
 
-            // Finally, write the bar to the console
-            _cui.ClearLine();
             _cui.Write(sb.ToString());
-
-            return _cancelled;
         }
 
-
-        public override void EndProgress()
-        {
-            _cui.ClearLine();
-        }
     }
 
 
