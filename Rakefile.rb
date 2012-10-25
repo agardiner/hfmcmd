@@ -18,6 +18,8 @@ RELEASE40_DIR   = "#{RELEASE_DIR}/4.0"
 HFMCMD40_EXE    = "#{BUILD40_DIR}/HFMCmd.exe"
 HFMCMD40_BUNDLE = "#{RELEASE40_DIR}/HFMCmd.exe"
 
+RESOURCES       = FileList['resources/*.resx']
+SOURCE_FILES    = FileList['src/**/*.cs']
 
 def settings_for_version(version)
   s = {}
@@ -86,7 +88,7 @@ end
 # Define resource dependencies on .resx files
 desc "Generate resources"
 task :resources => BUILD_DIR
-FileList['resources/*.resx'].each do |resx|
+RESOURCES.each do |resx|
   file resx
   name = File.basename(resx, '.resx')
   task :resources => "gen/HFMCmd.Resource.#{name}.resources"
@@ -101,7 +103,7 @@ namespace :dotnet35 do
 
   # Define .exe dependencies on source files
   file HFMCMD35_EXE => :resources
-  FileList['src/**/*.cs'].each do |src|
+  SOURCE_FILES.each do |src|
     file HFMCMD35_EXE => src
   end
 
@@ -126,7 +128,7 @@ namespace :dotnet40 do
 
   # Define .exe dependencies on source files
   file HFMCMD40_EXE => :resources
-  FileList['src/**/*.cs'].each do |src|
+  SOURCE_FILES.each do |src|
     file HFMCMD40_EXE => src
   end
 
@@ -149,6 +151,23 @@ task :clean do
   FileUtils.rm_rf BUILD_DIR
   FileUtils.rm_rf RELEASE_DIR
 end
+
+
+desc "Re-generate build.bat, useful for building HFMCmd without Ruby / rake"
+task "build.bat" do |t|
+  require 'erb'
+  template = File.read("build.bat.erb")
+  @resources = RESOURCES.map { |res| compile_resource(res) }
+  @compile_35 = compile("3.5")
+  @compile_40 = compile("4.0")
+  @bundle_35 = bundle("3.5")
+  @bundle_40 = bundle("4.0")
+  erb = ERB.new(template)
+  File.open(t.name, "w") do |f|
+    f.puts erb.result
+  end
+end
+
 
 task :default => 'dotnet35:build'
 task :build => ['dotnet35:build', 'dotnet40:build']

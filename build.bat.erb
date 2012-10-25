@@ -1,0 +1,54 @@
+@ECHO OFF
+IF "%1"=="" (SET TARGET_DOTNET=35) ELSE (SET TARGET_DOTNET=%1)
+
+
+IF NOT EXIST <%= BUILD_DIR %> MKDIR <%= BUILD_DIR %>
+IF NOT EXIST <%= RELEASE_DIR %> MKDIR <%= RELEASE_DIR %>
+DEL /Q <%= BUILD_DIR %>\*.*
+DEL /Q <%= RELEASE_DIR %>\*.*
+
+
+ECHO Generating resources...
+<% @resources.each do |resource| %>
+<%= resource %>
+IF ERRORLEVEL 1 EXIT /B %ERRORLEVEL%
+<% end %>
+
+IF %TARGET_DOTNET%==35 GOTO DOTNET35
+IF %TARGET_DOTNET%==40 GOTO DOTNET40
+
+
+ECHO Usage: build.bat *Version*, where *Version* is one of: 35 or 40 (default is 35)
+EXIT /B 99
+
+
+
+:DOTNET35
+ECHO Targeting .NET Framework 3.5...
+
+ECHO Compiling HFMCmd...
+<%= @compile_35 %>
+IF ERRORLEVEL 1 EXIT /B %ERRORLEVEL%
+
+ECHO Bundling HFMCmd and libraries into HFMCmd.exe...
+<%= @bundle_35 %>
+
+GOTO END
+
+
+
+:DOTNET40
+ECHO Targeting .NET Framework 4.0...
+
+ECHO Compiling HFMCmd...
+<%= @compile_40 %>
+IF ERRORLEVEL 1 EXIT /B %ERRORLEVEL%
+
+ECHO Bundling HFMCmd and libraries into HFMCmd.exe...
+<%= @bundle_40 %>
+
+GOTO END
+
+
+:END
+ECHO Build complete!
