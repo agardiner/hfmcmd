@@ -376,7 +376,7 @@ namespace HFM
                         _parentId = _dimension.GetId(_parentName);
                     }
                     else {
-                        HFM.Try("Retrieving default parent id",
+                        HFM.Try("Retrieving default parent id for {0}", _dimension.Name,
                                 () => _dimension.HsvTreeInfo.GetDefaultParent(Id, out _parentId));
                     }
                 }

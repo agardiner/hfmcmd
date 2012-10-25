@@ -1,5 +1,7 @@
 using System;
+using System.Reflection;
 using System.Collections.Generic;
+using System.Linq;
 
 using log4net;
 
@@ -13,9 +15,10 @@ namespace HFM
 
     /// <summary>
     /// Base class for all HFM Load/Extract option collections.
-    /// These are implementations of the TODO: SettingsCollection class, used to pass
-    /// around the myriad options that govern the behaviour of HFM loads and
-    /// extracts of Metadata, Security, Rules, Member Lists, Data, and Journals.
+    /// These are implementations of the ISettingsCollection interface, used to
+    /// pass around the myriad options that govern the behaviour of HFM loads
+    /// and extracts of Metadata, Security, Rules, Member Lists, Data, and
+    /// Journals.
     /// </summary>
     /// <remarks>
     /// These are a sort of hybrid struct/collection/enum:
@@ -48,11 +51,11 @@ namespace HFM
         public object this[string key]
         {
             get {
-                var option = _optionsType.GetMethod("get_Item").Invoke(_options, new object[] { key });
+                var option = GetOption(key);
                 return _optionType.GetProperty("CurrentValue").GetValue(option, null);
             }
             set {
-                var option = _optionsType.GetMethod("get_Item").Invoke(_options, new object[] { key });
+                var option = GetOption(key);
                 _optionType.GetProperty("CurrentValue").SetValue(option, value, null);
             }
         }
@@ -66,6 +69,17 @@ namespace HFM
             _options = options;
         }
 
+        protected object GetOption(string key)
+        {
+            try {
+                return _optionsType.GetMethod("get_Item").Invoke(_options, new object[] { key });
+            }
+            catch(TargetInvocationException) {
+                throw new ArgumentException(string.Format("The option key '{0}' is not a valid " +
+                        "option for this LoadExtractOptions collection. Valid keys are: {1}",
+                        key, string.Join(", ", GetOptionNames())));
+            }
+        }
 
         public object DefaultValue(string key)
         {
@@ -74,13 +88,16 @@ namespace HFM
         }
 
 
-        public void GetOptionNames()
+        public string[] GetOptionNames()
         {
-            foreach(var val in Enum.GetValues(_enumType)) {
-                var option = _optionsType.GetMethod("get_Item").Invoke(_options, new object[] { val });
-                var name = _optionType.GetProperty("Name").GetValue(option, null);
-                _log.InfoFormat("Option {0} name: {1}", val, name);
+            var indexes = Enum.GetValues(_enumType);
+            var names = new string[indexes.Length];
+            var i = 0;
+            foreach(var index in indexes) {
+                var option = _optionsType.GetMethod("get_Item").Invoke(_options, new object[] { index });
+                names[i++] = (string)_optionType.GetProperty("Name").GetValue(option, null);
             }
+            return names;
         }
 
     }

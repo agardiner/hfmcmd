@@ -82,9 +82,10 @@ namespace HFM
                  ParameterType = typeof(string)), // TODO: Validation list
          Setting("IncludeCalculatedData", "If true, the data extract includes calculated data",
                  InternalName = "Extract Calculated"),
-         Setting("View", "The view of data (i.e. periodic, YTD, etc) to extract",
+         Setting("IncludePhasedGroups", "If true, includes phased groups in data extract",
+                 InternalName = "Extract Phased Groups"),
+         Setting("View", "The view of data (i.e. Periodic, YTD, or ScenarioDefault) to extract",
                  ParameterType = typeof(EDataView))]
-         // TODO: Add support for member subsets
         public class ExtractOptions : LoadExtractOptions
         {
             [Factory]
@@ -175,33 +176,33 @@ namespace HFM
                 [Parameter("Path to the extract log file; if not specified, defaults to same path " +
                            "and name as extract file.", DefaultValue = null)]
                 string logFile,
-                [Parameter("The scenario(s) to include in the extract")]
-                string[] scenarios,
+                [Parameter("The scenario to include in the extract")]
+                string scenario,
                 [Parameter("The year to include in the extract")]
                 string year,
-                [Parameter("The period(s) to include in the extract")]
+                [Parameter("The period(s) to include in the extract",
+                           Alias = "Period")]
                 string[] periods,
-                [Parameter("The entities to include in the extract")]
+                [Parameter("The entities to include in the extract",
+                           Alias = "Entity")]
                 string[] entities,
-                [Parameter("The accounts to include in the extract")]
+                [Parameter("The accounts to include in the extract",
+                           Alias = "Account")]
                 string[] accounts,
                 ExtractOptions options,
                 Metadata metadata)
         {
+            options["Scenario"] = metadata["Scenario"].GetId(scenario);
+            options["Year"] = metadata["Year"].GetId(year);
             var entityList = metadata["Entity"].GetMembers(entities);
-            options["Parent Subset"] = entityList.MemberIds;
-            options["Entity Subset"] = entityList.ParentIds;
-            options["Scenario Subset"] = metadata["Scenario"].GetMembers(scenarios).MemberIds;
-            options["Year Subset"] = metadata["Year"].GetId(year);
+            options["Entity Subset"] = entityList.MemberIds;
+            options["Parent Subset"] = entityList.ParentIds;
             options["Period Subset"] = metadata["Period"].GetMembers(periods).MemberIds;
             options["Account Subset"] = metadata["Account"].GetMembers(accounts).MemberIds;
 
             if(logFile == null || logFile == "") {
                 logFile = Path.ChangeExtension(dataFile, ".log");
             }
-            // TODO: Display options etc
-            _log.FineFormat("    Data file: {0}", dataFile);
-            _log.FineFormat("    Log file:  {0}", logFile);
 
             // Ensure dataFile and logFile are writeable locations
             Utilities.EnsureFileWriteable(dataFile);
