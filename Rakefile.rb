@@ -5,12 +5,17 @@ LOG4NET40_LIB   = 'lib\log4net-1.2.11\bin\net\4.0\release'
 FRAMEWORK35_DIR = 'C:\WINDOWS\Microsoft.NET\Framework\v3.5'
 FRAMEWORK40_DIR = 'C:\WINDOWS\Microsoft.NET\Framework\v4.0.30319'
 
-RELEASE35_DIR   = 'bin/net/3.5'
-HFMCMD35_EXE = "gen/HFMCmd_35.exe"
+BUILD_DIR       = 'gen'
+RELEASE_DIR     = 'bin'
+
+BUILD35_DIR     = "#{BUILD_DIR}/3.5"
+RELEASE35_DIR   = "#{RELEASE_DIR}/3.5"
+HFMCMD35_EXE    = "#{BUILD35_DIR}/HFMCmd.exe"
 HFMCMD35_BUNDLE = "#{RELEASE35_DIR}/HFMCmd.exe"
 
-RELEASE40_DIR   = 'bin/net/4.0'
-HFMCMD40_EXE = "gen/HFMCmd_40.exe"
+BUILD40_DIR     = "#{BUILD_DIR}/4.0"
+RELEASE40_DIR   = "#{RELEASE_DIR}/4.0"
+HFMCMD40_EXE    = "#{BUILD40_DIR}/HFMCmd.exe"
 HFMCMD40_BUNDLE = "#{RELEASE40_DIR}/HFMCmd.exe"
 
 
@@ -38,6 +43,12 @@ def settings_for_version(version)
 end
 
 
+def compile_resource(source)
+  name = File.basename(source, '.resx')
+  "tools\\ResGen.exe #{source} gen\\HFMCmd.Resource.#{name}.resources /str:cs,HFMCmd.Resource,#{name},gen\\#{name}Resource.cs"
+end
+
+
 def compile(version)
   s = settings_for_version(version)
   options = "/nologo /target:exe /main:HFMCmd.Launcher /out:#{s[:exe]} /debug /optimize+"
@@ -53,9 +64,10 @@ def compile(version)
 end
 
 
+# Bundles all log4net and HFM interop .dlls into the HFMCmd.exe,
+# so that HFMCmd can be distributed as a single .exe
 def bundle(version)
   s = settings_for_version(version)
-
   tgt = version == "3.5" ? '' : "/targetplatform:#{s[:ilmerge]},#{s[:dotnet]}"
 
   "tools\\ILMerge\\ILMerge.exe #{tgt} /wildcards /lib:#{s[:dotnet]} /out:#{s[:bundle]} #{s[:exe]} #{s[:hfm_ref] == '/link' ? '' : "#{HFM_LIB}\\*.dll"} #{s[:log4net]}\\log4net.dll"
@@ -64,17 +76,16 @@ end
 
 # ---------
 
-directory "gen"
+directory BUILD_DIR
 
 # Define a rule for converting .resx files into .resources
 rule '.resources' => proc{ |t| "resources/#{t.split('.')[2]}.resx" } do |t|
-  name = File.basename(t.source, '.resx')
-  sh "tools\\ResGen.exe #{t.source} gen\\HFMCmd.Resource.#{name}.resources /str:cs,HFMCmd.Resource,#{name},gen\\#{name}Resource.cs"
+  sh compile_resource(t.source)
 end
 
 # Define resource dependencies on .resx files
 desc "Generate resources"
-task :resources => "gen"
+task :resources => BUILD_DIR
 FileList['resources/*.resx'].each do |resx|
   file resx
   name = File.basename(resx, '.resx')
@@ -85,6 +96,7 @@ end
 
 namespace :dotnet35 do
 
+  directory BUILD35_DIR
   directory RELEASE35_DIR
 
   # Define .exe dependencies on source files
@@ -93,7 +105,7 @@ namespace :dotnet35 do
     file HFMCMD35_EXE => src
   end
 
-  file HFMCMD35_EXE do
+  file HFMCMD35_EXE => BUILD35_DIR do
     sh compile("3.5")
   end
 
@@ -109,6 +121,7 @@ end
 
 namespace :dotnet40 do
 
+  directory BUILD40_DIR
   directory RELEASE40_DIR
 
   # Define .exe dependencies on source files
@@ -117,7 +130,7 @@ namespace :dotnet40 do
     file HFMCMD40_EXE => src
   end
 
-  file HFMCMD40_EXE do
+  file HFMCMD40_EXE => BUILD40_DIR do
     sh compile("4.0")
   end
 
@@ -130,10 +143,12 @@ namespace :dotnet40 do
 
 end
 
+
 desc "Remove all generated files"
 task :clean do
-  FileUtils.rm_rf "gen"
-  FileUtils.rm_rf "bin"
+  FileUtils.rm_rf BUILD_DIR
+  FileUtils.rm_rf RELEASE_DIR
 end
 
 task :default => 'dotnet35:build'
+task :build => ['dotnet35:build', 'dotnet40:build']
