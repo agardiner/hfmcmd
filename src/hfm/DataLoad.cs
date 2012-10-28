@@ -116,12 +116,13 @@ namespace HFM
         [Command("Loads data to an HFM application from a text file")]
         public void LoadData(
                 [Parameter("Path to the source data file(s). To load multiple files from the same " +
-                           "source directory, use wildcards in the file name")]
+                           "source directory, use wildcards in the file name",
+                           Alias = "DataFile")]
                 string dataFiles,
                 [Parameter("Path to the folder in which to create log files; if not specified, defaults to same folder " +
                            "as the source data file. Log files have the same file name (but with a .log extension) as " +
                            "the file from which the data is loaded",
-                 DefaultValue = null)]
+                           DefaultValue = null)]
                 string logDir,
                 LoadOptions options,
                 SystemInfo si,
@@ -132,9 +133,8 @@ namespace HFM
             string logFile;
 
             var paths = Utilities.GetMatchingFiles(dataFiles);
-            if(paths.Length > 1) {
-                _log.InfoFormat("Found {0} data files to process", paths.Length);
-            }
+            _log.InfoFormat("Found {0} data files to process", paths.Length);
+            output.InitProgress("Data Load", paths.Length);
             foreach(var dataFile in paths) {
                 if(logDir == null || logDir == "") {
                     logFile = Path.ChangeExtension(dataFile, ".log");
@@ -162,6 +162,7 @@ namespace HFM
                     didError = true;
                 }
             }
+            output.EndProgress();
 
             if(didError) {
                 throw new HFMException("One or more errors occurred while loading data");

@@ -449,12 +449,15 @@ namespace HFMCmd
 
         protected virtual int CompletionPct()
         {
-            int pct = (_iteration * _total + _progress) * 100 / (_totalIterations * _total);
-            if (pct < 0) {
-                pct = 0;
-            }
-            else if (pct > 100) {
-                pct = 100;
+            int pct = 0;
+            if(_totalIterations * _total > 0) {
+                pct = (_iteration * _total + _progress) * 100 / (_totalIterations * _total);
+                if (pct < 0) {
+                    pct = 0;
+                }
+                else if (pct > 100) {
+                    pct = 100;
+                }
             }
             return pct;
         }
