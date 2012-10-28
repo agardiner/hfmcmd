@@ -7,6 +7,7 @@ using System.Linq;
 using log4net;
 using HSVSESSIONLib;
 using HSVMETADATALib;
+using HFMSLICECOMLib;
 
 using Command;
 using HFMCmd;
@@ -42,6 +43,10 @@ namespace HFM
             new Dictionary<string, Dimension>(StringComparer.OrdinalIgnoreCase);
 
 
+        /// Returns the HFM HsvMetadata object
+        internal HsvMetadata HsvMetadata { get { return _hsvMetadata; } }
+
+
         /// Returns the Dimension object for the specified dimension
         public Dimension this[string dimName]
         {
@@ -68,6 +73,14 @@ namespace HFM
         public Metadata(Session session)
         {
             _hsvMetadata = (HsvMetadata)session.HsvSession.Metadata;
+        }
+
+
+        public POV POV
+        {
+            get {
+                return new POV(this);
+            }
         }
 
 
@@ -291,7 +304,7 @@ namespace HFM
         }
 
 
-        public Member CreateMember(string name)
+        public Member GetMember(string name)
         {
             if(IsEntity) {
                 return new Entity(this, name);
@@ -302,13 +315,13 @@ namespace HFM
         }
 
 
-        public Member CreateMember(int id)
+        public Member GetMember(int id)
         {
-            return CreateMember(id, Member.ID_NOT_SPECIFIED);
+            return GetMember(id, Member.ID_NOT_SPECIFIED);
         }
 
 
-        public Member CreateMember(int id, int parentId)
+        public Member GetMember(int id, int parentId)
         {
             if(IsEntity) {
                 return new Entity(this, id, parentId);
@@ -589,7 +602,7 @@ namespace HFM
         public IEnumerator<Member> GetEnumerator()
         {
             for(var i = 0; i < _members.Length; ++i) {
-                yield return _dimension.CreateMember(_members[i],
+                yield return _dimension.GetMember(_members[i],
                         _parents != null ? _parents[i] : Member.ID_NOT_SPECIFIED);
             }
         }
@@ -696,7 +709,7 @@ namespace HFM
         /// as "Mar" or "FOO.BAR".
         protected void AddItemIdsForMember(string member)
         {
-            var mbr = _dimension.CreateMember(member);
+            var mbr = _dimension.GetMember(member);
             AddIds(new int[] { mbr.Id }, new int[] { mbr.ParentId });
         }
 
@@ -723,6 +736,55 @@ namespace HFM
                     }
                 }
             }
+        }
+
+    }
+
+
+    public class POV
+    {
+        private HsvMetadata _metadata;
+        private HfmPovStrCOM _hfmPovStrCOM;
+
+        internal HfmPovStrCOM HfmPovStrCOM { get { return _hfmPovStrCOM; } }
+
+
+        public int ScenarioID { get { return -1; } }
+        public int YearID { get { return -1; } }
+        public int PeriodID { get { return -1; } }
+        public int ViewID { get { return -1; } }
+        public int EntityID { get { return -1; } }
+        public int ParentID { get { return -1; } }
+        public int ValueID { get { return -1; } }
+        public int AccountID { get { return -1; } }
+        public int ICPID { get { return -1; } }
+        public int Custom1ID { get { return -1; } }
+        public int Custom2ID { get { return -1; } }
+        public int Custom3ID { get { return -1; } }
+        public int Custom4ID { get { return -1; } }
+
+
+        public POV(Metadata metadata)
+        {
+            _metadata = metadata.HsvMetadata;
+            _hfmPovStrCOM = new HfmPovStrCOM();
+        }
+
+
+        public HfmPovCOM FromPOVString(string pov)
+        {
+            HfmPovCOM oPov = null;
+            HFM.Try("Converting to HfmPOVCOM", () => {
+                _hfmPovStrCOM.InitializeFromPovString(_metadata, pov);
+                oPov = _hfmPovStrCOM.ConvertToHfmPovCOM(_metadata);
+            });
+            return oPov;
+        }
+
+
+        public string ToPOVString()
+        {
+            return _hfmPovStrCOM.ToPovString(_metadata, false);
         }
 
     }
