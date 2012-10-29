@@ -1,9 +1,12 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Linq;
+
+using log4net;
 
 
 namespace HFMCmd
@@ -45,6 +48,10 @@ namespace HFMCmd
     /// </summary>
     public static class Utilities
     {
+        // Reference to class logger
+        private static readonly ILog _log = LogManager.GetLogger(
+            System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
 
         /// <summary>
         /// Converts a pattern containing ? and * characters into a case-
@@ -52,9 +59,46 @@ namespace HFMCmd
         /// </summary>
         public static Regex ConvertWildcardPatternToRE(string pattern)
         {
-            return new Regex("^" + pattern.Replace(".", @"\.").Replace(@"\", @"\\")
+            return new Regex("^" + pattern.Replace(@"\", @"\\").Replace(".", @"\.")
                     .Replace("*", ".*").Replace("?", ".") + "$",
                     RegexOptions.IgnoreCase);
+        }
+
+
+        /// <summary>
+        /// Given a starting directory and a filename pattern, returns a list
+        /// paths of files that match the name pattern.
+        /// </summary>
+        public static List<string> FindMatchingFiles(string sourceDir, string namePattern, bool includeSubDirs)
+        {
+            _log.TraceFormat("Searching for files like '{0}' {1} {2}", namePattern,
+                    includeSubDirs ? "below" : "in", sourceDir);
+            var nameRE = ConvertWildcardPatternToRE(namePattern);
+            return FindMatchingFiles(sourceDir, nameRE, includeSubDirs, 0);
+        }
+
+
+        private static List<string> FindMatchingFiles(string sourceDir, Regex nameRE, bool includeSubDirs, int depth)
+        {
+            var files = new List<string>();
+
+            foreach(var filePath in Directory.GetFiles(sourceDir)) {
+                var file = Path.GetFileName(filePath);
+                if(nameRE.IsMatch(file)) {
+                    _log.DebugFormat("Found file {0}", filePath);
+                    files.Add(filePath);
+                }
+            }
+
+            if(includeSubDirs) {
+                foreach(var dirPath in Directory.GetDirectories(sourceDir)) {
+                    var dir = Utilities.GetDirectoryName(dirPath);
+                    _log.DebugFormat("Recursing into {0}", Path.Combine(sourceDir, dir));
+                    files.AddRange(FindMatchingFiles(Path.Combine(sourceDir, dir), nameRE, includeSubDirs, depth + 1));
+                }
+            }
+
+            return files;
         }
 
 
@@ -62,11 +106,11 @@ namespace HFMCmd
         /// Given a path containing wildcards, returns the file(s) that match
         /// pattern.
         /// </summary>
-        public static string[] GetMatchingFiles(string pathPattern)
+        public static List<string> GetMatchingFiles(string pathPattern)
         {
             var dir = Path.GetDirectoryName(pathPattern);
             var pattern = Path.GetFileName(pathPattern);
-            return Directory.GetFiles(dir, pattern);
+            return FindMatchingFiles(dir, pattern, false);
         }
 
 

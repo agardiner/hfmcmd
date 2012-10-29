@@ -133,8 +133,8 @@ namespace HFM
             string logFile;
 
             var paths = Utilities.GetMatchingFiles(dataFiles);
-            _log.InfoFormat("Found {0} data files to process", paths.Length);
-            output.InitProgress("Data Load", paths.Length);
+            _log.InfoFormat("Found {0} data files to process", paths.Count);
+            output.InitProgress("Data Load", paths.Count);
             foreach(var dataFile in paths) {
                 if(logDir == null || logDir == "") {
                     logFile = Path.ChangeExtension(dataFile, ".log");

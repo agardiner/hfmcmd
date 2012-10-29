@@ -21,13 +21,6 @@ namespace HFM
     /// Represents a class for working with HFM documents, such as web forms,
     /// data grids etc.
     /// <summary>
-    /// TODO: Add following commands:
-    /// - CreateFolder
-    /// - DeleteDocuments
-    /// - EnumDocuments
-    /// - GetDocument
-    /// - LoadDocuments
-    /// - SaveDocument
     public class Documents
     {
 
@@ -255,12 +248,8 @@ namespace HFM
 
         // Reference to HFM HFMwManageDocuments object
         internal readonly HFMwManageDocuments _documents;
-
         // Cache of folder -> List<DocumentInfo>
         internal Dictionary<string, List<DocumentInfo>> _documentCache;
-
-        // Depth of recursion
-        private int _depth = 0;
 
 
 
@@ -622,12 +611,10 @@ namespace HFM
         }
 
 
-        [Command("Creates a new folder")]
+        [Command("Creates a new document folder in an HFM application")]
         public void CreateFolder(
-                [Parameter("The path to the parent folder in which to create the new folder (note: path must already exist)")]
+                [Parameter("The full document path to the folder to be created")]
                 string path,
-                [Parameter("The name of the new folder")]
-                string folderName,
                 [Parameter("A description for the new folder", DefaultValue = null)]
                 string description,
                 [Parameter("The name of the security class governing access to the folder",
@@ -643,12 +630,20 @@ namespace HFM
                  DefaultValue = false)]
                 bool overwrite)
         {
-            HFM.Try("Creating new folder",
-                    () => _documents.CreateFolderEx(path, folderName, description, securityClass,
-                                                    isPrivate, (int)folderContentType, overwrite));
-            _log.InfoFormat(@"Folder created at {0}", AddFolderToPath(path, folderName));
-            // Update cache
-            LoadCache(path, true);
+            var folders = path.Split('\\');
+            var parent = @"\";
+            for(var i = 1; i < folders.Length; ++i) {
+                if(!DoesDocumentExist(parent, folders[i], EDocumentType.Folder) ||
+                   (overwrite && i == folders.Length - 1)) {
+                    HFM.Try("Creating new folder",
+                            () => _documents.CreateFolderEx(parent, folders[i], description, securityClass,
+                                                            isPrivate, (int)folderContentType, overwrite));
+                    _log.InfoFormat(@"Folder created at {0}", AddFolderToPath(parent, folders[i]));
+                    // Update cache
+                    LoadCache(parent, true);
+                }
+                parent += @"\" + folders[i];
+            }
         }
 
 
@@ -681,50 +676,32 @@ namespace HFM
                 bool overwrite,
                 IOutput output)
         {
-            var nameRE = Utilities.ConvertWildcardPatternToRE(name);
+            var files = Utilities.FindMatchingFiles(sourceDir, name, includeSubDirs);
+            var loaded = 0;
 
-            if(_depth == 0) {
-                _log.InfoFormat("Loading documents from {0} to {1}", sourceDir, targetFolder);
-                // TODO: Use progress
-            }
+            _log.InfoFormat("Loading documents from {0} to {1}", sourceDir, targetFolder);
+            output.InitProgress("Loading documents", files.Count);
 
-            // Upload documents matching name
-            foreach(var dirPath in Directory.GetDirectories(sourceDir)) {
-                var dir = Utilities.GetDirectoryName(dirPath);
-                _log.DebugFormat("Processing directory {0}", dir);
-                if(!DoesDocumentExist(targetFolder, dir, EDocumentType.Folder)) {
-                    CreateFolder(targetFolder, dir, null,
-                                 securityClass, isPrivate, EDocumentType.All, false);
-                }
-                if(includeSubDirs) {
-                    _depth++;
-                    try {
-                        LoadDocuments(Path.Combine(sourceDir, dir), name, Path.Combine(targetFolder, dir),
-                                      includeSubDirs, documentType, securityClass,
-                                      isPrivate, overwrite, output);
-                    }
-                    finally {
-                        _depth--;
-                    }
-                }
-            }
-
-            foreach(var filePath in Directory.GetFiles(sourceDir)) {
+            foreach(var filePath in files) {
                 var file = Path.GetFileName(filePath);
-                if(!nameRE.IsMatch(file)) {
-                    continue;
-                }
-                if(overwrite || !DoesDocumentExist(targetFolder, file,
-                                                   EDocumentType.All)) {
+                var tgtFolder = Path.Combine(targetFolder, Utilities.PathDifference(sourceDir, filePath));
+                CreateFolder(tgtFolder, null, securityClass, isPrivate, EDocumentType.All, false);
+                if(overwrite || !DoesDocumentExist(tgtFolder, file, EDocumentType.All)) {
                     var doc = new DocumentInfo(filePath);
                     if(doc.IsDocumentType(documentType)) {
                         _log.FineFormat("Loading {0} to {1}", file, targetFolder);
                         SaveDocument(targetFolder, doc.Name, doc.Description,
                                      doc.DocumentType, doc.DocumentFileType,
                                      doc.Content, securityClass, isPrivate, overwrite);
+                        loaded++;
                     }
                 }
+                if(output.IterationComplete()) {
+                    break;
+                }
             }
+            output.EndProgress();
+            _log.InfoFormat("Successfully loaded {0} documents to {1}", loaded, targetFolder);
         }
 
 
@@ -764,8 +741,7 @@ namespace HFM
             }
             output.InitProgress("Extracting documents", docs.Count);
             foreach(var doc in docs) {
-                tgtPath = Path.Combine(targetDir,
-                                       Utilities.PathDifference(path, doc.Folder));
+                tgtPath = Path.Combine(targetDir, Utilities.PathDifference(path, doc.Folder));
                 filePath = Path.Combine(tgtPath, doc.DefaultFileName);
                 if(doc.IsFolder) {
                     if(!Directory.Exists(filePath)) {

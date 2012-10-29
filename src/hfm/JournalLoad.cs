@@ -86,8 +86,8 @@ namespace HFM
             string logFile;
 
             var paths = Utilities.GetMatchingFiles(journalFiles);
-            _log.InfoFormat("Found {0} journal files to process", paths.Length);
-            output.InitProgress("Journal Load", paths.Length);
+            _log.InfoFormat("Found {0} journal files to process", paths.Count);
+            output.InitProgress("Journal Load", paths.Count);
             foreach(var jnlFile in paths) {
                 if(logDir == null || logDir == "") {
                     logFile = Path.ChangeExtension(jnlFile, ".log");
