@@ -17,6 +17,9 @@ namespace HFMCmd
     /// </summary>
     public static class StringUtilities
     {
+        /// <summary>
+        /// Capitalizes the first letter of a string
+        /// </summary>
         public static string Capitalize(this string s)
         {
             if(char.IsUpper(s[0])) {
@@ -28,6 +31,10 @@ namespace HFMCmd
         }
 
 
+        /// <summary>
+        /// More generic version of Join, accepting any objects (and calling
+        /// ToString on them to get the string values) to join.
+        /// </summary>
         public static string Join(IEnumerable items, string separator)
         {
             var sb = new StringBuilder();
@@ -149,6 +156,9 @@ namespace HFMCmd
         }
 
 
+        /// <summary>
+        /// Returns the name of the directory, given a path to a directory
+        /// </summary>
         public static string GetDirectoryName(string path)
         {
             var di = new DirectoryInfo(path);
