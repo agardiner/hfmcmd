@@ -139,7 +139,7 @@ namespace Command
                 return Enum.Parse(type, enumVal);
             }
             catch (Exception ex) {
-                // TODO: Handle EnumPrefix option on parameters/settings
+                // TODO: Hide EnumPrefix option on parameters/settings
                 throw new ArgumentException(string.Format("Invalid value '{0}' specified for {1}." +
                             "Valid values are: {2}", val, type,
                             string.Join(", ", Enum.GetNames(type))), ex);

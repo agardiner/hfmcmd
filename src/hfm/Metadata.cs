@@ -7,6 +7,7 @@ using System.Linq;
 using log4net;
 using HSVSESSIONLib;
 using HSVMETADATALib;
+using HFMCONSTANTSLib;
 using HFMSLICECOMLib;
 
 using Command;
@@ -24,6 +25,24 @@ namespace HFM
     }
 
 
+    public enum EDimension
+    {
+        Scenario = tagHFMDIMENSIONS2.DIMID_SCENARIO,
+        Year = tagHFMDIMENSIONS2.DIMID_YEAR,
+        Period = tagHFMDIMENSIONS2.DIMID_PERIOD,
+        View = tagHFMDIMENSIONS2.DIMID_VIEW,
+        Entity = tagHFMDIMENSIONS2.DIMID_ENTITY,
+        Value = tagHFMDIMENSIONS2.DIMID_VALUE,
+        Account = tagHFMDIMENSIONS2.DIMID_ACCOUNT,
+        ICP = tagHFMDIMENSIONS2.DIMID_ICP,
+        CustomBase = tagHFMDIMENSIONS2.DIMID_CUSTOMBASE,
+        Custom1 = tagHFMDIMENSIONS.DIMENSIONCUSTOM1,
+        Custom2 = tagHFMDIMENSIONS.DIMENSIONCUSTOM2,
+        Custom3 = tagHFMDIMENSIONS.DIMENSIONCUSTOM3,
+        Custom4 = tagHFMDIMENSIONS.DIMENSIONCUSTOM4
+    }
+
+
 
     /// <summary>
     /// Wraps the HsvMetadata module, exposing its functionality for querying
@@ -38,32 +57,65 @@ namespace HFM
 
         // Reference to HFM HsvMetadata object
         protected readonly HsvMetadata _hsvMetadata;
+        // True if the installed version of HFM is >= 11.1.2.2
+        protected bool _useExtDims;
+        // Cache of custom dimension ids if HFM version >= 11.1.2.2
+        protected int[] _customDimIds;
+        // Cache of custom dimension names if HFM version >= 11.1.2.2
+        protected string[] _customDimNames;
+        // Cache of custom dimension aliases if HFM version >= 11.1.2.2
+        protected string[] _customDimAliases;
+        // Cache of canonical custom dimension names if HFM version >= 11.1.2.2
+        protected Dictionary<string, int> _customDimMap;
         // Cache of dimensions
-        protected Dictionary<string, Dimension> _dimensions =
-            new Dictionary<string, Dimension>(StringComparer.OrdinalIgnoreCase);
+        protected Dictionary<int, Dimension> _dimensions = new Dictionary<int, Dimension>();
 
 
         /// Returns the HFM HsvMetadata object
         internal HsvMetadata HsvMetadata { get { return _hsvMetadata; } }
 
 
+        internal int[] CustomDimIds
+        {
+            get {
+                if(_customDimIds == null) {
+                    GetCustomDims();
+                }
+                return _customDimIds;
+            }
+        }
+        internal string[] CustomDimNames
+        {
+            get {
+                if(_customDimNames == null) {
+                    GetCustomDims();
+                }
+                return _customDimNames;
+            }
+        }
+        internal string[] CustomDimAliases
+        {
+            get {
+                if(_customDimAliases == null) {
+                    GetCustomDims();
+                }
+                return _customDimAliases;
+            }
+        }
+
+
         /// Returns the Dimension object for the specified dimension
         public Dimension this[string dimName]
         {
             get {
-                if(!_dimensions.ContainsKey(dimName)) {
-                    int dimId = -1;
+                int dimId = GetDimensionId(ref dimName);
+                if(!_dimensions.ContainsKey(dimId)) {
                     IHsvTreeInfo dim = null;
-
-                    // TODO: Determine canonical name of dimension
-
-                    HFM.Try("Retrieving dimension id for {0}", dimName,
-                            () => _hsvMetadata.GetDimensionIdFromName(dimName, out dimId));
                     HFM.Try("Retrieving dimension {0}", dimName,
                             () => dim = (IHsvTreeInfo)_hsvMetadata.GetDimension(dimId));
-                    _dimensions[dimName] = new Dimension(dimName, dim);
+                    _dimensions[dimId] = new Dimension(dimName, dim);
                 }
-                return _dimensions[dimName];
+                return _dimensions[dimId];
             }
         }
 
@@ -73,13 +125,141 @@ namespace HFM
         public Metadata(Session session)
         {
             _hsvMetadata = (HsvMetadata)session.HsvSession.Metadata;
+            _useExtDims = Command.VersionedAttribute.ConvertVersionStringToNumber(HFM.Version) >=
+                   Command.VersionedAttribute.ConvertVersionStringToNumber("11.1.2.2");
         }
 
 
-        public POV POV
+        internal int GetDimensionId(ref string dimName)
         {
-            get {
-                return new POV(this);
+            int dimId;
+
+            switch(dimName.ToUpper()) {
+                case "SCENARIO":
+                case "S":
+                    dimName = "Scenario";
+                    dimId = (int)EDimension.Scenario;
+                    break;
+                case "YEAR":
+                case "Y":
+                    dimId = (int)EDimension.Year;
+                    dimName = "Year";
+                    break;
+                case "PERIOD":
+                case "P":
+                    dimId = (int)EDimension.Period;
+                    dimName = "Period";
+                    break;
+                case "VIEW":
+                case "W":
+                    dimId = (int)EDimension.View;
+                    dimName = "View";
+                    break;
+                case "ENTITY":
+                case "E":
+                    dimId = (int)EDimension.Entity;
+                    dimName = "Entity";
+                    break;
+                case "VALUE":
+                case "V":
+                    dimId = (int)EDimension.Value;
+                    dimName = "Value";
+                    break;
+                case "ACCOUNT":
+                case "A":
+                    dimId = (int)EDimension.Account;
+                    dimName = "Account";
+                    break;
+                case "ICP":
+                case "I":
+                    dimId = (int)EDimension.ICP;
+                    dimName = "ICP";
+                    break;
+                case "CUSTOM1":
+                case "C1":
+                    dimId = (int)EDimension.Custom1;
+                    dimName = "Custom1";
+                    break;
+                case "CUSTOM2":
+                case "C2":
+                    dimId = (int)EDimension.Custom2;
+                    dimName = "Custom2";
+                    break;
+                case "CUSTOM3":
+                case "C3":
+                    dimId = (int)EDimension.Custom3;
+                    dimName = "Custom3";
+                    break;
+                case "CUSTOM4":
+                case "C4":
+                    dimId = (int)EDimension.Custom4;
+                    dimName = "Custom4";
+                    break;
+                default:
+                    if(_customDimNames == null) {
+                        GetCustomDims();
+                    }
+                    if(_useExtDims) {
+                        var re = new Regex(@"^Custom(\d+)$", RegexOptions.IgnoreCase);
+                        var match = re.Match(dimName);
+                        int custom = -1;
+                        if(match.Success) {
+                            custom = int.Parse(match.Groups[1].Value) - 1;
+                            if(custom < _customDimIds.Length) {
+                                dimId = (int)EDimension.CustomBase + custom;
+                                dimName = _customDimNames[custom];
+                            }
+                            else {
+                                throw new ArgumentException(string.Format("Unknown dimension name '{0}'", dimName));
+                            }
+                        }
+                        else {
+                            if(_customDimMap.ContainsKey(dimName)) {
+                                custom = _customDimMap[dimName];
+                                dimId = _customDimIds[custom];
+                                dimName = _customDimNames[custom];
+                            }
+                            else {
+                                throw new ArgumentException(string.Format("Unknown dimension name '{0}'", dimName));
+                            }
+                        }
+                    }
+                    else {
+                        throw new ArgumentException(string.Format("Unknown dimension name '{0}'", dimName));
+                    }
+                    break;
+            }
+            return dimId;
+        }
+
+
+        private void GetCustomDims()
+        {
+            _customDimMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            if(_useExtDims) {
+                object oDimIds = null, oDimNames = null, oDimAliases = null, oSizes = null;
+                HFM.Try("Retrieving custom dimension details",
+                        () => _hsvMetadata.EnumCustomDimsForAppEx(out oDimIds, out oDimNames,
+                                                                  out oDimAliases, out oSizes));
+                _customDimIds = (int[])oDimIds;
+                _customDimNames = HFM.Object2Array<string>(oDimNames);
+                _customDimAliases = HFM.Object2Array<string>(oDimAliases);
+                for(var i = 0; i < _customDimIds.Length; ++i) {
+                    _customDimMap[_customDimNames[i]] = i;
+                    _customDimMap[_customDimAliases[i]] = i;
+                }
+            }
+            else {
+                _customDimIds = new int[] {
+                    (int)EDimension.Custom1, (int)EDimension.Custom2,
+                    (int)EDimension.Custom3, (int)EDimension.Custom4
+                };
+                _customDimNames = new string[] {
+                    "Custom1", "Custom2", "Custom3", "Custom4"
+                };
+                _customDimAliases = new string[] {
+                    "C1", "C2", "C3", "C4"
+                };
             }
         }
 
@@ -159,6 +339,14 @@ namespace HFM
             var members = this[dimension].GetMembers(memberList);
             output.WriteEnumerable(members, "Member");
         }
+
+
+        public Slice Slice(string pov)
+        {
+            return new Slice(this, pov);
+        }
+
+
     }
 
 
@@ -741,50 +929,223 @@ namespace HFM
     }
 
 
-    public class POV
+    /// <summary>
+    /// An object for passing a Member for each of the fixed 12 dimensions
+    /// in HFM pre 11.1.2.2.
+    /// </summary>
+    public struct Cell
     {
-        private HsvMetadata _metadata;
-        private HfmPovStrCOM _hfmPovStrCOM;
-
-        internal HfmPovStrCOM HfmPovStrCOM { get { return _hfmPovStrCOM; } }
-
-
-        public int ScenarioID { get { return -1; } }
-        public int YearID { get { return -1; } }
-        public int PeriodID { get { return -1; } }
-        public int ViewID { get { return -1; } }
-        public int EntityID { get { return -1; } }
-        public int ParentID { get { return -1; } }
-        public int ValueID { get { return -1; } }
-        public int AccountID { get { return -1; } }
-        public int ICPID { get { return -1; } }
-        public int Custom1ID { get { return -1; } }
-        public int Custom2ID { get { return -1; } }
-        public int Custom3ID { get { return -1; } }
-        public int Custom4ID { get { return -1; } }
+        public Member Scenario;
+        public Member Year;
+        public Member Period;
+        public Member View;
+        public Member Entity;
+        public Member Parent;
+        public Member Value;
+        public Member Account;
+        public Member ICP;
+        public Member Custom1;
+        public Member Custom2;
+        public Member Custom3;
+        public Member Custom4;
+    }
 
 
-        public POV(Metadata metadata)
+    public class IncompleteSliceDefinition : Exception
+    {
+        public IncompleteSliceDefinition(string msg) : base(msg) { }
+    }
+
+
+
+    /// <summary>
+    /// A Slice represents a set of member selections for each dimension in an
+    /// HFM application. The slice can then be used to obtain member ids for
+    /// each cell that intersects the slice definition.
+    /// </summary>
+    public class Slice
+    {
+        private Metadata _metadata;
+
+        private Dictionary<string, MemberList> _memberLists;
+
+        public MemberList this[string dimension]
         {
-            _metadata = metadata.HsvMetadata;
-            _hfmPovStrCOM = new HfmPovStrCOM();
+            get {
+                if(!_memberLists.ContainsKey(dimension)) {
+                    throw new IncompleteSliceDefinition("No members have been specified for the {0} dimension");
+                }
+                return _memberLists[dimension];
+            }
+            set {
+                if(_memberLists == null) {
+                    _memberLists = new Dictionary<string, MemberList>(StringComparer.OrdinalIgnoreCase);
+                }
+                _memberLists[dimension] = value;
+            }
         }
 
 
-        public HfmPovCOM FromPOVString(string pov)
+        public Slice(Metadata metadata)
+        {
+            _metadata = metadata;
+        }
+
+
+        public Slice(Metadata metadata, string pov)
+        {
+            _metadata = metadata;
+            MergePOV(pov);
+        }
+
+
+        private void MergePOV(string pov)
+        {
+            var mbrs = pov.Split(new char[] { '.', ';' });
+            foreach(var mbr in mbrs) {
+                var f = mbr.Split('#');
+                var dimension = _metadata[f[0]];
+                _memberLists[dimension.Name] = new MemberList(dimension, f[1]);
+            }
+        }
+
+
+        public HfmPovCOM ToHfmPovCOM(string pov)
         {
             HfmPovCOM oPov = null;
             HFM.Try("Converting to HfmPOVCOM", () => {
-                _hfmPovStrCOM.InitializeFromPovString(_metadata, pov);
-                oPov = _hfmPovStrCOM.ConvertToHfmPovCOM(_metadata);
+                var hfmPovStrCOM = new HfmPovStrCOM();
+                hfmPovStrCOM.InitializeFromPovString(_metadata.HsvMetadata, pov);
+                oPov = hfmPovStrCOM.ConvertToHfmPovCOM(_metadata.HsvMetadata);
             });
             return oPov;
         }
 
 
-        public string ToPOVString()
+        /// <summary>
+        /// Returns an HfmPovCOM object for each cell in the slice.
+        /// </summary>
+        public IEnumerable<HfmPovCOM> POVs()
         {
-            return _hfmPovStrCOM.ToPovString(_metadata, false);
+            foreach(var scenario in this["Scenario"]) {
+                foreach(var year in this["Year"]) {
+                    foreach(var period in this["Period"]) {
+                        foreach(var view in this["View"]) {
+                            foreach(var entity in this["Entity"]) {
+                                foreach(var value in this["Value"]) {
+                                    foreach(var account in this["Account"]) {
+                                        foreach(var icp in this["ICP"]) {
+                                            foreach(var customs in CustomMemberIds()) {
+                                                var pov = new HfmPovCOM();
+                                                pov.Scenario = scenario.Id;
+                                                pov.Year = year.Id;
+                                                pov.Period = period.Id;
+                                                pov.View = view.Id;
+                                                pov.Entity = entity.Id;
+                                                pov.Parent = entity.ParentId;
+                                                pov.Value = value.Id;
+                                                pov.Account = account.Id;
+                                                pov.ICP = icp.Id;
+                                                pov.SetCustoms(_metadata.CustomDimIds, customs);
+                                                yield return pov;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+
+        // Returns a list of arrays of member ids; each item in the list is an
+        // array of member ids representing a single combination of custom
+        // dimension members
+        private List<int[]> CustomMemberIds()
+        {
+            int[] dims = _metadata.CustomDimIds;
+
+            MemberList[] lists = new MemberList[dims.Length];
+            int[] dimSizes = new int[dims.Length];
+            int[] dimIdx = new int[dims.Length];
+
+            int size = 1;
+            int dim;
+            for(dim = 0; dim < dims.Length; ++dim) {
+                lists[dim] = this[_metadata.CustomDimNames[dim]];
+                dimSizes[dim] = lists[dim].MemberIds.Length;
+                size = size * dimSizes[dim];
+            }
+            var mbrIds = new List<int[]>(size);
+
+            for(var i = 0; i < size; ++i) {
+                mbrIds[i] = new int[dims.Length];
+                for(dim = 0; dim < dims.Length; ++dim) {
+                    mbrIds[i][dim] = lists[dim].MemberIds[dimIdx[dim]];
+                }
+                // Update indexers
+                for(dim = 0; dim < dims.Length; ++dim) {
+                    if(dimIdx[dim] + 1 < dimSizes[dim]) {
+                        dimIdx[dim]++;
+                        break;
+                    }
+                    else {
+                        dimIdx[dim] = 0;
+                    }
+                }
+            }
+
+            return mbrIds;
+        }
+
+
+        /// <summary>
+        /// For HFM pre-11.1.2.2, dimensionality was fixed and API calls have a
+        /// field for each dimension. This method returns Cell objects with a
+        /// member from each of the 12 dimensions for each cell in the slice.
+        /// </summary>
+        public IEnumerable<Cell> Cells()
+        {
+            foreach(var scenario in this["Scenario"]) {
+                foreach(var year in this["Year"]) {
+                    foreach(var period in this["Period"]) {
+                        foreach(var view in this["View"]) {
+                            foreach(var entity in this["Entity"]) {
+                                foreach(var value in this["Value"]) {
+                                    foreach(var account in this["Account"]) {
+                                        foreach(var icp in this["ICP"]) {
+                                            foreach(var c1 in this["Custom1"]) {
+                                                foreach(var c2 in this["Custom2"]) {
+                                                    foreach(var c3 in this["Custom3"]) {
+                                                        foreach(var c4 in this["Custom4"]) {
+                                                            yield return new Cell() {
+                                                                Scenario = scenario,
+                                                                Year = year,
+                                                                Period = period,
+                                                                View = view,
+                                                                Entity = entity,
+                                                                Value = value,
+                                                                Account = account,
+                                                                ICP = icp,
+                                                                Custom1 = c1,
+                                                                Custom2 = c2,
+                                                                Custom3 = c3,
+                                                                Custom4 = c4,
+                                                            };
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
     }

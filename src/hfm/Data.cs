@@ -55,19 +55,23 @@ namespace HFM
 
         protected void SetCellInternal(Metadata metadata, string pov, double value, bool clear)
         {
+            Slice slice = metadata.Slice(pov);
             if(Command.VersionedAttribute.ConvertVersionStringToNumber(HFM.Version) >=
                Command.VersionedAttribute.ConvertVersionStringToNumber("11.1.2.2")) {
-                HFM.Try("Setting cell",
-                        () => _hsvData.SetCellExtDim(metadata.POV.FromPOVString(pov), value, clear));
+                foreach(var cellPOV in slice.POVs()) {
+                    HFM.Try("Setting cell",
+                            () => _hsvData.SetCellExtDim(cellPOV, value, clear));
+                }
             }
             else {
-                var cell = metadata.POV;
-                HFM.Try("Setting cell",
-                        () => _hsvData.SetCell(cell.ScenarioID, cell.YearID, cell.PeriodID, cell.ViewID,
-                                               cell.EntityID, cell.ParentID, cell.ValueID,
-                                               cell.AccountID, cell.ICPID, cell.Custom1ID,
-                                               cell.Custom2ID, cell.Custom3ID, cell.Custom4ID,
-                                               value, clear));
+                foreach(var cell in slice.Cells()) {
+                    HFM.Try("Setting cell",
+                            () => _hsvData.SetCell(cell.Scenario.Id, cell.Year.Id, cell.Period.Id, cell.View.Id,
+                                                   cell.Entity.Id, cell.Entity.ParentId, cell.Value.Id,
+                                                   cell.Account.Id, cell.ICP.Id, cell.Custom1.Id,
+                                                   cell.Custom2.Id, cell.Custom3.Id, cell.Custom4.Id,
+                                                   value, clear));
+                }
             }
         }
 
