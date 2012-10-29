@@ -204,13 +204,15 @@ namespace CommandLine
         /// Writes a line of text to the console, ensuring lines the same width
         /// as the console don't output an unnecessary new-line.
         /// </summary>
-        public void WriteLine(string line)
+        public void WriteLine(string text)
         {
-            if(line.Length == ConsoleWidth) {
-                System.Console.Out.Write(line);
-            }
-            else {
-                System.Console.Out.WriteLine(line);
+            foreach(var line in text.Split('\n')) {
+                if(line.Length == ConsoleWidth) {
+                    System.Console.Out.Write(line);
+                }
+                else {
+                    System.Console.Out.WriteLine(line);
+                }
             }
         }
 

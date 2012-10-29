@@ -361,7 +361,6 @@ namespace HFM
                                 FirstOrDefault(t => t.TaskId == taskId);
 
             if(task != null) {
-                output.InitProgress(task.TaskType.ToString());
                 var pm = new ProgressMonitor(output);
                 pm.MonitorProgress(delegate(bool cancel, out bool isRunning) {
                     int progress;
@@ -374,7 +373,7 @@ namespace HFM
 
                     return progress;
                 });
-                output.EndProgress();
+                output.IterationComplete();
             }
             else {
                 _log.InfoFormat("No running task was found with task id {0}", taskId);

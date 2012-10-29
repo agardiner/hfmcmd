@@ -69,7 +69,7 @@ namespace Command
         /// Function for converting a version to an 8-digit number that can be
         /// compared with another version string (after conversion) to determine
         /// which is newer.
-        private int ConvertVersionStringToNumber(string ver)
+        public static int ConvertVersionStringToNumber(string ver)
         {
             var parts = ver.Split('.');
             int verNum = 0;
