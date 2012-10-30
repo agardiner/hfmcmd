@@ -1071,6 +1071,8 @@ namespace HFM
         /// </summary>
         public IEnumerable<HfmPovCOM> POVs()
         {
+            var customIds = CustomMemberIds();
+
             foreach(var scenario in MemberList("Scenario")) {
                 foreach(var year in MemberList("Year")) {
                     foreach(var period in MemberList("Period")) {
@@ -1079,7 +1081,7 @@ namespace HFM
                                 foreach(var value in MemberList("Value")) {
                                     foreach(var account in MemberList("Account")) {
                                         foreach(var icp in MemberList("ICP")) {
-                                            foreach(var customs in CustomMemberIds()) {
+                                            foreach(var customs in customIds) {
                                                 var pov = new HfmPovCOM();
                                                 pov.Scenario = scenario.Id;
                                                 pov.Year = year.Id;

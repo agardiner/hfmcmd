@@ -266,6 +266,37 @@ namespace CommandLine
             return esc;
         }
 
+
+        /// <summary>
+        /// Reads a password from the command-line, echoing * for each keypress.
+        /// </summary>
+        public string ReadPassword(string prompt)
+        {
+            ConsoleKeyInfo ki;
+            var pwd = new System.Security.SecureString();
+
+            System.Console.Write(prompt);
+            while(true) {
+                ki = System.Console.ReadKey(true);
+                if(ki.Key == ConsoleKey.Enter) {
+                    break;
+                }
+                else if(ki.Key == ConsoleKey.Backspace) {
+                    if(pwd.Length > 0) {
+                        pwd.RemoveAt(pwd.Length - 1);
+                        System.Console.Write("\b \b");
+                    }
+                }
+                else {
+                    pwd.AppendChar(c);
+                    System.Console.Write('*');
+                }
+            }
+            System.Console.WriteLine();
+
+            return pwd.ToString();
+        }
+
     }
 
 }
