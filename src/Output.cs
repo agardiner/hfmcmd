@@ -435,15 +435,13 @@ namespace HFMCmd
             _iteration++;
             _progress = 0;
             _cancelled = _cancelled || OutputHelper.ShouldCancel();
-            if(_iteration >= _totalIterations) {
-                Operation = null;
-            }
             return _cancelled;
         }
 
 
         public virtual void EndProgress()
         {
+            Operation = null;
         }
 
 
@@ -682,22 +680,23 @@ namespace HFMCmd
 
         public override bool SetProgress(int progress)
         {
-            _cancelled = _cancelled || _cui.EscPressed() || OutputHelper.ShouldCancel();
-            _progress = progress;
-
-
-            // Finally, write the bar to the console
-            _cui.ClearLine();
+            base.SetProgress(progress);
             RenderProgressBar();
+            return _cancelled;
+        }
 
+
+        public override bool IterationComplete()
+        {
+            base.IterationComplete();
+            RenderProgressBar();
             return _cancelled;
         }
 
 
         public override void EndProgress()
         {
-            Operation = null;
-            _spin = 0;
+            base.EndProgress();
             _cui.ClearLine();
         }
 
@@ -741,6 +740,7 @@ namespace HFMCmd
             sb.Remove(barMid, pctStr.Length);
             sb.Insert(barMid, pctStr);
 
+            _cui.ClearLine();
             _cui.Write(sb.ToString());
         }
 

@@ -39,7 +39,7 @@ namespace HFM
                 double amount,
                 IOutput output)
         {
-            SetCellInternal(metadata, slice, value, false, output);
+            SetCellInternal(metadata, slice, amount, false, output);
         }
 
 
