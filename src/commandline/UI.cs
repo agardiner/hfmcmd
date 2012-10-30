@@ -257,13 +257,22 @@ namespace CommandLine
         {
             bool esc = false;
 
-            if (System.Console.KeyAvailable) {
+            if(System.Console.KeyAvailable) {
                 var keyInfo = System.Console.ReadKey();
                 if(keyInfo.Key == System.ConsoleKey.Escape) {
                     esc = true;
                 }
             }
             return esc;
+        }
+
+
+        /// <summary>
+        /// For completeness - read a line of input from the console.
+        /// </summary>
+        public string ReadLine()
+        {
+            return System.Console.ReadLine();
         }
 
 
