@@ -226,12 +226,6 @@ namespace Command
         /// Gets or sets a single setting in the settings collection.
         /// </summary>
         object this[string key] { get; set; }
-
-        /// <summary>
-        /// Returns the default value for a single setting in the collection.
-        /// </summary>
-        object DefaultValue(string key);
-
     }
 
 

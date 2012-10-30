@@ -74,6 +74,9 @@ namespace HFM
         /// Returns the HFM HsvMetadata object
         internal HsvMetadata HsvMetadata { get { return _hsvMetadata; } }
 
+        /// Returns true if this application is 11.1.2.2 or later
+        public bool HasVariableCustoms { get { return _useExtDims; } }
+
 
         internal int[] CustomDimIds
         {
@@ -174,26 +177,6 @@ namespace HFM
                 case "I":
                     dimId = (int)EDimension.ICP;
                     dimName = "ICP";
-                    break;
-                case "CUSTOM1":
-                case "C1":
-                    dimId = (int)EDimension.Custom1;
-                    dimName = "Custom1";
-                    break;
-                case "CUSTOM2":
-                case "C2":
-                    dimId = (int)EDimension.Custom2;
-                    dimName = "Custom2";
-                    break;
-                case "CUSTOM3":
-                case "C3":
-                    dimId = (int)EDimension.Custom3;
-                    dimName = "Custom3";
-                    break;
-                case "CUSTOM4":
-                case "C4":
-                    dimId = (int)EDimension.Custom4;
-                    dimName = "Custom4";
                     break;
                 default:
                     if(_customDimNames == null) {
@@ -539,6 +522,7 @@ namespace HFM
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
 
+        public const int ID_NOT_NEEDED = -1;
         public const int ID_NOT_SPECIFIED = -2;
 
         protected Dimension _dimension;
@@ -576,9 +560,12 @@ namespace HFM
                     if(_parentName != null) {
                         _parentId = _dimension.GetId(_parentName);
                     }
-                    else {
-                        HFM.Try("Retrieving default parent id for {0}", _dimension.Name,
+                    else if(_dimension.IsEntity) {
+                        HFM.Try("Retrieving default parent id for {0} {1}", _dimension.Name, _name != null ? _name : _id.ToString(),
                                 () => _dimension.HsvTreeInfo.GetDefaultParent(Id, out _parentId));
+                    }
+                    else {
+                        _parentId = ID_NOT_NEEDED;
                     }
                 }
                 return _parentId;
@@ -750,7 +737,7 @@ namespace HFM
         /// as {[Base]}.
         /// </summary>
         protected internal MemberList(Dimension dimension, string memberSpec)
-            : this(dimension, new string[] { memberSpec })
+            : this(dimension, memberSpec.Split(','))
         { }
 
 
@@ -799,6 +786,12 @@ namespace HFM
         IEnumerator IEnumerable.GetEnumerator()
         {
             return GetEnumerator();
+        }
+
+
+        public override string ToString()
+        {
+            return string.Join(", ", _memberSpecs.ToArray());
         }
 
 
@@ -963,29 +956,78 @@ namespace HFM
     /// HFM application. The slice can then be used to obtain member ids for
     /// each cell that intersects the slice definition.
     /// </summary>
-    public class Slice
+    [Setting("POV", "A Point-of-View expression, such as 'S#Actual.Y#2010.P#May.W#YTD.E#E1.V#<Entity Currency>...'",
+             ParameterType = typeof(string)),
+     Setting("Scenario", "Scenario member(s) to include in slice",
+             ParameterType = typeof(string)),
+     Setting("Year", "Year member(s) to include in slice",
+             ParameterType = typeof(string)),
+     Setting("Period", "Period member(s) to include in slice",
+             ParameterType = typeof(string)),
+     Setting("View", "View member(s) to include in slice",
+             ParameterType = typeof(string)),
+     Setting("Entity", "Entity member(s) to include in slice",
+             ParameterType = typeof(string)),
+     Setting("Value", "Value member(s) to include in slice",
+             ParameterType = typeof(string)),
+     Setting("Account", "Account member(s) to include in slice",
+             ParameterType = typeof(string)),
+     Setting("ICP", "ICP member(s) to include in slice",
+             ParameterType = typeof(string))]
+    // TODO: Work out how we can specify Custom member settings
+    public class Slice : ISettingsCollection
     {
+        // Reference to class logger
+        protected static readonly ILog _log = LogManager.GetLogger(
+            System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
         private Metadata _metadata;
 
-        private Dictionary<string, MemberList> _memberLists;
+        private string _pov;
+        private Dictionary<string, MemberList> _memberLists =
+            new Dictionary<string, MemberList>(StringComparer.OrdinalIgnoreCase);
 
-        public MemberList this[string dimension]
+        public object this[string dimension]
         {
             get {
+                if(dimension == "POV") {
+                    return _pov;
+                }
                 if(!_memberLists.ContainsKey(dimension)) {
-                    throw new IncompleteSliceDefinition("No members have been specified for the {0} dimension");
+                    throw new IncompleteSliceDefinition(string.Format(
+                                "No members have been specified for the {0} dimension", dimension));
                 }
                 return _memberLists[dimension];
             }
             set {
-                if(_memberLists == null) {
-                    _memberLists = new Dictionary<string, MemberList>(StringComparer.OrdinalIgnoreCase);
+                if(dimension == "POV") {
+                    MergePOV(value as string);
                 }
-                _memberLists[dimension] = value;
+                else {
+                    if(_memberLists == null) {
+                        _memberLists = new Dictionary<string, MemberList>(StringComparer.OrdinalIgnoreCase);
+                    }
+                    if(value is MemberList) {
+                        _memberLists[dimension] = value as MemberList;
+                    }
+                    else if(value is string) {
+                        _memberLists[dimension] = new MemberList(_metadata[dimension], value as string);
+                    }
+                    else {
+                        throw new ArgumentException(string.Format("Invalid type for Slice dimension {0}", dimension));
+                    }
+                }
             }
         }
 
 
+        public MemberList MemberList(string dimension)
+        {
+            return this[dimension] as MemberList;
+        }
+
+
+        [Factory(SingleUse = true)]
         public Slice(Metadata metadata)
         {
             _metadata = metadata;
@@ -1001,10 +1043,12 @@ namespace HFM
 
         private void MergePOV(string pov)
         {
+            _pov = pov;
             var mbrs = pov.Split(new char[] { '.', ';' });
             foreach(var mbr in mbrs) {
                 var f = mbr.Split('#');
                 var dimension = _metadata[f[0]];
+                _log.DebugFormat("Creating {0} member list for {1}", dimension.Name, f[1]);
                 _memberLists[dimension.Name] = new MemberList(dimension, f[1]);
             }
         }
@@ -1027,14 +1071,14 @@ namespace HFM
         /// </summary>
         public IEnumerable<HfmPovCOM> POVs()
         {
-            foreach(var scenario in this["Scenario"]) {
-                foreach(var year in this["Year"]) {
-                    foreach(var period in this["Period"]) {
-                        foreach(var view in this["View"]) {
-                            foreach(var entity in this["Entity"]) {
-                                foreach(var value in this["Value"]) {
-                                    foreach(var account in this["Account"]) {
-                                        foreach(var icp in this["ICP"]) {
+            foreach(var scenario in MemberList("Scenario")) {
+                foreach(var year in MemberList("Year")) {
+                    foreach(var period in MemberList("Period")) {
+                        foreach(var view in MemberList("View")) {
+                            foreach(var entity in MemberList("Entity")) {
+                                foreach(var value in MemberList("Value")) {
+                                    foreach(var account in MemberList("Account")) {
+                                        foreach(var icp in MemberList("ICP")) {
                                             foreach(var customs in CustomMemberIds()) {
                                                 var pov = new HfmPovCOM();
                                                 pov.Scenario = scenario.Id;
@@ -1074,14 +1118,15 @@ namespace HFM
             int size = 1;
             int dim;
             for(dim = 0; dim < dims.Length; ++dim) {
-                lists[dim] = this[_metadata.CustomDimNames[dim]];
+                lists[dim] = MemberList(_metadata.CustomDimNames[dim]);
                 dimSizes[dim] = lists[dim].MemberIds.Length;
                 size = size * dimSizes[dim];
             }
+            _log.DebugFormat("Size of custom member cartesian join: {0}", size);
             var mbrIds = new List<int[]>(size);
 
             for(var i = 0; i < size; ++i) {
-                mbrIds[i] = new int[dims.Length];
+                mbrIds.Add(new int[dims.Length]);
                 for(dim = 0; dim < dims.Length; ++dim) {
                     mbrIds[i][dim] = lists[dim].MemberIds[dimIdx[dim]];
                 }
@@ -1108,18 +1153,18 @@ namespace HFM
         /// </summary>
         public IEnumerable<Cell> Cells()
         {
-            foreach(var scenario in this["Scenario"]) {
-                foreach(var year in this["Year"]) {
-                    foreach(var period in this["Period"]) {
-                        foreach(var view in this["View"]) {
-                            foreach(var entity in this["Entity"]) {
-                                foreach(var value in this["Value"]) {
-                                    foreach(var account in this["Account"]) {
-                                        foreach(var icp in this["ICP"]) {
-                                            foreach(var c1 in this["Custom1"]) {
-                                                foreach(var c2 in this["Custom2"]) {
-                                                    foreach(var c3 in this["Custom3"]) {
-                                                        foreach(var c4 in this["Custom4"]) {
+            foreach(var scenario in MemberList("Scenario")) {
+                foreach(var year in MemberList("Year")) {
+                    foreach(var period in MemberList("Period")) {
+                        foreach(var view in MemberList("View")) {
+                            foreach(var entity in MemberList("Entity")) {
+                                foreach(var value in MemberList("Value")) {
+                                    foreach(var account in MemberList("Account")) {
+                                        foreach(var icp in MemberList("ICP")) {
+                                            foreach(var c1 in MemberList("Custom1")) {
+                                                foreach(var c2 in MemberList("Custom2")) {
+                                                    foreach(var c3 in MemberList("Custom3")) {
+                                                        foreach(var c4 in MemberList("Custom4")) {
                                                             yield return new Cell() {
                                                                 Scenario = scenario,
                                                                 Year = year,

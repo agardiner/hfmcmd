@@ -309,6 +309,8 @@ namespace Command
                 Set(result);
             }
 
+            // TODO: Purge any single use objects from the context
+
             return result;
         }
 
@@ -383,6 +385,7 @@ namespace Command
                 }
                 // If there is a factory to create this type, then try to create it
                 else if(_registry.Contains(param.ParameterType)) {
+                    // TODO: Deal with single use objects
                     foreach(var step in FindPathToType(param.ParameterType, cmd)) {
                         Instantiate(step, args);
                     }

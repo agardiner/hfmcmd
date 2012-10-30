@@ -572,7 +572,9 @@ namespace HFM
                         () => _documents.DeleteDocuments(paths, names, (int)doc.DocumentType,
                                                          (int)doc.DocumentFileType, false));
                 count++;
-                output.IterationComplete();
+                if(output.IterationComplete()) {
+                    break;
+                }
                 if(doc.DocumentType == EDocumentType.Folder) {
                     _documentCache.Remove(AddFolderToPath(doc.Folder, doc.Name));
                 }

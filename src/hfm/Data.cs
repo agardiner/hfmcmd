@@ -1,9 +1,11 @@
 using System;
+using System.Linq;
 
 using log4net;
 using HSVDATALib;
 
 using Command;
+using HFMCmd;
 
 
 namespace HFM
@@ -29,41 +31,45 @@ namespace HFM
         }
 
 
-        [Command("Sets a cell to the specified value")]
+        [Command("Sets a cell or slice to the specified value")]
         public void SetCell(
                 Metadata metadata,
-                [Parameter("The POV string, e.g. 'S#Actual.Y#2012.P#Jan." +
-                           "W#YTD.E#E100.V#<Entity Currency>.A#A1234.C1#[None].C2#[None]'")]
-                string pov,
+                Slice slice,
                 [Parameter("The value to set the cell to")]
-                double value)
+                double amount,
+                IOutput output)
         {
-            SetCellInternal(metadata, pov, value, false);
+            SetCellInternal(metadata, slice, value, false, output);
         }
 
 
-        [Command("Clears data fron a cell")]
+        [Command("Clears data fron a cell or slice")]
         public void ClearCell(
                 Metadata metadata,
-                [Parameter("The POV string, e.g. 'S#Actual.Y#2012.P#Jan." +
-                           "W#YTD.E#E100.V#<Entity Currency>.A#A1234.C1#[None].C2#[None]'")]
-                string pov)
+                Slice slice,
+                IOutput output)
         {
-            SetCellInternal(metadata, pov, 0, true);
+            SetCellInternal(metadata, slice, 0, true, output);
         }
 
 
-        protected void SetCellInternal(Metadata metadata, string pov, double value, bool clear)
+        protected void SetCellInternal(Metadata metadata, Slice slice, double value, bool clear, IOutput output)
         {
-            Slice slice = metadata.Slice(pov);
-            if(Command.VersionedAttribute.ConvertVersionStringToNumber(HFM.Version) >=
-               Command.VersionedAttribute.ConvertVersionStringToNumber("11.1.2.2")) {
+            if(metadata.HasVariableCustoms) {
+                var povs = slice.POVs().ToArray();
+                output.InitProgress(string.Format("{0} cells", clear ? "Clearing" : "Setting"), povs.Length);
                 foreach(var cellPOV in slice.POVs()) {
                     HFM.Try("Setting cell",
                             () => _hsvData.SetCellExtDim(cellPOV, value, clear));
+                    if(output.IterationComplete()) {
+                        break;
+                    }
                 }
+                output.EndProgress();
             }
             else {
+                var cells = slice.Cells().ToArray();
+                output.InitProgress(string.Format("{0} cells", clear ? "Clearing" : "Setting"), cells.Length);
                 foreach(var cell in slice.Cells()) {
                     HFM.Try("Setting cell",
                             () => _hsvData.SetCell(cell.Scenario.Id, cell.Year.Id, cell.Period.Id, cell.View.Id,
@@ -71,7 +77,11 @@ namespace HFM
                                                    cell.Account.Id, cell.ICP.Id, cell.Custom1.Id,
                                                    cell.Custom2.Id, cell.Custom3.Id, cell.Custom4.Id,
                                                    value, clear));
+                    if(output.IterationComplete()) {
+                        break;
+                    }
                 }
+                output.EndProgress();
             }
         }
 

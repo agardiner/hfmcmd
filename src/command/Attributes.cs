@@ -121,7 +121,12 @@ namespace Command
      AllowMultiple = false)]
     public class FactoryAttribute : Attribute
     {
+        /// Flag indicating whether this Factory is the primary means for
+        /// obtaining these objects, or an alternate
         public bool Alternate = false;
+        /// Flag indicating whether factory object can be persisted in context
+        /// and reused for other command invocations
+        public bool SingleUse = false;
     }
 
 
