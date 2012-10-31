@@ -47,26 +47,18 @@ end
 
 
 def increment_build
-  version_re =   /(?<pre>.+Version)\("(?<version>\d+)\.(?<major>\d+)\.(?<minor>\d+)\.(?<build>\d+)"\)(?<post>.+)/
+  require 'erb'
+
   commits = `git log --oneline`
   commits = commits.split("\n")
-  hash = commits[0].split(' ')[0]
-  lines = File.readlines 'properties\AssemblyInfo.cs'
-
-  build = nil
-  File.open('properties\AssemblyInfo.cs', 'wb') do |f|
-    lines.each do |line|
-      if line =~ /(.+AssemblyProduct\(")(\w+)(?: \(\w+\))?("\).*)/
-        f.puts "#{$1}#{$2} (#{hash})#{$3}"
-      elsif m = version_re.match(line)
-        build = "#{m[:version]}.#{m[:major]}.#{m[:minor]}.#{commits.size}"
-        f.puts %Q(#{m[:pre]}("#{build}")#{m[:post]})
-      else
-        f.puts line
-      end
-    end
+  @build_num = commits.size
+  @git_hash = commits[0].split(' ')[0]
+  template = File.read('properties\AssemblyInfo.cs.erb')
+  erb = ERB.new(template)
+  File.open('gen\AssemblyInfo.cs', "w") do |f|
+    f.puts erb.result
   end
-  puts "Build is now: #{build}"
+  puts "Build is now: #{@build_num}"
 end
 
 
@@ -85,7 +77,7 @@ def compile(version)
     hfm << "#{s[:hfm_ref]}:#{File.basename(dll)}"
   end
   resources = FileList['gen/*.resources'].map{ |f| "/resource:#{f.gsub('/', '\\')}" }
-  source = "src\\*.cs src\\command\\*.cs src\\commandline\\*.cs src\\yaml\\*.cs src\\hfm\\*.cs gen\\*.cs properties\\*.cs"
+  source = "src\\*.cs src\\command\\*.cs src\\commandline\\*.cs src\\yaml\\*.cs src\\hfm\\*.cs gen\\*.cs"
 
   "#{s[:dotnet]}\\csc.exe #{options} #{log4net_ref} #{hfm.join(' ')} #{resources.join(' ')} #{source}"
 end
@@ -105,6 +97,7 @@ end
 
 directory BUILD_DIR
 
+
 # Define a rule for converting .resx files into .resources
 rule '.resources' => proc{ |t| "resources/#{t.split('.')[2]}.resx" } do |t|
   sh compile_resource(t.source)
@@ -120,11 +113,17 @@ RESOURCES.each do |resx|
 end
 
 
-PROPERTIES.each do |prop|
-  file prop
-  task :properties => prop
+# Define rule for generating AssemblyInfo.cs
+file 'properties/AssemblyInfo.cs.erb'
+file 'gen/AssemblyInfo.cs' => 'properties/AssemblyInfo.cs.erb' do
+  increment_build
 end
+task :properties => 'gen/AssemblyInfo.cs'
 
+
+task :set_build do
+  increment_build
+end
 
 
 namespace :dotnet35 do
@@ -203,8 +202,4 @@ end
 
 
 task :default => 'dotnet35:build'
-task :build => ['dotnet35:build', 'dotnet40:build']
-
-task :inc do
-  increment_build
-end
+task :build => [:set_build, 'dotnet35:build', 'dotnet40:build']
