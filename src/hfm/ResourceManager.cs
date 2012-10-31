@@ -1,3 +1,4 @@
+using System;
 using System.Runtime.InteropServices;
 
 using log4net;
@@ -25,7 +26,7 @@ namespace HFM
         private static bool _loggedErrorMessagesUnavailable = false;
 
         /// The current version of HFM that is installed on this machine
-        public static readonly string Version;
+        public static readonly Version Version;
 
 
         // Static initializer - initializes HsvResourceManager
@@ -35,7 +36,7 @@ namespace HFM
                 _resourceManager = new HsvResourceManager();
                 _resourceManager.Initialize((short)tagHFM_TIERS.HFM_TIER1);
 
-                Version = (string)_resourceManager.GetCurrentVersionInUserDisplayFormat();
+                Version = new Version((string)_resourceManager.GetCurrentVersionInUserDisplayFormat());
             }
             catch (COMException ex) {
                 unchecked {

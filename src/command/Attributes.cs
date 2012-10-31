@@ -53,31 +53,15 @@ namespace Command
 
         /// Checks if the setting is current for a specified version, based on
         /// the Since and/or Deprecated settings.
-        public bool IsCurrent(string version)
+        public bool IsCurrent(Version version)
         {
             bool current = true;
             if(IsVersioned) {
-                var ver = ConvertVersionStringToNumber(version);
-                var from = Since != null ? ConvertVersionStringToNumber(Since) : ver;
-                var to = Deprecated != null ? ConvertVersionStringToNumber(Deprecated) : ver + 1;
-                current = ver >= from && ver < to;
+                var from = Since != null ? new Version(Since) : null;
+                var to = Deprecated != null ? new Version(Deprecated) : null;
+                current = (from == null || version >= from) && (to == null || version < to);
             }
             return current;
-        }
-
-
-        /// Function for converting a version to an 8-digit number that can be
-        /// compared with another version string (after conversion) to determine
-        /// which is newer.
-        public static int ConvertVersionStringToNumber(string ver)
-        {
-            var parts = ver.Split('.');
-            int verNum = 0;
-
-            for(var i = 0; i < 4; i++) {
-                verNum = verNum * 100 + (i < parts.Length ? int.Parse(parts[i]) : 0);
-            }
-            return verNum;
         }
 
 

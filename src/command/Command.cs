@@ -65,7 +65,7 @@ namespace Command
         }
 
 
-        public bool IsCurrent(string ver)
+        public bool IsCurrent(Version ver)
         {
             return CommandAttribute.IsCurrent(ver);
         }
@@ -105,7 +105,7 @@ namespace Command
         bool IsVersioned { get; }
 
         /// Is the setting current for the specified version?
-        bool IsCurrent(string version);
+        bool IsCurrent(Version version);
         /// Returns true if the setting has been tagged with the specified UDA
         bool HasUda(string uda);
     }
@@ -183,7 +183,7 @@ namespace Command
         }
 
         /// Returns true if the parameter is current
-        public bool IsCurrent(string version)
+        public bool IsCurrent(Version version)
         {
             return _paramAttribute != null ? _paramAttribute.IsCurrent(version) : true;
         }

@@ -128,8 +128,7 @@ namespace HFM
         public Metadata(Session session)
         {
             _hsvMetadata = (HsvMetadata)session.HsvSession.Metadata;
-            _useExtDims = Command.VersionedAttribute.ConvertVersionStringToNumber(HFM.Version) >=
-                   Command.VersionedAttribute.ConvertVersionStringToNumber("11.1.2.2");
+            _useExtDims = HFM.Version >= new Version("11.1.2.2");
         }
 
 

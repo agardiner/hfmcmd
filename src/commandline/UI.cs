@@ -297,7 +297,7 @@ namespace CommandLine
                     }
                 }
                 else {
-                    pwd.AppendChar(c);
+                    pwd.AppendChar(ki.KeyChar);
                     System.Console.Write('*');
                 }
             }
