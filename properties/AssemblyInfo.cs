@@ -9,7 +9,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyDescription("A command-line interface to Oracle Hyperion Financial Management.")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("http://github.com/agardiner/hfm-cmd")]
-[assembly: AssemblyProduct("HFMCmd")]
+[assembly: AssemblyProduct("HFMCmd (2c79c5b)")]
 [assembly: AssemblyCopyright("Adam Gardiner, 2012")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -26,5 +26,5 @@ using System.Runtime.InteropServices;
 //      Build Number
 //      Revision
 //
-[assembly: AssemblyVersion("0.0.1")]
-[assembly: AssemblyFileVersion("0.0.1")]
+[assembly: AssemblyVersion("0.1.0.167")]
+[assembly: AssemblyFileVersion("0.1.0.167")]

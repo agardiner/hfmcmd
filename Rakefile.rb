@@ -45,6 +45,30 @@ def settings_for_version(version)
 end
 
 
+def increment_build
+  version_re =   /(?<pre>.+Version)\("(?<version>\d+)\.(?<major>\d+)\.(?<minor>\d+)\.(?<build>\d+)"\)(?<post>.+)/
+  commits = `git log --oneline`
+  commits = commits.split("\n")
+  hash = commits[0].split(' ')[0]
+  lines = File.readlines 'properties\AssemblyInfo.cs'
+
+  build = nil
+  File.open('properties\AssemblyInfo.cs', 'wb') do |f|
+    lines.each do |line|
+      if line =~ /(.+AssemblyProduct\(")(\w+)(?: \(\w+\))?("\).*)/
+        f.puts "#{$1}#{$2} (#{hash})#{$3}"
+      elsif m = version_re.match(line)
+        build = "#{m[:version]}.#{m[:major]}.#{m[:minor]}.#{commits.size}"
+        f.puts %Q(#{m[:pre]}("#{build}")#{m[:post]})
+      else
+        f.puts line
+      end
+    end
+  end
+  puts "Build is now: #{build}"
+end
+
+
 def compile_resource(source)
   name = File.basename(source, '.resx')
   "tools\\ResGen.exe #{source} gen\\HFMCmd.Resource.#{name}.resources /str:cs,HFMCmd.Resource,#{name},gen\\#{name}Resource.cs"
@@ -171,3 +195,7 @@ end
 
 task :default => 'dotnet35:build'
 task :build => ['dotnet35:build', 'dotnet40:build']
+
+task :inc do
+  increment_build
+end
