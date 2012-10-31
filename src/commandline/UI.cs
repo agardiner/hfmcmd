@@ -129,7 +129,8 @@ namespace CommandLine
         /// </summary>
         public void DisplayUsage(TextWriter console, Dictionary<string, object> args)
         {
-            console.WriteLine("{0} {1}", ApplicationInfo.Title, ApplicationInfo.Version.ToString(3));
+            console.WriteLine("{0} {1}  [{2}]", ApplicationInfo.Title,
+                    ApplicationInfo.Version.ToString(), ApplicationInfo.Product);
             console.WriteLine("Copyright (c) {0}", ApplicationInfo.Copyright);
 
             console.WriteLine();
@@ -141,7 +142,9 @@ namespace CommandLine
             }
 
             console.WriteLine();
+            console.WriteLine();
             console.WriteLine("Usage:");
+            console.WriteLine();
             console.Write("    {0}", ApplicationInfo.ExeName);
 
             var posArgs = Definition.PositionalArguments.ToList();
@@ -168,21 +171,22 @@ namespace CommandLine
 
             if(posArgs.Count > 0) {
                 console.WriteLine();
-                console.WriteLine("Positional Arguments:");
+                console.WriteLine("  Positional Arguments:");
                 posArgs.ForEach(x => OutputArg(x, console));
             }
 
             if(Definition.KeywordArguments.Count > 0) {
                 console.WriteLine();
-                console.WriteLine("Keyword Arguments:");
+                console.WriteLine("  Keyword Arguments:");
                 Definition.KeywordArguments.ForEach(x => OutputArg(x, console));
             }
 
             if(Definition.FlagArguments.Count > 0) {
                 console.WriteLine();
-                console.WriteLine("Flag Arguments:");
+                console.WriteLine("  Flag Arguments:");
                 Definition.FlagArguments.ForEach(x => OutputArg(x, console));
             }
+            console.WriteLine();
         }
 
         /// Outputs a single argument definition
@@ -440,6 +444,14 @@ namespace CommandLine
             get {
                 object[] attributes = AppAssembly.GetCustomAttributes(typeof(AssemblyCopyrightAttribute), false);
                 return attributes.Length == 0 ? "" : ((AssemblyCopyrightAttribute)attributes[0]).Copyright;
+            }
+        }
+
+        public static string Product
+        {
+            get {
+                object[] attributes = AppAssembly.GetCustomAttributes(typeof(AssemblyProductAttribute), false);
+                return attributes.Length == 0 ? "" : ((AssemblyProductAttribute)attributes[0]).Product;
             }
         }
 

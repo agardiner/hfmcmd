@@ -306,6 +306,7 @@ namespace HFMCmd
             }
             else if(string.Equals(command, "Commands", StringComparison.OrdinalIgnoreCase)) {
                 // Display a list of commands in two columns
+                _log.Info("Displaying available commands:");
                 output.SetHeader("Commands", 40, "", 40);
                 var cmds = _commands.EachCommand().ToArray();
                 int limit = cmds.Length / 2;
@@ -319,12 +320,12 @@ namespace HFMCmd
                     }
                 }
                 output.End(true);
+                output.WriteLine(string.Format("For detailed help on any of the above commands, " +
+                                 "use the command '{0} Help <CommandName>'", ApplicationInfo.ExeName));
             }
             else {
                 // Display help for the requested command
                 var cmd = _commands[command];
-                output.WriteLine(string.Format("Command: {0}", cmd.Name));
-                output.WriteLine();
                 if(cmd.Description != null) {
                     output.WriteSingleValue(cmd.Description, "Description", 80);
                     output.WriteLine();
