@@ -118,9 +118,9 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
 
-  <data name="Purpose">
+  <data name="Instructions">
     <value>
-      {0} is a tool for automating operations in Oracle Hyperion Financial Management.
+      Type '{0} Help' to get more detailed help and usage instructions.
     </value>
   </data>
 

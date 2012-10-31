@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Text.RegularExpressions;
+using System.Linq;
 
 using log4net;
 using log4net.Appender;
@@ -81,7 +82,7 @@ namespace HFMCmd
             int rc = 0;
 
             // Define command-line UI
-            _cmdLine = new UI(HFMCmd.Resource.Help.Purpose);
+            _cmdLine = new UI(HFMCmd.Resource.Help.Instructions);
             _console = new ConsoleOutput(_cmdLine);
 
             ConfigureLogging();
@@ -103,7 +104,7 @@ namespace HFMCmd
                     "The name of the command to execute, or the path to a file containing commands to execute");
             arg.IsRequired = true;
             arg.Validate = ValidateCommand;
-            arg = _cmdLine.AddKeywordArgument("LogLevel", "Set logging to the specified level",
+            arg = _cmdLine.AddKeywordArgument("LogLevel", "Set logging to the specified log level",
                     (_, val) => Log(val, null));
             arg.AddValidator(new ListValidator("NONE", "SEVERE", "ERROR", "WARN",
                     "INFO", "FINE", "TRACE", "DEBUG"));
@@ -304,8 +305,20 @@ namespace HFMCmd
                 output.WriteLine(HFMCmd.Resource.Help.General);
             }
             else if(string.Equals(command, "Commands", StringComparison.OrdinalIgnoreCase)) {
-                // Display a list of commands
-                output.WriteEnumerable(_commands.EachCommand(), "Commands", 40);
+                // Display a list of commands in two columns
+                output.SetHeader("Commands", 40, "", 40);
+                var cmds = _commands.EachCommand().ToArray();
+                int limit = cmds.Length / 2;
+                if(cmds.Length % 2 == 1) { limit++; }
+                for(var i = 0; i < limit; ++i) {
+                    if(limit + i < cmds.Length) {
+                        output.WriteRecord(cmds[i], cmds[limit + i]);
+                    }
+                    else {
+                        output.WriteRecord(cmds[i], "");
+                    }
+                }
+                output.End(true);
             }
             else {
                 // Display help for the requested command
@@ -374,7 +387,6 @@ namespace HFMCmd
                 log4net.Config.BasicConfigurator.Configure(fa);
             }
         }
-
 
     }
 

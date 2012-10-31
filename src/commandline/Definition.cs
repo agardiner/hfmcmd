@@ -1,10 +1,6 @@
 using System;
-using System.IO;
-using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Linq;
-
-using log4net;
 
 
 namespace CommandLine
@@ -15,10 +11,6 @@ namespace CommandLine
     /// </summary>
     public class Definition
     {
-        // Reference to class logger
-        protected static readonly ILog _log = LogManager.GetLogger(
-            System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-
         /// Collection of Argument objects, defining the permitted/expected
         /// arguments this program takes.
         internal Dictionary<string, Argument> Arguments =
@@ -29,8 +21,9 @@ namespace CommandLine
 
         // Properties
 
-        /// Purpose of the program whose command-line arguments we are parsing.
-        public string Purpose { get; set; }
+        /// Details on how to get help about the program whose command-line
+        /// arguments we are defining.
+        public string HelpInstructions { get; set; }
         /// Flag governing whether unknown keyword args should be included in
         /// the parse results
         public bool IncludeUnrecognisedKeywordArgs = false;
@@ -115,85 +108,6 @@ namespace CommandLine
                 _positionalArgumentOrder.Add(arg.Key);
             }
             return arg;
-        }
-
-
-        /// <summary>
-        /// Displays a usgae message, based on the allowed arguments and purpose
-        /// represented by this class.
-        /// </summary>
-        public void DisplayUsage(string arg0, TextWriter console, Dictionary<string, object> args)
-        {
-            string exe = Path.GetFileNameWithoutExtension(arg0);
-
-            console.WriteLine();
-            console.WriteLine("Purpose:");
-            console.WriteLine("    {0}", string.Format(Purpose, exe).Trim());
-
-            console.WriteLine();
-            console.WriteLine("Usage:");
-            console.Write("    {0}", exe);
-
-            var posArgs = PositionalArguments.ToList();
-            var i = 0;
-            foreach(var arg in PositionalArguments) {
-                if(arg.IsCommand && (args.ContainsKey(arg.Key) ||
-                   (arg.Alias != null && args.ContainsKey(arg.Alias)))) {
-                    console.Write(arg.IsRequired ? " {0}" : " [{0}]",
-                            args.ContainsKey(arg.Key) ? args[arg.Key] : args[arg.Alias]);
-                    posArgs.RemoveAt(i);
-                }
-                else {
-                    console.Write(arg.IsRequired ? " <{0}>" : " [<{0}>]", arg.Key);
-                }
-                i++;
-            }
-            if(KeywordArguments.Count > 0) {
-                console.Write(" [<Key>:<Value> ...]");
-            }
-            if(FlagArguments.Count > 0) {
-                console.Write(" [--<Flag> ...]");
-            }
-            console.WriteLine();
-
-            if(posArgs.Count > 0) {
-                console.WriteLine();
-                console.WriteLine("Positional Arguments:");
-                posArgs.ForEach(x => OutputArg(x, console));
-            }
-
-            if(KeywordArguments.Count > 0) {
-                console.WriteLine();
-                console.WriteLine("Keyword Arguments:");
-                KeywordArguments.ForEach(x => OutputArg(x, console));
-            }
-
-            if(FlagArguments.Count > 0) {
-                console.WriteLine();
-                console.WriteLine("Flag Arguments:");
-                FlagArguments.ForEach(x => OutputArg(x, console));
-            }
-
-        }
-
-        /// Outputs a single argument definition
-        protected void OutputArg(Argument arg, TextWriter console) {
-            if(arg is FlagArgument) {
-                console.Write("    --{0,-14}  {1}", arg.Key, arg.Description);
-            }
-            else {
-                console.Write("    {0,-16}  {1}", arg.Key, arg.Description);
-            }
-            var valArg = arg as ValueArgument;
-            if(valArg != null) {
-                if(valArg.DefaultValue != null) {
-                    console.Write(" (Default: {0})", valArg.DefaultValue);
-                }
-                else if(valArg.IsRequired) {
-                    console.Write(" (Required)");
-                }
-            }
-            console.WriteLine();
         }
 
     }

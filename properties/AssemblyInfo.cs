@@ -5,8 +5,8 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("HFMCmd")]
-[assembly: AssemblyDescription("A command-line interface to Oracle Hyperion Financial Management")]
+[assembly: AssemblyTitle("HFM Command")]
+[assembly: AssemblyDescription("A command-line interface to Oracle Hyperion Financial Management.")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("http://github.com/agardiner/hfm-cmd")]
 [assembly: AssemblyProduct("HFMCmd")]
@@ -26,5 +26,5 @@ using System.Runtime.InteropServices;
 //      Build Number
 //      Revision
 //
-[assembly: AssemblyVersion("0.0.1.1")]
-[assembly: AssemblyFileVersion("0.0.1.1")]
+[assembly: AssemblyVersion("0.0.1")]
+[assembly: AssemblyFileVersion("0.0.1")]

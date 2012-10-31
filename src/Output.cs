@@ -52,7 +52,7 @@ namespace HFMCmd
         /// Marker method called to indicate completion of output for the current
         /// table.
         /// </summary>
-        void End();
+        void End(bool suppressFooter);
 
         /// <summary>
         /// Instructs the output mechanism to display some form of progress
@@ -212,6 +212,15 @@ namespace HFMCmd
 
 
         /// <summary>
+        /// Convenience for the common case of not suppressing footer record
+        /// </summary>
+        public static void End(this IOutput output)
+        {
+            output.End(false);
+        }
+
+
+        /// <summary>
         /// Helper method for initiating an operation whose progress will be
         /// monitored. Provides defaults for iteration (1) and total (100).
         /// </summary>
@@ -260,7 +269,7 @@ namespace HFMCmd
         public void WriteLine(string format, params object[] values) { }
         public void SetHeader(params object[] fields) { }
         public void WriteRecord(params object[] values) { }
-        public void End() { }
+        public void End(bool suppress) { }
         public void InitProgress(string operation, int iterations) { }
         public void InitProgress(string operation, int iterations, int total) { }
         public bool SetProgress(int progress) { return OutputHelper.ShouldCancel(); }
@@ -365,7 +374,7 @@ namespace HFMCmd
 
 
         // Default no-op implementation
-        public virtual void End()
+        public virtual void End(bool suppress)
         {
         }
 
@@ -531,9 +540,9 @@ namespace HFMCmd
         }
 
 
-        public override void End()
+        public override void End(bool suppress)
         {
-            if(_widths != null && _widths.Length > 0 && _records > 5) {
+            if(!suppress && _widths != null && _widths.Length > 0 && _records > 5) {
                 _log.InfoFormat("{0} records output", _records);
             }
         }
@@ -662,11 +671,12 @@ namespace HFMCmd
         }
 
 
-        public override void End()
+        public override void End(bool suppress)
         {
-            if(_widths != null && _widths.Length > 0 && _records > 5) {
-                _cui.WriteLine();
+            _cui.WriteLine();
+            if(!suppress && _widths != null && _widths.Length > 0 && _records > 5) {
                 _cui.WriteLine(IndentString + string.Format("{0} records output", _records));
+                _cui.WriteLine();
             }
         }
 
