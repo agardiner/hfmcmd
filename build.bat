@@ -10,9 +10,6 @@ DEL /Q bin\*.*
 
 ECHO Generating resources...
 
-tools\ResGen.exe resources/CommandLine.resx gen\HFMCmd.Resource.CommandLine.resources /str:cs,HFMCmd.Resource,CommandLine,gen\CommandLineResource.cs
-IF ERRORLEVEL 1 EXIT /B %ERRORLEVEL%
-
 tools\ResGen.exe resources/Help.resx gen\HFMCmd.Resource.Help.resources /str:cs,HFMCmd.Resource,Help,gen\HelpResource.cs
 IF ERRORLEVEL 1 EXIT /B %ERRORLEVEL%
 
