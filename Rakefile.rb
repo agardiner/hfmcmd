@@ -19,6 +19,7 @@ HFMCMD40_EXE    = "#{BUILD40_DIR}/HFMCmd.exe"
 HFMCMD40_BUNDLE = "#{RELEASE40_DIR}/HFMCmd.exe"
 
 RESOURCES       = FileList['resources/*.resx']
+PROPERTIES      = FileList['properties/*']
 SOURCE_FILES    = FileList['src/**/*.cs']
 
 def settings_for_version(version)
@@ -119,6 +120,12 @@ RESOURCES.each do |resx|
 end
 
 
+PROPERTIES.each do |prop|
+  file prop
+  task :properties => prop
+end
+
+
 
 namespace :dotnet35 do
 
@@ -127,6 +134,7 @@ namespace :dotnet35 do
 
   # Define .exe dependencies on source files
   file HFMCMD35_EXE => :resources
+  file HFMCMD35_EXE => :properties
   SOURCE_FILES.each do |src|
     file HFMCMD35_EXE => src
   end
@@ -152,6 +160,7 @@ namespace :dotnet40 do
 
   # Define .exe dependencies on source files
   file HFMCMD40_EXE => :resources
+  file HFMCMD40_EXE => :properties
   SOURCE_FILES.each do |src|
     file HFMCMD40_EXE => src
   end
