@@ -54,6 +54,10 @@ namespace HFM
         protected static readonly ILog _log = LogManager.GetLogger(
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
+        public static string[] FixedDimNames = new string[] {
+            "Scenario", "Year", "Period", "View", "Entity", "Value",
+            "Account", "ICP"
+        };
 
         // Reference to HFM HsvMetadata object
         protected readonly HsvMetadata _hsvMetadata;
@@ -74,9 +78,29 @@ namespace HFM
         /// Returns the HFM HsvMetadata object
         internal HsvMetadata HsvMetadata { get { return _hsvMetadata; } }
 
+        public string[] DimensionNames
+        {
+            get {
+                string[] names = new string[NumberOfDims];
+                Array.Copy(FixedDimNames, names, 8);
+                Array.Copy(CustomDimNames, 0, names, 8, NumberOfCustomDims);
+                return names;
+            }
+        }
+
         /// Returns true if this application is 11.1.2.2 or later
         public bool HasVariableCustoms { get { return _useExtDims; } }
 
+        public int NumberOfDims { get { return FixedDimNames.Length + NumberOfCustomDims; } }
+        public int NumberOfCustomDims
+        {
+            get {
+                if(_customDimIds == null) {
+                    GetCustomDims();
+                }
+                return _customDimIds.Length;
+            }
+        }
 
         internal int[] CustomDimIds
         {
@@ -87,7 +111,7 @@ namespace HFM
                 return _customDimIds;
             }
         }
-        internal string[] CustomDimNames
+        public string[] CustomDimNames
         {
             get {
                 if(_customDimNames == null) {
@@ -127,6 +151,7 @@ namespace HFM
         [Factory]
         public Metadata(Session session)
         {
+            _log.Trace("Constructing Metadata object");
             _hsvMetadata = (HsvMetadata)session.HsvSession.Metadata;
             _useExtDims = HFM.Version >= new Version("11.1.2.2");
         }
@@ -1070,71 +1095,65 @@ namespace HFM
         /// </summary>
         public IEnumerable<HfmPovCOM> POVs()
         {
-            var customIds = CustomMemberIds();
+            var cellIds = CellMemberIds();
+            int numCustoms = _metadata.NumberOfCustomDims;
+            int[] customs;
 
-            foreach(var scenario in MemberList("Scenario")) {
-                foreach(var year in MemberList("Year")) {
-                    foreach(var period in MemberList("Period")) {
-                        foreach(var view in MemberList("View")) {
-                            foreach(var entity in MemberList("Entity")) {
-                                foreach(var value in MemberList("Value")) {
-                                    foreach(var account in MemberList("Account")) {
-                                        foreach(var icp in MemberList("ICP")) {
-                                            foreach(var customs in customIds) {
-                                                var pov = new HfmPovCOM();
-                                                pov.Scenario = scenario.Id;
-                                                pov.Year = year.Id;
-                                                pov.Period = period.Id;
-                                                pov.View = view.Id;
-                                                pov.Entity = entity.Id;
-                                                pov.Parent = entity.ParentId;
-                                                pov.Value = value.Id;
-                                                pov.Account = account.Id;
-                                                pov.ICP = icp.Id;
-                                                pov.SetCustoms(_metadata.CustomDimIds, customs);
-                                                yield return pov;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+            foreach(var cell in cellIds) {
+                var pov = new HfmPovCOM();
+                pov.Scenario = cell[0];
+                pov.Year = cell[1];
+                pov.Period = cell[2];
+                pov.View = cell[3];
+                pov.Entity = cell[4];
+                pov.Parent = cell[5];
+                pov.Value = cell[6];
+                pov.Account = cell[7];
+                pov.ICP = cell[8];
+                customs = new int[numCustoms];
+                Array.Copy(cell, 9, customs, 0, numCustoms);
+                pov.SetCustoms(_metadata.CustomDimIds, customs);
+                yield return pov;
             }
         }
 
 
         // Returns a list of arrays of member ids; each item in the list is an
-        // array of member ids representing a single combination of custom
-        // dimension members
-        private List<int[]> CustomMemberIds()
+        // array of member ids representing a single cell, i.e. an array with a
+        // single member id from each dimension.
+        private List<int[]> CellMemberIds()
         {
-            int[] dims = _metadata.CustomDimIds;
-
-            MemberList[] lists = new MemberList[dims.Length];
-            int[] dimSizes = new int[dims.Length];
-            int[] dimIdx = new int[dims.Length];
+            _log.Trace("Creating cell id arrays");
+            int numDims = _metadata.NumberOfDims;
+            MemberList[] lists = new MemberList[numDims];
+            int[] dimSizes = new int[numDims];
+            int[] dimIdx = new int[numDims];
 
             int size = 1;
-            int dim;
-            for(dim = 0; dim < dims.Length; ++dim) {
-                lists[dim] = MemberList(_metadata.CustomDimNames[dim]);
+            int dim = 0;
+            foreach(var dimName in _metadata.DimensionNames) {
+                lists[dim] = MemberList(dimName);
                 dimSizes[dim] = lists[dim].MemberIds.Length;
                 size = size * dimSizes[dim];
+                dim++;
             }
-            _log.DebugFormat("Size of custom member cartesian join: {0}", size);
-            var mbrIds = new List<int[]>(size);
+            _log.DebugFormat("Number of cells in cartesian join: {0}", size);
 
-            for(var i = 0; i < size; ++i) {
-                mbrIds.Add(new int[dims.Length]);
-                for(dim = 0; dim < dims.Length; ++dim) {
-                    mbrIds[i][dim] = lists[dim].MemberIds[dimIdx[dim]];
+            var mbrIds = new List<int[]>(size);
+            int[] ids;
+            for(int i = 0; i < size; ++i) {
+                ids = new int[numDims + 1];   // Allow space for Entity parent
+                for(int d = 0, j = 0; d < numDims; ++d) {
+                    mbrIds[i][j++] = lists[d].MemberIds[dimIdx[d]];
+                    if(lists[dim].Dimension.IsEntity) {
+                        mbrIds[i][j++] = lists[d].ParentIds[dimIdx[d]];
+                    }
                 }
-                // Update indexers
-                for(dim = 0; dim < dims.Length; ++dim) {
-                    if(dimIdx[dim] + 1 < dimSizes[dim]) {
-                        dimIdx[dim]++;
+                mbrIds.Add(ids);
+
+                // Update member list indexers
+                for(dim = 0; dim < numDims; ++dim) {
+                    if(++dimIdx[dim] < dimSizes[dim]) {
                         break;
                     }
                     else {
