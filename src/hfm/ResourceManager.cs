@@ -1,4 +1,5 @@
 using System;
+using System.Text.RegularExpressions;
 using System.Runtime.InteropServices;
 
 using log4net;
@@ -36,7 +37,16 @@ namespace HFM
                 _resourceManager = new HsvResourceManager();
                 _resourceManager.Initialize((short)tagHFM_TIERS.HFM_TIER1);
 
-                Version = new Version((string)_resourceManager.GetCurrentVersionInUserDisplayFormat());
+                var ver = (string)_resourceManager.GetCurrentVersionInUserDisplayFormat();
+                var re = new Regex(@"^(\d+\.\d+\.\d+(?:\.\d+)?)");
+                var match = re.Match(ver);
+                if(match.Success) {
+                    Version = new Version(match.Groups[1].Value);
+                }
+                else {
+                    throw new Exception(string.Format("Could not determine HFM version from " +
+                               "returned version string '{0}'", ver));
+                }
             }
             catch (COMException ex) {
                 unchecked {
