@@ -744,6 +744,16 @@ namespace HFM
         int[] _parents;
 
 
+        public Member this[int i] {
+            get {
+                if(i < 0 && i >= Count) {
+                    throw new IndexOutOfRangeException(string.Format("Invalid index {0} for MemberList; " +
+                                "value must be between 0 and {1}", i, Count - 1));
+                }
+                return _dimension.GetMember(_members[i], _parents != null ?
+                        _parents[i] : Member.ID_NOT_SPECIFIED);
+            }
+        }
         /// Returns the number of members in the list
         public int Count { get { return _members.Length; } }
         /// Returns the dimension to which this member list relates
@@ -947,25 +957,90 @@ namespace HFM
 
 
     /// <summary>
-    /// An object for passing a Member for each of the fixed 12 dimensions
-    /// in HFM pre 11.1.2.2.
+    /// An object for describing a single cell in an HFM application. Contains a
+    /// Member object for each dimension.
     /// </summary>
-    public struct Cell
+    public class POV
     {
-        public Member Scenario;
-        public Member Year;
-        public Member Period;
-        public Member View;
-        public Member Entity;
-        public Member Parent;
-        public Member Value;
-        public Member Account;
-        public Member ICP;
-        public Member Custom1;
-        public Member Custom2;
-        public Member Custom3;
-        public Member Custom4;
+        // Reference to class logger
+        protected static readonly ILog _log = LogManager.GetLogger(
+            System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
+        private Metadata _metadata;
+        private Member[] _members;
+
+        public Member this[int dim]
+        {
+            get {
+                if(dim < 0 || dim >= _members.Length) {
+                    throw new IndexOutOfRangeException(string.Format("Invalid dimension number {0}; " +
+                                "must be a value between 0 and {1}", dim, _members.Length - 1));
+                }
+                return _members[dim];
+            }
+            set {
+                if(dim < 0 || dim >= _members.Length) {
+                    throw new IndexOutOfRangeException(string.Format("Invalid dimension number {0}; " +
+                                "must be a value between 0 and {1}", dim, _members.Length - 1));
+                }
+                _members[dim] = value;
+            }
+        }
+        public Member Scenario { get { return this[0]; } }
+        public Member Year { get { return this[1]; } }
+        public Member Period { get { return this[2]; } }
+        public Member View { get { return this[3]; } }
+        public Member Entity { get { return this[4]; } }
+        public Member Value { get { return this[5]; } }
+        public Member Account { get { return this[6]; } }
+        public Member ICP { get { return this[7]; } }
+        public Member Custom1 { get { return this[8]; } }
+        public Member Custom2 { get { return this[9]; } }
+        public Member Custom3 { get { return this[10]; } }
+        public Member Custom4 { get { return this[11]; } }
+        /// Converts this POV to an HfmPovCOM object
+        public HfmPovCOM HfmPovCOM
+        {
+            get {
+                var pov = new HfmPovCOM();
+                pov.Scenario = Scenario.Id;
+                pov.Year = Year.Id;
+                pov.Period = Period.Id;
+                pov.View = View.Id;
+                pov.Entity = Entity.Id;
+                pov.Parent = Entity.ParentId;
+                pov.Value = Value.Id;
+                pov.Account = Account.Id;
+                pov.ICP = ICP.Id;
+                var customs = new int[_members.Length - 8];
+                int i = 0;
+                for(i = 0; i < customs.Length; ++i) {
+                    customs[i++] = GetCustom(i+1).Id;
+                }
+                pov.SetCustoms(_metadata.CustomDimIds, customs);
+                return pov;
+            }
+        }
+
+
+        public POV(Metadata metadata) {
+            _metadata = metadata;
+            _log.TraceFormat("Number of dims: {0}", _metadata.NumberOfDims);
+            _members = new Member[_metadata.NumberOfDims];
+        }
+
+
+        public Member GetCustom(int custom) {
+            int dim = custom + 7;
+            if(custom < 1 || custom > _members.Length - 8) {
+                throw new IndexOutOfRangeException(string.Format("Invalid Custom dimension number {0}; " +
+                            "must be a value between 1 and {1}", custom, _members.Length - 8));
+            }
+            return this[dim];
+        }
+
     }
+
 
 
     public class IncompleteSliceDefinition : Exception
@@ -1044,6 +1119,10 @@ namespace HFM
             }
         }
 
+        /// Returns an array of all cells in the slice
+        public POV[] POVs { get { return GeneratePOVs(); } }
+
+
 
         public MemberList MemberList(string dimension)
         {
@@ -1078,52 +1157,12 @@ namespace HFM
         }
 
 
-        public HfmPovCOM ToHfmPovCOM(string pov)
-        {
-            HfmPovCOM oPov = null;
-            HFM.Try("Converting to HfmPOVCOM", () => {
-                var hfmPovStrCOM = new HfmPovStrCOM();
-                hfmPovStrCOM.InitializeFromPovString(_metadata.HsvMetadata, pov);
-                oPov = hfmPovStrCOM.ConvertToHfmPovCOM(_metadata.HsvMetadata);
-            });
-            return oPov;
-        }
-
-
-        /// <summary>
-        /// Returns an HfmPovCOM object for each cell in the slice.
-        /// </summary>
-        public IEnumerable<HfmPovCOM> POVs()
-        {
-            var cellIds = CellMemberIds();
-            int numCustoms = _metadata.NumberOfCustomDims;
-            int[] customs;
-
-            foreach(var cell in cellIds) {
-                var pov = new HfmPovCOM();
-                pov.Scenario = cell[0];
-                pov.Year = cell[1];
-                pov.Period = cell[2];
-                pov.View = cell[3];
-                pov.Entity = cell[4];
-                pov.Parent = cell[5];
-                pov.Value = cell[6];
-                pov.Account = cell[7];
-                pov.ICP = cell[8];
-                customs = new int[numCustoms];
-                Array.Copy(cell, 9, customs, 0, numCustoms);
-                pov.SetCustoms(_metadata.CustomDimIds, customs);
-                yield return pov;
-            }
-        }
-
-
         // Returns a list of arrays of member ids; each item in the list is an
         // array of member ids representing a single cell, i.e. an array with a
         // single member id from each dimension.
-        private List<int[]> CellMemberIds()
+        private POV[] GeneratePOVs()
         {
-            _log.Trace("Creating cell id arrays");
+            _log.Trace("Generating POV array");
             int numDims = _metadata.NumberOfDims;
             MemberList[] lists = new MemberList[numDims];
             int[] dimSizes = new int[numDims];
@@ -1137,19 +1176,16 @@ namespace HFM
                 size = size * dimSizes[dim];
                 dim++;
             }
-            _log.DebugFormat("Number of cells in cartesian join: {0}", size);
+            _log.DebugFormat("Number of cells in slice: {0}", size);
 
-            var mbrIds = new List<int[]>(size);
-            int[] ids;
+            var povs = new POV[size];
+            POV pov;
             for(int i = 0; i < size; ++i) {
-                ids = new int[numDims + 1];   // Allow space for Entity parent
-                for(int d = 0, j = 0; d < numDims; ++d) {
-                    mbrIds[i][j++] = lists[d].MemberIds[dimIdx[d]];
-                    if(lists[dim].Dimension.IsEntity) {
-                        mbrIds[i][j++] = lists[d].ParentIds[dimIdx[d]];
-                    }
+                pov = new POV(_metadata);
+                for(dim = 0; dim < numDims; ++dim) {
+                    pov[dim] = lists[dim][dimIdx[dim]];
                 }
-                mbrIds.Add(ids);
+                povs[i] = pov;
 
                 // Update member list indexers
                 for(dim = 0; dim < numDims; ++dim) {
@@ -1161,56 +1197,7 @@ namespace HFM
                     }
                 }
             }
-
-            return mbrIds;
-        }
-
-
-        /// <summary>
-        /// For HFM pre-11.1.2.2, dimensionality was fixed and API calls have a
-        /// field for each dimension. This method returns Cell objects with a
-        /// member from each of the 12 dimensions for each cell in the slice.
-        /// </summary>
-        public IEnumerable<Cell> Cells()
-        {
-            foreach(var scenario in MemberList("Scenario")) {
-                foreach(var year in MemberList("Year")) {
-                    foreach(var period in MemberList("Period")) {
-                        foreach(var view in MemberList("View")) {
-                            foreach(var entity in MemberList("Entity")) {
-                                foreach(var value in MemberList("Value")) {
-                                    foreach(var account in MemberList("Account")) {
-                                        foreach(var icp in MemberList("ICP")) {
-                                            foreach(var c1 in MemberList("Custom1")) {
-                                                foreach(var c2 in MemberList("Custom2")) {
-                                                    foreach(var c3 in MemberList("Custom3")) {
-                                                        foreach(var c4 in MemberList("Custom4")) {
-                                                            yield return new Cell() {
-                                                                Scenario = scenario,
-                                                                Year = year,
-                                                                Period = period,
-                                                                View = view,
-                                                                Entity = entity,
-                                                                Value = value,
-                                                                Account = account,
-                                                                ICP = icp,
-                                                                Custom1 = c1,
-                                                                Custom2 = c2,
-                                                                Custom3 = c3,
-                                                                Custom4 = c4,
-                                                            };
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            return povs;
         }
 
     }

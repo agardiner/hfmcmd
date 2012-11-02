@@ -53,36 +53,28 @@ namespace HFM
         }
 
 
-        protected void SetCellInternal(Metadata metadata, Slice slice, double value, bool clear, IOutput output)
+        protected void SetCellInternal(Metadata metadata, Slice slice, double amount, bool clear, IOutput output)
         {
-            if(metadata.HasVariableCustoms) {
-                var povs = slice.POVs().ToArray();
-                output.InitProgress(string.Format("{0} cells", clear ? "Clearing" : "Setting"), povs.Length);
-                foreach(var cellPOV in slice.POVs()) {
+            var povs = slice.POVs;
+            output.InitProgress(string.Format("{0} cells", clear ? "Clearing" : "Setting"), povs.Length);
+            foreach(var pov in povs) {
+                if(metadata.HasVariableCustoms) {
                     HFM.Try("Setting cell",
-                            () => _hsvData.SetCellExtDim(cellPOV, value, clear));
-                    if(output.IterationComplete()) {
-                        break;
-                    }
+                            () => _hsvData.SetCellExtDim(pov.HfmPovCOM, amount, clear));
                 }
-                output.EndProgress();
-            }
-            else {
-                var cells = slice.Cells().ToArray();
-                output.InitProgress(string.Format("{0} cells", clear ? "Clearing" : "Setting"), cells.Length);
-                foreach(var cell in slice.Cells()) {
+                else {
                     HFM.Try("Setting cell",
-                            () => _hsvData.SetCell(cell.Scenario.Id, cell.Year.Id, cell.Period.Id, cell.View.Id,
-                                                   cell.Entity.Id, cell.Entity.ParentId, cell.Value.Id,
-                                                   cell.Account.Id, cell.ICP.Id, cell.Custom1.Id,
-                                                   cell.Custom2.Id, cell.Custom3.Id, cell.Custom4.Id,
-                                                   value, clear));
-                    if(output.IterationComplete()) {
-                        break;
-                    }
+                            () => _hsvData.SetCell(pov.Scenario.Id, pov.Year.Id, pov.Period.Id, pov.View.Id,
+                                                   pov.Entity.Id, pov.Entity.ParentId, pov.Value.Id,
+                                                   pov.Account.Id, pov.ICP.Id, pov.Custom1.Id,
+                                                   pov.Custom2.Id, pov.Custom3.Id, pov.Custom4.Id,
+                                                   amount, clear));
                 }
-                output.EndProgress();
+                if(output.IterationComplete()) {
+                    break;
+                }
             }
+            output.EndProgress();
         }
 
     }
