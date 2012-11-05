@@ -384,9 +384,9 @@ namespace HFMCmd
             }
 
             // Set the log file
-            if (logFile != null) {
+            if(logFile != null) {
                 // Logging needs to respect working directory
-                if (Path.IsPathRooted(logFile)) {
+                if(!Path.IsPathRooted(logFile)) {
                     _log.Debug("Converting log file to respect working directory");
                     logFile = Environment.CurrentDirectory + @"\" + logFile;
                 }
@@ -394,7 +394,7 @@ namespace HFMCmd
                 // Determine if there is already a FileAppender active
                 FileAppender fa = (FileAppender)Array.Find<IAppender>(_logRepository.GetAppenders(),
                     (appender) => appender is FileAppender);
-                if (fa == null) {
+                if(fa == null) {
                     fa = new log4net.Appender.FileAppender();
                 }
 
