@@ -88,9 +88,9 @@ namespace YAML
             // Update current line number and perform any variable
             // substitution on the line
             _lines.Push(_lines.Pop() + 1);
-            if(line.IndexOf('#') >= 0) {
+            if(line.IndexOf(" #") >= 0) {
                 // Ignore any comments
-                line = line.Substring(0, line.IndexOf('#'));
+                line = line.Substring(0, line.IndexOf(" #"));
             }
             if(_process.Peek()) {
                 line = SubstituteVariables(line, _variables);
@@ -110,8 +110,8 @@ namespace YAML
             if(line.Trim().Length > 0 && !line.Trim().StartsWith("#")) {
                 // Line contains content to be processed
                 // Strip any trailing comments from the line
-                if (line.IndexOf("#") > 0) {
-                    line = line.Substring(0, line.IndexOf("#"));
+                if (line.IndexOf(" #") > 0) {
+                    line = line.Substring(0, line.IndexOf(" #")).TrimEnd();
                 }
             }
             else {
