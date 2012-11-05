@@ -18,8 +18,7 @@ namespace Command
     {
         public ContextException(string msg) :
             base(msg)
-        {
-        }
+        { }
     }
 
 
@@ -38,11 +37,24 @@ namespace Command
         public static bool ContainsRequiredValuesForCommand(this Dictionary<string, object> args, Command cmd)
         {
             foreach(var param in cmd.Parameters) {
-                if(!(args.ContainsKey(param.Name) ||
-                     (param.HasAlias && args.ContainsKey(param.Alias)) ||
-                     param.HasDefaultValue)) {
+                if(!args.ContainsValueForSetting(param)) {
                     return false;
                 }
+            }
+            return true;
+        }
+
+
+        /// <summary>
+        /// Checks if the supplied Dictionary contains a value for the specified
+        /// ISetting.
+        /// </summary>
+        public static bool ContainsValueForSetting(this Dictionary<string, object> args, ISetting setting)
+        {
+            if(!(args.ContainsKey(setting.Name) ||
+                 (setting.HasAlias && args.ContainsKey(setting.Alias)) ||
+                 setting.HasDefaultValue)) {
+                return false;
             }
             return true;
         }
@@ -95,6 +107,10 @@ namespace Command
         }
 
 
+        /// <summary>
+        /// Sets an object in the context. Only a single object of a given type
+        /// is permitted, so any existing object of this type is replaced.
+        /// </summary>
         public void Set(object value)
         {
             var valType = value.GetType();
@@ -234,6 +250,17 @@ namespace Command
                         }
                     }
                 }
+                if(ctxt == null && MissingArgHandler != null) {
+                    // Call missing arg handler for each missing arg
+                    foreach(var param in step.Command.Parameters) {
+                        if(!args.ContainsValueForSetting(param)) {
+                            args[param.Name] = MissingArgHandler(param);
+                        }
+                    }
+                }
+                if(ctxt == null && args.ContainsRequiredValuesForCommand(step.Command)) {
+                    ctxt = InvokeCommand(step.Command, args);
+                }
             }
             else {
                 throw new Exception(string.Format("Unrecognised factory type: {0}", step));
@@ -324,90 +351,49 @@ namespace Command
             // Create an array of parameters in the order expected
             var parms = new object[cmd.Parameters.Count];
             var sb = new StringBuilder();
-            Action<ISetting, object> logParam = (p, v) => {
-                if(v != null) {
-                    if(v.GetType().IsArray) {
-                        sb.AppendFormat("\n          {0}{1,-18}: {2}",
-                              char.ToUpper(p.Name[0]),
-                              p.Name.Substring(1),
-                              string.Join(", ", ((object[])v).Select(o => o.ToString()).ToArray()));
-                    }
-                    else {
-                        sb.AppendFormat("\n          {0}{1,-18}: {2}",
-                              char.ToUpper(p.Name[0]),
-                              p.Name.Substring(1),
-                              p.IsSensitive ? "******" : v);
-                    }
-                }
-            };
             var i = 0;
 
             foreach(var param in cmd.Parameters) {
                 _log.TraceFormat("Processing parameter {0}", param.Name);
                 if(args.ContainsKey(param.Name)) {
                     parms[i] = ConvertSetting(args[param.Name], param);
-                    logParam(param, parms[i]);
+                    LogSettingValue(sb, param, parms[i]);
                 }
                 else if(param.HasAlias && args.ContainsKey(param.Alias)) {
                     parms[i] = ConvertSetting(args[param.Alias], param);
-                    logParam(param, parms[i]);
+                    LogSettingValue(sb, param, parms[i]);
                 }
                 else if(param.IsSettingsCollection) {
-                    // Attempt to create an instance of the collection class if necessary
-                    if(!HasObject(param.ParameterType)) {
-                        foreach(var step in FindPathToType(param.ParameterType, cmd)) {
-                            Instantiate(step, args);
-                        }
-                    }
-                    // Set each setting that has a value in the supplied args
-                    var coll = this[param.ParameterType] as ISettingsCollection;
-                    foreach(var setting in GetSettings(param.ParameterType)) {
-                        if(setting is DynamicSettingAttribute) {
-                            foreach(var dynset in ((IDynamicSettingsCollection)coll).DynamicSettingNames) {
-                                if(args.ContainsKey(dynset)) {
-                                    coll[dynset] = args[dynset];
-                                }
-                            }
-                        }
-                        else if(args.ContainsKey(setting.Name)) {
-                            coll[setting.InternalName] = ConvertSetting(args[setting.Name], setting);
-                            logParam(setting, coll[setting.InternalName]);
-                        }
-                        else if(setting.HasAlias && args.ContainsKey(setting.Alias)) {
-                            coll[setting.InternalName] = ConvertSetting(args[setting.Alias], setting);
-                            logParam(setting, coll[setting.InternalName]);
-                        }
-                    }
-                    parms[i] = coll;
+                    parms[i] = PrepareSettingsCollectionArg(cmd, param, args, sb);
                 }
                 else if(param.HasDefaultValue) {
                     // Deal with missing arg values, default values, etc
                     _log.DebugFormat("No value supplied for {0}; using default value '{1}'",
                             param.Name, param.DefaultValue);
                     parms[i] = param.DefaultValue;
-                    logParam(param, parms[i]);
+                    LogSettingValue(sb, param, parms[i]);
                 }
                 else if(HasObject(param.ParameterType)) {
                     parms[i] = this[param.ParameterType];
                     if(param.HasParameterAttribute) {
-                        logParam(param, parms[i]);
+                        LogSettingValue(sb, param, parms[i]);
                     }
                 }
                 // If there is a factory to create this type, then try to create it
                 else if(_registry.Contains(param.ParameterType)) {
-                    // TODO: Deal with single use objects
                     foreach(var step in FindPathToType(param.ParameterType, cmd)) {
                         Instantiate(step, args);
                     }
                     parms[i] = this[param.ParameterType];
                     if(param.HasParameterAttribute) {
-                        logParam(param, parms[i]);
+                        LogSettingValue(sb, param, parms[i]);
                     }
                 }
                 else if(MissingArgHandler != null) {
                     object val = MissingArgHandler(param);
                     if(val != null) {
                         parms[i] = ConvertSetting(val, param);
+                        LogSettingValue(sb, param, parms[i]);
                     }
                     else {
                         throw new ArgumentException(
@@ -427,8 +413,27 @@ namespace Command
         }
 
 
+        /// Logs the value of a setting
+        private void LogSettingValue(StringBuilder sb, ISetting setting, object val)
+        {
+            if(val != null) {
+                sb.AppendLine();
+                sb.Append("          ");
+                sb.Append(char.ToUpper(setting.Name[0]));
+                sb.AppendFormat("{0,-18}", setting.Name.Substring(1));
+                sb.Append(": ");
+                if(val.GetType().IsArray) {
+                    sb.Append(string.Join(", ", ((object[])val).Select(o => o.ToString()).ToArray()));
+                }
+                else {
+                    sb.Append(setting.IsSensitive ? "******" : val);
+                }
+            }
+        }
+
+
         /// Ensures a value to be passed as a setting is of the right ParameterType
-        protected object ConvertSetting(object val, ISetting setting)
+        private object ConvertSetting(object val, ISetting setting)
         {
             if(setting.ParameterType.IsAssignableFrom(val.GetType())) {
                 return val;
@@ -442,6 +447,36 @@ namespace Command
             }
         }
 
+
+        private ISettingsCollection PrepareSettingsCollectionArg(Command cmd, CommandParameter param, Dictionary<string, object> args, StringBuilder sb)
+        {
+            // Attempt to create an instance of the collection class if necessary
+            if(!HasObject(param.ParameterType)) {
+                foreach(var step in FindPathToType(param.ParameterType, cmd)) {
+                    Instantiate(step, args);
+                }
+            }
+            // Set each setting that has a value in the supplied args
+            var coll = this[param.ParameterType] as ISettingsCollection;
+            foreach(var setting in GetSettings(param.ParameterType)) {
+                if(setting is DynamicSettingAttribute) {
+                    foreach(var dynset in ((IDynamicSettingsCollection)coll).DynamicSettingNames) {
+                        if(args.ContainsKey(dynset)) {
+                            coll[dynset] = args[dynset];
+                        }
+                    }
+                }
+                else if(args.ContainsKey(setting.Name)) {
+                    coll[setting.InternalName] = ConvertSetting(args[setting.Name], setting);
+                    LogSettingValue(sb, setting, coll[setting.InternalName]);
+                }
+                else if(setting.HasAlias && args.ContainsKey(setting.Alias)) {
+                    coll[setting.InternalName] = ConvertSetting(args[setting.Alias], setting);
+                    LogSettingValue(sb, setting, coll[setting.InternalName]);
+                }
+            }
+            return coll;
+        }
     }
 
 }
