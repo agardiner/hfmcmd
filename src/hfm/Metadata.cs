@@ -17,6 +17,11 @@ using HFMCmd;
 namespace HFM
 {
 
+    /// <summary>
+    /// Defines the possible sizes of a Custom dimension. The sizes determine
+    /// the maximum number of members that may appear in the dimension, and are
+    /// used when specifying the custom dimensions in an app (post 11.1.2.2).
+    /// </summary>
     public enum ECustomDimSize : short
     {
         Small = 1,
@@ -25,6 +30,10 @@ namespace HFM
     }
 
 
+    /// <summary>
+    /// Defines the names of the 8 fixed and 2 or more Custom dimensions
+    /// in an HFM application.
+    /// </summary>
     public enum EDimension
     {
         Scenario = tagHFMDIMENSIONS2.DIMID_SCENARIO,
@@ -53,7 +62,7 @@ namespace HFM
         // Reference to class logger
         protected static readonly ILog _log = LogManager.GetLogger(
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-
+        // Names of the fixed dimensions
         public static string[] FixedDimNames = new string[] {
             "Scenario", "Year", "Period", "View", "Entity", "Value",
             "Account", "ICP"
@@ -63,13 +72,13 @@ namespace HFM
         protected readonly HsvMetadata _hsvMetadata;
         // True if the installed version of HFM is >= 11.1.2.2
         protected bool _useExtDims;
-        // Cache of custom dimension ids if HFM version >= 11.1.2.2
+        // Cache of custom dimension ids
         protected int[] _customDimIds;
-        // Cache of custom dimension names if HFM version >= 11.1.2.2
+        // Cache of custom dimension names
         protected string[] _customDimNames;
-        // Cache of custom dimension aliases if HFM version >= 11.1.2.2
+        // Cache of custom dimension aliases
         protected string[] _customDimAliases;
-        // Cache of canonical custom dimension names if HFM version >= 11.1.2.2
+        // Map of custom dimension names and aliases to ids
         protected Dictionary<string, int> _customDimMap;
         // Cache of dimensions
         protected Dictionary<int, Dimension> _dimensions = new Dictionary<int, Dimension>();
@@ -77,7 +86,7 @@ namespace HFM
 
         /// Returns the HFM HsvMetadata object
         internal HsvMetadata HsvMetadata { get { return _hsvMetadata; } }
-
+        /// Returns the names of all dimensions in the current app
         public string[] DimensionNames
         {
             get {
@@ -87,11 +96,11 @@ namespace HFM
                 return names;
             }
         }
-
         /// Returns true if this application is 11.1.2.2 or later
         public bool HasVariableCustoms { get { return _useExtDims; } }
-
+        /// Returns a count of the total number of dimensions in the current app
         public int NumberOfDims { get { return FixedDimNames.Length + NumberOfCustomDims; } }
+        /// Returns a count of the number of custom dimensions in the current app
         public int NumberOfCustomDims
         {
             get {
@@ -101,7 +110,7 @@ namespace HFM
                 return _customDimIds.Length;
             }
         }
-
+        /// Returns the Custom dimension ids
         internal int[] CustomDimIds
         {
             get {
@@ -111,6 +120,7 @@ namespace HFM
                 return _customDimIds;
             }
         }
+        /// Returns the Custom dimension names
         public string[] CustomDimNames
         {
             get {
@@ -120,6 +130,7 @@ namespace HFM
                 return _customDimNames;
             }
         }
+        /// Returns the Custom dimension aliases
         internal string[] CustomDimAliases
         {
             get {
@@ -129,9 +140,7 @@ namespace HFM
                 return _customDimAliases;
             }
         }
-
-
-        /// Returns the Dimension object for the specified dimension
+        /// Returns a Dimension object for the specified dimension
         public Dimension this[string dimName]
         {
             get {
@@ -147,7 +156,7 @@ namespace HFM
         }
 
 
-
+        /// Constructor
         [Factory]
         public Metadata(Session session)
         {
@@ -157,6 +166,7 @@ namespace HFM
         }
 
 
+        /// Given a dimension name, returns the id for that dimension.
         internal int GetDimensionId(ref string dimName)
         {
             int dimId;
@@ -240,6 +250,8 @@ namespace HFM
         }
 
 
+        /// Populates the internal variables holding the names and dimension ids
+        /// for the custom dimensions in the current app.
         private void GetCustomDims()
         {
             _customDimMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
@@ -348,11 +360,13 @@ namespace HFM
         }
 
 
+        /// <summary>
+        /// Takes a slice specification, and returns a Slice object.
+        /// </summary>
         public Slice Slice(string pov)
         {
             return new Slice(this, pov);
         }
-
 
     }
 
@@ -368,11 +382,15 @@ namespace HFM
         protected static readonly ILog _log = LogManager.GetLogger(
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
+        // Reference to HFM HsvTreeInfo object
         protected IHsvTreeInfo _hsvTreeInfo;
+        // Name of the dimension
         protected string _name;
-
+        // Id for the [Hierarchy] member list (to return all members in the dimension)
         public const int MEMBER_LIST_ALL_HIERARCHY = 0;
+        // Member id for the root of a hierarchy
         public const int TREE_ROOT = -1;
+
 
         // Properties
 
@@ -482,7 +500,9 @@ namespace HFM
 
 
         /// <summary>
-        /// Returns a collection of members corresponding to the member specs.
+        /// Returns a MemberList corresponding to a single member spec.
+        /// The memberSpec can correspond to a member name, member list name,
+        /// or range of members.
         /// </summary>
         public MemberList GetMembers(string memberSpec)
         {
@@ -491,7 +511,9 @@ namespace HFM
 
 
         /// <summary>
-        /// Returns a collection of members corresponding to the member specs.
+        /// Returns a MemberList corresponding to the member specs.
+        /// The memberSpec can correspond to a member name, member list name,
+        /// or range of members.
         /// </summary>
         public MemberList GetMembers(IEnumerable<string> memberSpecs)
         {
@@ -499,6 +521,9 @@ namespace HFM
         }
 
 
+        /// <summary>
+        /// Returns a Member object for the member with the specified name
+        /// </summary>
         public Member GetMember(string name)
         {
             if(IsEntity) {
@@ -510,12 +535,18 @@ namespace HFM
         }
 
 
+        /// <summary>
+        /// Returns a Member object for the member with the specified id
+        /// </summary>
         public Member GetMember(int id)
         {
             return GetMember(id, Member.ID_NOT_SPECIFIED);
         }
 
 
+        /// <summary>
+        /// Returns a Member object for the member with the specified id
+        /// </summary>
         public Member GetMember(int id, int parentId)
         {
             if(IsEntity) {
@@ -529,12 +560,6 @@ namespace HFM
     }
 
 
-    /*
-    public class AccountsDimension : Dimension { }
-    public class EntityDimension : Dimension { }
-    public class CustomDimension : Dimension { }
-    */
-
 
     /// <summary>
     /// Represents a member of a dimension (other than Entity).
@@ -545,22 +570,27 @@ namespace HFM
         protected static readonly ILog _log = LogManager.GetLogger(
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-
-        public const int ID_NOT_NEEDED = -1;
-        public const int ID_NOT_SPECIFIED = -2;
-
+        /// Id indicating a parent id that has not been specified
+        public const int ID_NOT_SPECIFIED = -1;
+        /// Id value used when a member id has not yet been retrieved
+        public const int ID_NEEDS_RETRIEVAL = -2;
+        /// Reference to the Dimension to which this Member belongs
         protected Dimension _dimension;
+        /// Name of this member
         protected string _name;
-        protected int _id = ID_NOT_SPECIFIED;
+        /// Id of this member
+        protected int _id = ID_NEEDS_RETRIEVAL;
+        /// Parent name of this member
         protected string _parentName = null;
-        protected int _parentId = ID_NOT_SPECIFIED;
+        /// Parent id of this member
+        protected int _parentId = ID_NEEDS_RETRIEVAL;
 
 
         /// The internal id for the member
         public int Id
         {
             get {
-                if(_id == ID_NOT_SPECIFIED) {
+                if(_id == ID_NEEDS_RETRIEVAL) {
                     _id = _dimension.GetId(_name);
                 }
                 return _id;
@@ -576,11 +606,11 @@ namespace HFM
                 return _name;
             }
         }
-        /// Returns the parent id for this entity
+        /// Returns the parent id for this member
         public int ParentId
         {
             get {
-                if(_parentId == ID_NOT_SPECIFIED) {
+                if(_parentId == ID_NEEDS_RETRIEVAL) {
                     if(_parentName != null) {
                         _parentId = _dimension.GetId(_parentName);
                     }
@@ -589,7 +619,7 @@ namespace HFM
                                 () => _dimension.HsvTreeInfo.GetDefaultParent(Id, out _parentId));
                     }
                     else {
-                        _parentId = ID_NOT_NEEDED;
+                        _parentId = ID_NOT_SPECIFIED;
                     }
                 }
                 return _parentId;
@@ -627,12 +657,14 @@ namespace HFM
         }
 
 
+        /// Constructor
         protected Member(Dimension dimension)
         {
             _dimension = dimension;
         }
 
 
+        /// Constructor
         public Member(Dimension dimension, string name)
         {
             _dimension = dimension;
@@ -656,6 +688,7 @@ namespace HFM
         }
 
 
+        /// Constructor
         public Member(Dimension dimension, int id)
         {
             _dimension = dimension;
@@ -663,6 +696,7 @@ namespace HFM
         }
 
 
+        /// Constructor
         public Member(Dimension dimension, int id, int parentId)
         {
             _dimension = dimension;
@@ -675,6 +709,7 @@ namespace HFM
         {
             return Name;
         }
+
     }
 
 
@@ -684,6 +719,19 @@ namespace HFM
     /// <summary>
     public class Entity : Member
     {
+
+        /// Constructor
+        public Entity(Dimension dimension, string name)
+            : base(dimension, name)
+        { }
+
+
+        /// Constructor
+        public Entity(Dimension dimension, int id, int parentId)
+            : base(dimension, id, parentId)
+        { }
+
+
         /// Returns the default currency id for this entity
         public int DefaultCurrencyId {
             get {
@@ -693,16 +741,6 @@ namespace HFM
                 return currId;
             }
         }
-
-
-        public Entity(Dimension dimension, string name)
-            : base(dimension, name)
-        { }
-
-
-        public Entity(Dimension dimension, int id, int parentId)
-            : base(dimension, id, parentId)
-        { }
 
 
         public override string ToString()
@@ -744,6 +782,7 @@ namespace HFM
         int[] _parents;
 
 
+        /// Returns the n-th Member in the list
         public Member this[int i] {
             get {
                 if(i < 0 && i >= Count) {
@@ -956,6 +995,7 @@ namespace HFM
     }
 
 
+
     /// <summary>
     /// An object for describing a single cell in an HFM application. Contains a
     /// Member object for each dimension.
@@ -966,9 +1006,12 @@ namespace HFM
         protected static readonly ILog _log = LogManager.GetLogger(
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
+        /// Reference to the Metadata object for this app
         private Metadata _metadata;
+        /// An array of Members, one for each dimension in the app
         private Member[] _members;
 
+        /// Returns the Member for the specified dimension number
         public Member this[int dim]
         {
             get {
@@ -986,17 +1029,29 @@ namespace HFM
                 _members[dim] = value;
             }
         }
+        /// Returns the member of the Scenario dimension
         public Member Scenario { get { return this[0]; } }
+        /// Returns the member of the Year dimension
         public Member Year { get { return this[1]; } }
+        /// Returns the member of the Period dimension
         public Member Period { get { return this[2]; } }
+        /// Returns the member of the View dimension
         public Member View { get { return this[3]; } }
+        /// Returns the member of the Entity dimension
         public Member Entity { get { return this[4]; } }
+        /// Returns the member of the Value dimension
         public Member Value { get { return this[5]; } }
+        /// Returns the member of the Account dimension
         public Member Account { get { return this[6]; } }
+        /// Returns the member of the ICP dimension
         public Member ICP { get { return this[7]; } }
+        /// Returns the member of the Custom1 dimension
         public Member Custom1 { get { return this[8]; } }
+        /// Returns the member of the Custom2 dimension
         public Member Custom2 { get { return this[9]; } }
+        /// Returns the member of the Custom3 dimension
         public Member Custom3 { get { return this[10]; } }
+        /// Returns the member of the Custom4 dimension
         public Member Custom4 { get { return this[11]; } }
         /// Converts this POV to an HfmPovCOM object
         public HfmPovCOM HfmPovCOM
@@ -1023,6 +1078,7 @@ namespace HFM
         }
 
 
+        /// Constructor
         public POV(Metadata metadata) {
             _metadata = metadata;
             _log.TraceFormat("Number of dims: {0}", _metadata.NumberOfDims);
@@ -1030,6 +1086,10 @@ namespace HFM
         }
 
 
+        /// <summary>
+        /// Returns the member for Custom dimension 1 to n (where n is the
+        /// number of custom dimensions in the app).
+        /// </summary>
         public Member GetCustom(int custom) {
             int dim = custom + 7;
             if(custom < 1 || custom > _members.Length - 8) {
@@ -1080,12 +1140,16 @@ namespace HFM
         protected static readonly ILog _log = LogManager.GetLogger(
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
+        /// Reference to the Metadata object for the app
         private Metadata _metadata;
-
+        /// The POV specification used to initialise the Slice
         private string _pov;
+        /// A map of dimension names to MemberList objects
         private Dictionary<string, MemberList> _memberLists =
             new Dictionary<string, MemberList>(StringComparer.OrdinalIgnoreCase);
 
+
+        /// Gets or sets the MemberList object for the specified dimension.
         public object this[string dimension]
         {
             get {
@@ -1118,18 +1182,21 @@ namespace HFM
                 }
             }
         }
-
         /// Returns an array of all cells in the slice
         public POV[] POVs { get { return GeneratePOVs(); } }
 
 
-
+        /// <summary>
+        /// Returns the MemberList that defines the Slice member(s) for the
+        /// specified dimension
+        /// </summary>
         public MemberList MemberList(string dimension)
         {
             return this[dimension] as MemberList;
         }
 
 
+        /// Constructor
         [Factory(SingleUse = true)]
         public Slice(Metadata metadata)
         {
@@ -1137,6 +1204,7 @@ namespace HFM
         }
 
 
+        /// Constructor
         public Slice(Metadata metadata, string pov)
         {
             _metadata = metadata;
@@ -1144,6 +1212,7 @@ namespace HFM
         }
 
 
+        /// Merges a POV specification into the current Slice definition.
         private void MergePOV(string pov)
         {
             _pov = pov;
@@ -1157,9 +1226,7 @@ namespace HFM
         }
 
 
-        // Returns a list of arrays of member ids; each item in the list is an
-        // array of member ids representing a single cell, i.e. an array with a
-        // single member id from each dimension.
+        // Returns an array of POV objects representing each cell in the Slice.
         private POV[] GeneratePOVs()
         {
             _log.Trace("Generating POV array");
@@ -1201,4 +1268,5 @@ namespace HFM
         }
 
     }
+
 }
