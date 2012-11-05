@@ -85,6 +85,7 @@ namespace log4net
 
             for (; ex != null; ex = ex.InnerException) {
                 if (ex is COMException && ex.Message.StartsWith("<?xml")) {
+                    writer.WriteLine();
                     writer.Write("HFMException message XML contents:");
                     writer.Write(YAML.XML.ConvertXML(ex.Message));
                 }
@@ -99,7 +100,6 @@ namespace log4net
             }
 
             if (_logHierarchy.Root.Level.CompareTo(log4net.Core.Level.Fine) < 0) {
-                writer.WriteLine();
                 writer.WriteLine();
                 writer.WriteLine("Backtrace:");
                 writer.Write(stackTrace);

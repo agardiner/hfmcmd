@@ -639,6 +639,19 @@ namespace HFMCmd
         }
 
 
+        public void Write(string text)
+        {
+            if(Operation != null && _spin > 0) {
+                _cui.ClearLine();
+            }
+            _cui.Write(text);
+
+            if(Operation != null && _spin > 0) {
+                RenderProgressBar();
+            }
+        }
+
+
         public override void SetHeader(params object[] fields)
         {
             base.SetHeader(fields);
@@ -774,7 +787,7 @@ namespace HFMCmd
 
         protected override void Append(LoggingEvent logEvent)
         {
-            _console.WriteLine(RenderLoggingEvent(logEvent));
+            _console.Write(RenderLoggingEvent(logEvent));
         }
     }
 

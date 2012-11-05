@@ -157,7 +157,7 @@ namespace HFMCmd
 
             // Create a console logger
             ConsoleAppender ca = new HFMCmd.ConsoleAppender(_console);
-            ca.Layout = new log4net.Layout.PatternLayout("%-5level  %message");
+            ca.Layout = new log4net.Layout.PatternLayout("%-5level  %message%newline%exception");
             ca.ActivateOptions();
             log4net.Config.BasicConfigurator.Configure(ca);
 
@@ -320,8 +320,8 @@ namespace HFMCmd
                     }
                 }
                 output.End(true);
-                output.WriteLine(string.Format("For detailed help on any of the above commands, " +
-                                 "use the command '{0} Help <CommandName>'", ApplicationInfo.ExeName));
+                output.WriteSingleValue(string.Format("For detailed help on any of the above commands, " +
+                                        "use the command '{0} Help <CommandName>'", ApplicationInfo.ExeName));
             }
             else {
                 // Display help for the requested command
@@ -346,7 +346,7 @@ namespace HFMCmd
                             }
                         }
                     }
-                    output.End();
+                    output.End(true);
                 }
             }
         }
