@@ -1117,24 +1117,25 @@ namespace HFM
     /// </summary>
     [Setting("POV", "A Point-of-View expression, such as 'S#Actual.Y#2010.P#May.W#YTD.E#E1.V#<Entity Currency>...'",
              ParameterType = typeof(string)),
-     Setting("Scenario", "Scenario member(s) to include in slice",
+     Setting("Scenario", "Scenario member(s) to include in the slice definition",
              ParameterType = typeof(string)),
-     Setting("Year", "Year member(s) to include in slice",
+     Setting("Year", "Year member(s) to include in the slice definition",
              ParameterType = typeof(string)),
-     Setting("Period", "Period member(s) to include in slice",
+     Setting("Period", "Period member(s) to include in the slice definition",
              ParameterType = typeof(string)),
-     Setting("View", "View member(s) to include in slice",
+     Setting("View", "View member(s) to include in the slice definition",
              ParameterType = typeof(string)),
-     Setting("Entity", "Entity member(s) to include in slice",
+     Setting("Entity", "Entity member(s) to include in the slice definition",
              ParameterType = typeof(string)),
-     Setting("Value", "Value member(s) to include in slice",
+     Setting("Value", "Value member(s) to include in the slice definition",
              ParameterType = typeof(string)),
-     Setting("Account", "Account member(s) to include in slice",
+     Setting("Account", "Account member(s) to include in the slice definition",
              ParameterType = typeof(string)),
-     Setting("ICP", "ICP member(s) to include in slice",
+     Setting("ICP", "ICP member(s) to include in the slice definition",
+             ParameterType = typeof(string)),
+     DynamicSetting("CustomDimName", "<CustomDimName> member(s) to include in the slice definition",
              ParameterType = typeof(string))]
-    // TODO: Work out how we can specify Custom member settings
-    public class Slice : ISettingsCollection
+    public class Slice : IDynamicSettingsCollection
     {
         // Reference to class logger
         protected static readonly ILog _log = LogManager.GetLogger(
@@ -1182,6 +1183,13 @@ namespace HFM
                 }
             }
         }
+        /// Returns the names of the dynamic settings
+        public string[] DynamicSettingNames
+        {
+            get {
+                return _metadata.CustomDimNames;
+            }
+        }
         /// Returns an array of all cells in the slice
         public POV[] POVs { get { return GeneratePOVs(); } }
 
@@ -1220,8 +1228,10 @@ namespace HFM
             foreach(var mbr in mbrs) {
                 var f = mbr.Split('#');
                 var dimension = _metadata[f[0]];
-                _log.DebugFormat("Creating {0} member list for {1}", dimension.Name, f[1]);
-                _memberLists[dimension.Name] = new MemberList(dimension, f[1]);
+                if(!_memberLists.ContainsKey(dimension.Name)) {
+                    _log.DebugFormat("Creating {0} member list for {1}", dimension.Name, f[1]);
+                    _memberLists[dimension.Name] = new MemberList(dimension, f[1]);
+                }
             }
         }
 

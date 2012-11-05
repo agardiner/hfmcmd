@@ -133,7 +133,7 @@ namespace HFMCmd
         public static List<string> WrapText(object value, int width)
         {
             List<string> lines = new List<string>();
-            var sVal = value.ToString().Trim();
+            var sVal = value == null ? "" : value.ToString().Trim();
             var wsPos = 0;
             var wbPos = 0;
             string chunk;

@@ -359,7 +359,14 @@ namespace Command
                     // Set each setting that has a value in the supplied args
                     var coll = this[param.ParameterType] as ISettingsCollection;
                     foreach(var setting in GetSettings(param.ParameterType)) {
-                        if(args.ContainsKey(setting.Name)) {
+                        if(setting is DynamicSettingAttribute) {
+                            foreach(var dynset in ((IDynamicSettingsCollection)coll).DynamicSettingNames) {
+                                if(args.ContainsKey(dynset)) {
+                                    coll[dynset] = args[dynset];
+                                }
+                            }
+                        }
+                        else if(args.ContainsKey(setting.Name)) {
                             coll[setting.InternalName] = ConvertSetting(args[setting.Name], setting);
                             logParam(setting, coll[setting.InternalName]);
                         }

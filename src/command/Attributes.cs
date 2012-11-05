@@ -205,4 +205,21 @@ namespace Command
         }
     }
 
+
+    /// <summary>
+    /// Used to define a single setting that has one or more dynamic names/values.
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
+    public class DynamicSettingAttribute : SettingAttribute
+    {
+        /// Constructor; description is mandatory, type defaults to
+        /// boolean, default value to null (false)
+        public DynamicSettingAttribute(string label, string desc)
+            : base("<" + label + ">", desc)
+        {
+            ParameterType = typeof(bool);
+            _hasDefaultValue = true;
+        }
+    }
+
 }

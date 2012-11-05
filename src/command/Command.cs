@@ -229,6 +229,15 @@ namespace Command
     }
 
 
+    /// <summary>
+    /// Marks a setting collection as possessing a dynamic set of settings, i.e.
+    /// one whose mem
+    /// </summary>
+    public interface IDynamicSettingsCollection : ISettingsCollection
+    {
+        string[] DynamicSettingNames { get; }
+    }
+
 
     /// <summary>
     /// Represents a constructor, method, or property that can be invoked to

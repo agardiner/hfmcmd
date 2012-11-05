@@ -96,6 +96,14 @@ namespace Command
                 // Process class level attributes
                 List<SettingAttribute> settings = new List<SettingAttribute>();
                 foreach(var attr in t.GetCustomAttributes(typeof(SettingAttribute), false)) {
+                    if(attr is DynamicSettingAttribute) {
+                        // Verify that DynamicSettingAttributes are only used on IDynamicSettingsCollection
+                        if(t.GetInterface("IDynamicSettingsCollection") == null) {
+                            throw new ArgumentException(string.Format("A DynamicSettingAttribute has " +
+                                        "been defined on class {0}, but this class does not implement " +
+                                        "the IDynamicSettingsCollection interface", t.Name));
+                        }
+                    }
                     settings.Add((SettingAttribute)attr);
                 }
                 _settings[t] = settings;

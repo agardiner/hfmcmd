@@ -236,18 +236,26 @@ namespace HFMCmd
         protected void AddSettingAsArg(ISetting setting)
         {
             if(!setting.IsVersioned || setting.IsCurrent(HFM.HFM.Version)) {
-                var key = setting.Name.Capitalize();
-                _log.DebugFormat("Adding command-line arg {0}", key);
+                if(setting is DynamicSettingAttribute) {
+                    // Instruct parser to include unrecognised args, since these
+                    // may correspond to dynamic setting values
+                    _cmdLine.Definition.IncludeUnrecognisedKeywordArgs = true;
+                    _cmdLine.Definition.IncludeUnrecognisedFlagArgs = true;
+                }
+                else {
+                    var key = setting.Name.Capitalize();
+                    _log.DebugFormat("Adding command-line arg {0}", key);
 
-                // Add a keyword argument for this setting
-                ValueArgument arg = setting.HasUda("PositionalArg") ?
-                    (ValueArgument)_cmdLine.AddPositionalArgument(key, setting.Description) :
-                    (ValueArgument)_cmdLine.AddKeywordArgument(key, setting.Description);
-                arg.Alias = setting.Alias;
-                arg.IsRequired = !setting.HasDefaultValue;
-                arg.IsSensitive = setting.IsSensitive;
-                if(setting.HasDefaultValue && setting.DefaultValue != null) {
-                    arg.DefaultValue = setting.DefaultValue.ToString();
+                    // Add a keyword argument for this setting
+                    ValueArgument arg = setting.HasUda("PositionalArg") ?
+                        (ValueArgument)_cmdLine.AddPositionalArgument(key, setting.Description) :
+                        (ValueArgument)_cmdLine.AddKeywordArgument(key, setting.Description);
+                    arg.Alias = setting.Alias;
+                    arg.IsRequired = !setting.HasDefaultValue;
+                    arg.IsSensitive = setting.IsSensitive;
+                    if(setting.HasDefaultValue && setting.DefaultValue != null) {
+                        arg.DefaultValue = setting.DefaultValue.ToString();
+                    }
                 }
             }
         }
@@ -327,27 +335,37 @@ namespace HFMCmd
                 // Display help for the requested command
                 var cmd = _commands[command];
                 if(cmd.Description != null) {
-                    output.WriteSingleValue(cmd.Description, "Description", 80);
+                    output.WriteSingleValue(cmd.Description, "Description");
                     output.WriteLine();
                 }
                 if(cmd.Parameters != null) {
-                    output.SetHeader("Parameter", 30, "Description", 50);
+                    output.SetHeader("Parameter", 30, "Default Value", 15, "Description");
                     foreach(var parm in cmd.Parameters) {
                         if(parm.HasParameterAttribute) {
-                            if(!parm.IsVersioned || parm.IsCurrent(HFM.HFM.Version)) {
-                                output.WriteRecord(parm.Name.Capitalize(), parm.Description);
-                            }
+                            OutputSetting(output, parm);
                         }
                         else if(parm.IsSettingsCollection) {
                             foreach(var setting in _commands.GetSettings(parm.ParameterType)) {
-                                if(!parm.IsVersioned || setting.IsCurrent(HFM.HFM.Version)) {
-                                    output.WriteRecord(setting.Name.Capitalize(), setting.Description);
-                                }
+                                OutputSetting(output, setting);
                             }
                         }
                     }
                     output.End(true);
                 }
+            }
+        }
+
+
+        private void OutputSetting(IOutput output, ISetting setting)
+        {
+            if(!setting.IsVersioned || setting.IsCurrent(HFM.HFM.Version)) {
+                var name = setting.Name.Capitalize();
+                var def = setting.DefaultValue;
+                var desc = setting.Description;
+                if(!desc.EndsWith(".")) {
+                    desc = desc + ".";
+                }
+                output.WriteRecord(name, def, desc);
             }
         }
 

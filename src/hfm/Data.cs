@@ -31,11 +31,15 @@ namespace HFM
         }
 
 
-        [Command("Sets a cell or slice to the specified value")]
+        [Command("Sets a cell or slice to the specified value (note: use ClearCell to remove data). " +
+                 "The cell intersection(s) to be set can be specified using either a POV string, " +
+                 "a member list specification for each dimension, or a combination of both - provided " +
+                 "all dimensions are ultimately specified. If a dimension is specified both in the POV " +
+                 "and in a dimension setting, the dimension setting takes precedence.")]
         public void SetCell(
                 Metadata metadata,
                 Slice slice,
-                [Parameter("The value to set the cell to")]
+                [Parameter("The amount to set the cell(s) to")]
                 double amount,
                 IOutput output)
         {
@@ -43,7 +47,11 @@ namespace HFM
         }
 
 
-        [Command("Clears data fron a cell or slice")]
+        [Command("Clears data fron a cell or slice. " +
+                 "The cell intersection(s) to be cleared can be specified using either a POV string, " +
+                 "a member list specification for each dimension, or a combination of both - provided " +
+                 "all dimensions are ultimately specified. If a dimension is specified both in the POV " +
+                 "and in a dimension setting, the dimension setting takes precedence.")]
         public void ClearCell(
                 Metadata metadata,
                 Slice slice,
