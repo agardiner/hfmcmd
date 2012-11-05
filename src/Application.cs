@@ -98,6 +98,10 @@ namespace HFMCmd
             _context.Set(this);
             //_context.Set(new LogOutput());
             _context.Set(_console);
+            _context.MissingArgHandler = p => {
+                var prompt = string.Format("Enter a value for {0} ({1}): ", p.Name, p.Description);
+                return p.IsSensitive ? _cmdLine.ReadPassword(prompt) : _cmdLine.ReadLine(prompt);
+            };
 
             // Standard command-line arguments
             ValueArgument arg = _cmdLine.AddPositionalArgument("CommandOrFile",
@@ -251,7 +255,9 @@ namespace HFMCmd
                         (ValueArgument)_cmdLine.AddPositionalArgument(key, setting.Description) :
                         (ValueArgument)_cmdLine.AddKeywordArgument(key, setting.Description);
                     arg.Alias = setting.Alias;
-                    arg.IsRequired = !setting.HasDefaultValue;
+                    // TODO: Argument should only be optional if prompting is valid (i.e. not headless)
+                    arg.IsRequired = false;
+                    // arg.IsRequired = !setting.HasDefaultValue;
                     arg.IsSensitive = setting.IsSensitive;
                     if(setting.HasDefaultValue && setting.DefaultValue != null) {
                         arg.DefaultValue = setting.DefaultValue.ToString();

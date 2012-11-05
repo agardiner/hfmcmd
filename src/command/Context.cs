@@ -73,7 +73,10 @@ namespace Command
         // list.
         protected List<object> _context;
 
+        /// A callback that will be invoked when a required argument is missing
+        public Func<CommandParameter, object> MissingArgHandler;
 
+        /// Accessor for obtaining an object of the specified type from the context
         public object this[Type type] {
             get {
                 var result = _context.FirstOrDefault(o => type.IsInstanceOfType(o));
@@ -399,6 +402,17 @@ namespace Command
                     parms[i] = this[param.ParameterType];
                     if(param.HasParameterAttribute) {
                         logParam(param, parms[i]);
+                    }
+                }
+                else if(MissingArgHandler != null) {
+                    object val = MissingArgHandler(param);
+                    if(val != null) {
+                        parms[i] = ConvertSetting(val, param);
+                    }
+                    else {
+                        throw new ArgumentException(
+                                String.Format("No value was specified for the required argument '{0}' to command '{1}'",
+                                param.Name, cmd.Name));
                     }
                 }
                 else {

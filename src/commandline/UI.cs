@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Linq;
@@ -358,8 +359,9 @@ namespace CommandLine
         /// <summary>
         /// For completeness - read a line of input from the console.
         /// </summary>
-        public string ReadLine()
+        public string ReadLine(string prompt)
         {
+            System.Console.Write(prompt);
             return System.Console.ReadLine();
         }
 
@@ -370,7 +372,7 @@ namespace CommandLine
         public string ReadPassword(string prompt)
         {
             ConsoleKeyInfo ki;
-            var pwd = new System.Security.SecureString();
+            var pwd = new StringBuilder();
 
             System.Console.Write(prompt);
             while(true) {
@@ -380,12 +382,12 @@ namespace CommandLine
                 }
                 else if(ki.Key == ConsoleKey.Backspace) {
                     if(pwd.Length > 0) {
-                        pwd.RemoveAt(pwd.Length - 1);
+                        pwd.Remove(pwd.Length - 1, 1);
                         System.Console.Write("\b \b");
                     }
                 }
                 else {
-                    pwd.AppendChar(ki.KeyChar);
+                    pwd.Append(ki.KeyChar);
                     System.Console.Write('*');
                 }
             }
