@@ -96,47 +96,14 @@ namespace HFMCmd
             // Create a Context for invoking Commands
             _context = new Context(_commands);
             _context.Set(this);
-            //_context.Set(new LogOutput());
             _context.Set(_console);
             _context.MissingArgHandler = p => {
-                var prompt = string.Format("Enter a value for {0} ({1}): ", p.Name, p.Description);
+                var prompt = string.Format("Enter a value for {0} ({1}): ", p.Name.Capitalize(), p.Description);
                 return p.IsSensitive ? _cmdLine.ReadPassword(prompt) : _cmdLine.ReadLine(prompt);
             };
 
-            // Standard command-line arguments
-            ValueArgument arg = _cmdLine.AddPositionalArgument("CommandOrFile",
-                    "The name of the command to execute, or the path to a file containing commands to execute");
-            arg.IsRequired = true;
-            arg.Validate = ValidateCommand;
-            arg = _cmdLine.AddKeywordArgument("LogLevel", "Set logging to the specified log level",
-                    (_, val) => Log(val, null));
-            arg.AddValidator(new ListValidator("NONE", "SEVERE", "ERROR", "WARN",
-                    "INFO", "FINE", "TRACE", "DEBUG"));
-            _cmdLine.AddFlagArgument("Debug", "Enable debug logging",
-                    (_, val) => Log("DEBUG", null));
-
-            // Process command-line arguments
-            try {
-                var args = _cmdLine.Parse(Environment.GetCommandLineArgs());
-                if(args != null) {
-                    string cmdOrFile = args["CommandOrFile"] as string;
-                    bool ok;
-                    if(_commands.Contains(cmdOrFile)) {
-                        ok = InvokeCommand(cmdOrFile, args);
-                    }
-                    else {
-                        ok = ProcessCommandFile(cmdOrFile, args);
-                    }
-
-                    if(!ok) {
-                        rc = 1;
-                    }
-                }
-            }
-            catch(ParseException ex) {
-                _log.Error(ex);
-                rc = 99;
-            }
+            SetupCommandLine();
+            rc = ProcessCommandLine();
             if(rc == 0) {
                 _log.Info("Exiting with status code 0");
             }
@@ -170,6 +137,24 @@ namespace HFMCmd
 
             // Set default log level
             _logHierarchy.Root.Level = _logRepository.LevelMap["INFO"];
+        }
+
+
+        // Defines the standard command-line arguments
+        protected void SetupCommandLine()
+        {
+            ValueArgument arg = _cmdLine.AddPositionalArgument("CommandOrFile",
+                    "The name of the command to execute, or the path to a file containing commands to execute");
+            arg.IsRequired = true;
+            arg.Validate = ValidateCommand;
+
+            arg = _cmdLine.AddKeywordArgument("LogLevel", "Set logging to the specified log level",
+                    (_, val) => Log(val, null));
+            arg.AddValidator(new ListValidator("NONE", "SEVERE", "ERROR", "WARN",
+                    "INFO", "FINE", "TRACE", "DEBUG"));
+
+            _cmdLine.AddFlagArgument("Debug", "Enable debug logging",
+                    (_, val) => Log("DEBUG", null));
         }
 
 
@@ -264,6 +249,35 @@ namespace HFMCmd
                     }
                 }
             }
+        }
+
+
+        /// Process command-line arguments
+        protected int ProcessCommandLine()
+        {
+            int rc = 0;
+            try {
+                var args = _cmdLine.Parse(Environment.GetCommandLineArgs());
+                if(args != null) {
+                    string cmdOrFile = args["CommandOrFile"] as string;
+                    bool ok;
+                    if(_commands.Contains(cmdOrFile)) {
+                        ok = InvokeCommand(cmdOrFile, args);
+                    }
+                    else {
+                        ok = ProcessCommandFile(cmdOrFile, args);
+                    }
+
+                    if(!ok) {
+                        rc = 1;
+                    }
+                }
+            }
+            catch(ParseException ex) {
+                _log.Error(ex);
+                rc = 99;
+            }
+            return rc;
         }
 
 
@@ -410,6 +424,9 @@ namespace HFMCmd
                 fa.File = logFile;
                 fa.ActivateOptions();
                 log4net.Config.BasicConfigurator.Configure(fa);
+
+                // TODO: Add log output for capturing output to log
+                //_context.Set(new LogOutput());
             }
         }
 
