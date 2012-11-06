@@ -416,17 +416,26 @@ namespace Command
         /// Logs the value of a setting
         private void LogSettingValue(StringBuilder sb, ISetting setting, object val)
         {
+            if(setting.IsSensitive) {
+                val = "******";
+            }
+            LogSettingNameValue(sb, setting.Name, val);
+        }
+
+
+        private void LogSettingNameValue(StringBuilder sb, string name, object val)
+        {
             if(val != null) {
                 sb.AppendLine();
                 sb.Append("          ");
-                sb.Append(char.ToUpper(setting.Name[0]));
-                sb.AppendFormat("{0,-18}", setting.Name.Substring(1));
+                sb.Append(char.ToUpper(name[0]));
+                sb.AppendFormat("{0,-18}", name.Substring(1));
                 sb.Append(": ");
                 if(val.GetType().IsArray) {
                     sb.Append(string.Join(", ", ((object[])val).Select(o => o.ToString()).ToArray()));
                 }
                 else {
-                    sb.Append(setting.IsSensitive ? "******" : val);
+                    sb.Append(val);
                 }
             }
         }
@@ -460,9 +469,12 @@ namespace Command
             var coll = this[param.ParameterType] as ISettingsCollection;
             foreach(var setting in GetSettings(param.ParameterType)) {
                 if(setting is DynamicSettingAttribute) {
+                    _log.Trace("Retrieving dynamic setting argument names");
                     foreach(var dynset in ((IDynamicSettingsCollection)coll).DynamicSettingNames) {
                         if(args.ContainsKey(dynset)) {
-                            coll[dynset] = args[dynset];
+                            _log.DebugFormat("Processing dynamic setting {0}", dynset);
+                            coll[dynset] = ConvertSetting(args[dynset], setting);
+                            LogSettingNameValue(sb, dynset, coll[dynset]);
                         }
                     }
                 }
