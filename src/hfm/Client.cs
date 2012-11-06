@@ -54,6 +54,9 @@ namespace HFM
         // Reference to HFM HsxClient COM object
         private readonly HsxClient _hsxClient;
 
+        /// Property for returning the HsxClient COM object
+        internal HsxClient HsxClient { get { return _hsxClient; } }
+
 
         // Constructor
         [Factory]
@@ -106,28 +109,22 @@ namespace HFM
         }
 
 
-        [Factory]
-        public Server GetServer(string clusterName)
-        {
-            object server = null;
-            HFM.Try("Retrieving HsxServer instance",
-                    () => server = _hsxClient.GetServerOnCluster(clusterName));
-            return new Server((HsxServer)server);
-        }
-
-
         [Command("Returns the names of the HFM clusters and/or servers registered on this machine")]
-        public string[] GetClusters(IOutput output)
+        public string[] EnumClusters(IOutput output)
         {
             string[] clusters = null;
 
             HFM.Try("Retrieving names of registered clusters / servers",
                     () => clusters = _hsxClient.EnumRegisteredClusterNames() as string[]);
-            if(output != null && clusters != null) {
+            if(clusters != null) {
                 output.SetHeader("Cluster");
                 foreach(var cluster in clusters) {
                     output.WriteRecord(cluster);
                 }
+                output.End();
+            }
+            else {
+                output.WriteSingleValue("There are no clusters registered on this machine");
             }
             return clusters;
         }
@@ -146,7 +143,7 @@ namespace HFM
             // TODO: This seems to always throw an exception!?
             HFM.Try("Obtaining cluster information for server",
                     () => _hsxClient.GetClusterInfo(serverName, loadBalanced, out clusterName));
-            if(output != null && clusterName != null) {
+            if(clusterName != null) {
                 output.WriteSingleValue(clusterName, "Cluster Name");
             }
         }
@@ -160,7 +157,7 @@ namespace HFM
                     () => _hsxClient.DetermineWindowsLoggedOnUser(out domain, out userid));
             if(output != null) {
                 output.SetHeader("Domain", "User Name", 30);
-                output.WriteRecord(domain, userid);
+                output.WriteSingleRecord(domain, userid);
             }
             return string.Format(@"{0}\{1}", domain, userid);
         }
@@ -275,7 +272,7 @@ namespace HFM
 
 
         [Command("Returns the names of the available provisioning projects in Shared Services.")]
-        public string[] GetProvisioningProjects(
+        public string[] EnumProvisioningProjects(
                 [Parameter("The name of the cluster from which to obtain the Shared Services information")]
                 string clusterName,
                 IOutput output)
@@ -358,7 +355,7 @@ namespace HFM
             HFM.Try("Checking if user has SystemAdmin rights",
                     () => _hsxClient.DoesUserHaveSystemAdminRights(clusterName, out hasAdmin));
             if(output != null) {
-                output.SetHeader("Cluster", "System Admin Rights");
+                output.SetHeader("Cluster", "System Admin Rights", 20);
                 output.WriteSingleRecord(clusterName, hasAdmin ? "Yes" : "No");
             }
             return hasAdmin;
