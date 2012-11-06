@@ -79,11 +79,13 @@ namespace Command
 
         // Registry of known Commands and Factories
         protected Registry _registry;
-
         // A list of object instances representing the current context.
         // When a command is invoked, it is invoked on an object that is in this
         // list.
-        protected List<object> _context;
+        protected List<object> _context = new List<object>();
+        /// A list of single-use objects that should be purged when the current
+        /// command completes.
+        protected List<object> _purgeList = new List<object>();
 
         /// A callback that will be invoked when a required argument is missing
         public Func<CommandParameter, object> MissingArgHandler;
@@ -100,10 +102,15 @@ namespace Command
 
 
         // Constructor
-        public Context(Registry registry)
+        public Context(Registry registry) : this(registry, null)
+        { }
+
+
+        // Constructor
+        public Context(Registry registry, Func<CommandParameter, object> missingArgHandler)
         {
             _registry = registry;
-            _context = new List<object>();
+            MissingArgHandler = missingArgHandler;
         }
 
 
@@ -139,6 +146,23 @@ namespace Command
             var result = _context.Any(o => type.IsInstanceOfType(o));
             _log.DebugFormat("Context {1} contain an object of type {0}", type,
                     result ? "does" : "does not");
+            return result;
+        }
+
+
+        /// <summary>
+        /// Removes the first object that is an instance of type.
+        /// </summary>
+        public object Remove(Type type)
+        {
+            object result = null;
+            for(int i = 0; i < _context.Count; ++i) {
+                if(type.IsInstanceOfType(_context[i])) {
+                    result = _context[i];
+                    _context.Remove(i);
+                    break;
+                }
+            }
             return result;
         }
 
@@ -212,11 +236,12 @@ namespace Command
         public object Invoke(string command, Dictionary<string, object> args)
         {
             Command cmd = _registry[command];
-
             foreach(var step in FindPathToType(cmd.Type, cmd)) {
                 Instantiate(step, args);
             }
-            return InvokeCommand(cmd, args);
+            var result = InvokeCommand(cmd, args);
+            PurgeSingleUseObjects();
+            return result;
         }
 
 
@@ -226,7 +251,7 @@ namespace Command
         /// necessary parameter values the command needs. If not, we then look
         /// to see if any alternate Factories have been registered, looking to
         /// see which of these might succeed from the current context.
-        protected object Instantiate(Factory step, Dictionary<string, object> args)
+        private object Instantiate(Factory step, Dictionary<string, object> args)
         {
             object ctxt = null;
 
@@ -245,6 +270,7 @@ namespace Command
                     // Check for alternate factories
                     foreach(var factory in _registry.GetAlternates(step.ReturnType)) {
                         if(!factory.IsCommand || args.ContainsRequiredValuesForCommand(factory.Command)) {
+                            step = factory;
                             ctxt = Instantiate(factory, args);
                             break;
                         }
@@ -268,6 +294,9 @@ namespace Command
 
             if(ctxt != null) {
                 Set(ctxt);
+                if(step.IsSingleUse) {
+                    _purgeList.Add(ctxt);
+                }
             }
             else {
                 throw new ContextException(string.Format("No object of type {0} can be constructed " +
@@ -279,7 +308,7 @@ namespace Command
 
         /// Invoke a Factory constructor, supplying any arguments needed by the
         /// constructor from the current context.
-        protected object InvokeConstructor(ConstructorInfo ctor)
+        private object InvokeConstructor(ConstructorInfo ctor)
         {
             ParameterInfo[] pi = ctor.GetParameters();
             object[] parms = new object[pi.Length];
@@ -300,7 +329,7 @@ namespace Command
         /// Invoke an instance of the supplied Command object, using the supplied
         /// arguments dictionary to obtain parameter values. An instance of the
         /// host object must already be available in the context.
-        protected object InvokeCommand(Command cmd, Dictionary<string, object> args)
+        private object InvokeCommand(Command cmd, Dictionary<string, object> args)
         {
             if(!HasObject(cmd.Type)) {
                 throw new ContextException(String.Format("No object of type {0} " +
@@ -339,14 +368,12 @@ namespace Command
                 Set(result);
             }
 
-            // TODO: Purge any single use objects from the context
-
             return result;
         }
 
 
         /// Prepares the parameters to be passed to a command.
-        protected object[] PrepareCommandArguments(Command cmd, Dictionary<string, object> args, out string paramLog)
+        private object[] PrepareCommandArguments(Command cmd, Dictionary<string, object> args, out string paramLog)
         {
             // Create an array of parameters in the order expected
             var parms = new object[cmd.Parameters.Count];
@@ -489,6 +516,19 @@ namespace Command
             }
             return coll;
         }
+
+
+        /// Once a command has been invoked, any single-use objects used to
+        /// enable that command must be removed from the context.
+        private void PurgeSingleUseObjects()
+        {
+            foreach(var purgeObj in _purgeList) {
+                _log.DebugFormat("Removing {0} object from context", purgeObj.GetType().Name);
+                _context.Remove(purgeObj);
+            }
+            _purgeList.Clear();
+        }
+
     }
 
 }

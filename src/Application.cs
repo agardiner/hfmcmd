@@ -94,13 +94,9 @@ namespace HFMCmd
             _commands.RegisterNamespace("HFM");
 
             // Create a Context for invoking Commands
-            _context = new Context(_commands);
+            _context = new Context(_commands, PromptForMissingArg);
             _context.Set(this);
             _context.Set(_console);
-            _context.MissingArgHandler = p => {
-                var prompt = string.Format("Enter a value for {0} ({1}): ", p.Name.Capitalize(), p.Description);
-                return p.IsSensitive ? _cmdLine.ReadPassword(prompt) : _cmdLine.ReadLine(prompt);
-            };
 
             SetupCommandLine();
             rc = ProcessCommandLine();
@@ -249,6 +245,18 @@ namespace HFMCmd
                     }
                 }
             }
+        }
+
+
+        /// <summary>
+        /// Prompts for a value for setting
+        /// </summary>
+        public object PromptForMissingArg(ISetting setting)
+        {
+            var prompt = string.Format("Enter a value for {0} ({1}): ",
+                    setting.Name.Capitalize(), setting.Description);
+            return setting.IsSensitive ? _cmdLine.ReadPassword(prompt) :
+                                   _cmdLine.ReadLine(prompt);
         }
 
 

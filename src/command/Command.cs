@@ -269,6 +269,8 @@ namespace Command
         /// The MemberInfo that holds details about the item (i.e. method,
         /// constructor, or property) that is the factory
         protected readonly MemberInfo _memberInfo;
+        /// The FactoryAttribute used to identify a factory
+        protected readonly FactoryAttribute _factoryAttribute;
         /// The Type of the object that is returned by this factory
         public readonly Type ReturnType;
         /// Reference to the Command definition (if this factory is also a command)
@@ -290,12 +292,18 @@ namespace Command
         public PropertyInfo    Property { get { return _memberInfo as PropertyInfo; } }
         /// The Type of the class on which this Factory is declared
         public Type            DeclaringType { get { return _memberInfo.DeclaringType; } }
+        /// True if the factory is an alternate (rather than primary) means of
+        /// creating objects
+        public bool            IsAlternate { get { return _factoryAttribute.Alternate; } }
+        /// True if the factory object can be persisted across multiple commands
+        public bool            IsSingleUse { get { return _factoryAttribute.SingleUse; } }
 
 
         /// Constructor
-        public Factory(MemberInfo mi)
+        public Factory(MemberInfo mi, FactoryAttribute fa)
         {
-            this._memberInfo = mi;
+            _memberInfo = mi;
+            _factoryAttribute = fa;
             if(mi is MethodInfo) {
                 ReturnType = (mi as MethodInfo).ReturnType;
             }

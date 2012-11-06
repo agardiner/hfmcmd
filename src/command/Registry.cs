@@ -118,8 +118,8 @@ namespace Command
                             Add(cmd);
                         }
                         if(attr is FactoryAttribute) {
-                            factory = new Factory(mi);
-                            Add(factory, (attr as FactoryAttribute).Alternate);
+                            factory = new Factory(mi, attr as FactoryAttribute);
+                            Add(factory);
                         }
                     }
                     if(cmd != null && factory != null) {
@@ -141,23 +141,14 @@ namespace Command
 
 
         /// <summary>
-        /// Registers the specified Factory instance.
-        /// </summary>
-        public void Add(Factory factory)
-        {
-            Add(factory, false);
-        }
-
-
-        /// <summary>
         /// Registers the specified Factory instance as an alternate mechanism
         /// for obtaining objects of the Factory return type. An alternate means
         /// will be tried when no other non-alternate path to create an object
         /// can be found from the current context state.
         /// </summary>
-        public void Add(Factory factory, bool isAlternate)
+        public void Add(Factory factory)
         {
-            if(isAlternate) {
+            if(factory.IsAlternate) {
                 _alternates.Add(factory);
             }
             else {
@@ -193,6 +184,9 @@ namespace Command
         }
 
 
+        /// <summary>
+        /// Returns each Command that is currently registered.
+        /// </summary>
         public IEnumerable<Command> EachCommand()
         {
             return _commands.Values.OrderBy(c => c.Name);
@@ -217,8 +211,7 @@ namespace Command
         {
             return _alternates.Where(f => f.ReturnType == type);
         }
+
     }
-
-
 
 }
