@@ -87,6 +87,11 @@ namespace Command
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
     public class CommandAttribute : VersionedAttribute
     {
+        /// Name of the command; this is normally the same as the method that is
+        /// decorated with this attribute
+        public string Name { get; set; }
+
+        /// Constructor
         public CommandAttribute(string desc)
             : base(desc)
         { }

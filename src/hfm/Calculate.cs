@@ -120,7 +120,7 @@ namespace HFM
         }
 
 
-        [Command("Performs a calculation")]
+        [Command("Performs a calculation", Name = "Calculate")]
         public void ChartLogic(
                 Metadata metadata,
                 [Parameter("The scenario(s) in which to perform the calculation",
@@ -248,7 +248,7 @@ namespace HFM
 
         [Command("Performs an Equity Pick-up adjustment calculation",
                  Since = "11.1.2.2")]
-        public void CalcEPU(
+        public void CalculateEPU(
                 Metadata metadata,
                 [Parameter("The scenario in which to perform the equity pick-up",
                            Alias = "Scenario")]

@@ -39,7 +39,13 @@ namespace Command
         // Properties
 
         /// The name of the Command
-        public string Name { get { return MethodInfo.Name; } }
+        public string Name {
+            get {
+                return CommandAttribute.Name != null ?
+                    CommandAttribute.Name :
+                    MethodInfo.Name;
+            }
+        }
         /// The return type of this Command
         public Type ReturnType { get { return MethodInfo.ReturnType; } }
         /// True if this Command is also a Factory for objects
@@ -65,6 +71,9 @@ namespace Command
         }
 
 
+        /// <summary>
+        /// Returns true if the Command is current for the specified version
+        /// </summary>
         public bool IsCurrent(Version ver)
         {
             return CommandAttribute.IsCurrent(ver);
@@ -182,17 +191,6 @@ namespace Command
             }
         }
 
-        /// Returns true if the parameter is current
-        public bool IsCurrent(Version version)
-        {
-            return _paramAttribute != null ? _paramAttribute.IsCurrent(version) : true;
-        }
-        /// Returns true if the parameter is tagged with the Uda
-        public bool HasUda(string uda)
-        {
-            return _paramAttribute != null ? _paramAttribute.HasUda(uda) : false;
-        }
-
 
         /// Constructor
         public CommandParameter(ParameterInfo pi)
@@ -201,6 +199,25 @@ namespace Command
             _paramType = pi.ParameterType;
             _paramAttribute = Attribute.GetCustomAttribute(pi, typeof(ParameterAttribute)) as ParameterAttribute;
         }
+
+
+        /// <summary>
+        /// Returns true if the parameter is current
+        /// </summary>
+        public bool IsCurrent(Version version)
+        {
+            return _paramAttribute != null ? _paramAttribute.IsCurrent(version) : true;
+        }
+
+
+        /// <summary>
+        /// Returns true if the parameter is tagged with the Uda
+        /// </summary>
+        public bool HasUda(string uda)
+        {
+            return _paramAttribute != null ? _paramAttribute.HasUda(uda) : false;
+        }
+
 
         public override string ToString()
         {
@@ -231,7 +248,7 @@ namespace Command
 
     /// <summary>
     /// Marks a setting collection as possessing a dynamic set of settings, i.e.
-    /// one whose mem
+    /// one whose members cannot be determined until run-time.
     /// </summary>
     public interface IDynamicSettingsCollection : ISettingsCollection
     {
@@ -249,20 +266,27 @@ namespace Command
         protected static readonly ILog _log = LogManager.GetLogger(
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
+        /// The MemberInfo that holds details about the item (i.e. method,
+        /// constructor, or property) that is the factory
         protected readonly MemberInfo _memberInfo;
         /// The Type of the object that is returned by this factory
         public readonly Type ReturnType;
         /// Reference to the Command definition (if this factory is also a command)
         protected internal Command _command;
 
-        /// Public properties
+        // Public properties
 
-        public string          Name { get { return _memberInfo.Name; } }
+        /// True if the factory is also a command
         public bool            IsCommand { get { return _command != null; } }
+        /// The Command object for the factory command
         public Command         Command { get { return _command; } }
+        /// True if the factory is a constructor
         public bool            IsConstructor { get { return _memberInfo is ConstructorInfo; } }
+        /// The ConstructorInfo for the factory constructor
         public ConstructorInfo Constructor { get { return _memberInfo as ConstructorInfo; } }
+        /// True if the factory is a property on another object type
         public bool            IsProperty { get { return _memberInfo is PropertyInfo; } }
+        /// The PropertyInfo for the factory property
         public PropertyInfo    Property { get { return _memberInfo as PropertyInfo; } }
         /// The Type of the class on which this Factory is declared
         public Type            DeclaringType { get { return _memberInfo.DeclaringType; } }
@@ -288,10 +312,10 @@ namespace Command
         public override string ToString()
         {
             if(_memberInfo is MethodInfo) {
-                return string.Format("Factory method {0} for {1}", Name, ReturnType);
+                return string.Format("Factory method {0} for {1}", _memberInfo.Name, ReturnType);
             }
             else if(_memberInfo is PropertyInfo) {
-                return string.Format("Factory property {0} for {1}", Name, ReturnType);
+                return string.Format("Factory property {0} for {1}", _memberInfo.Name, ReturnType);
             }
             else if(_memberInfo is ConstructorInfo) {
                 return string.Format("Factory constructor for {0}", ReturnType);
