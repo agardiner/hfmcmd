@@ -16,8 +16,16 @@ namespace Command
     /// </summary>
     public class ContextException : Exception
     {
-        public ContextException(string msg) :
-            base(msg)
+        public ContextException(string msg)
+            : base(msg)
+        { }
+    }
+
+
+    public class CommandException : Exception
+    {
+        public CommandException(string format, string arg, Exception ex)
+            : base(string.Format(format, arg), ex)
         { }
     }
 
@@ -337,7 +345,14 @@ namespace Command
             }
 
             string paramLog;
-            object[] parms = PrepareCommandArguments(cmd, args, out paramLog);
+            object[] parms = null;
+            try {
+                parms = PrepareCommandArguments(cmd, args, out paramLog);
+            }
+            catch(Exception ex) {
+                throw new CommandException("An error occurred while preparing arguments for command {0}", cmd.Name, ex);
+            }
+
             if(paramLog.Length > 0) {
                 _log.InfoFormat("Executing {0} command {1}:{2}", cmd.Type.Name, cmd.Name, paramLog);
             }
@@ -352,15 +367,8 @@ namespace Command
                 result = cmd.MethodInfo.Invoke(ctxt, parms);
             }
             catch(TargetInvocationException ex) {
-                if(ex.InnerException != null) {
-                    _log.Error(string.Format("Command {0} threw an exception:", cmd.Name),
-                            ex.InnerException);
-                }
-                else {
-                    _log.Error(string.Format("Command {0} threw an exception:", cmd.Name),
-                            ex);
-                }
-                throw;
+                throw new CommandException("Command {0} threw an exception:", cmd.Name,
+                        ex.InnerException != null ? ex.InnerException : ex);
             }
 
             // If the method is a factory method, set the returned object in the context

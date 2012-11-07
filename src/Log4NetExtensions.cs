@@ -81,7 +81,6 @@ namespace log4net
         public void RenderObject(RendererMap map, object obj, System.IO.TextWriter writer)
         {
             Exception ex = obj as Exception;
-            string stackTrace = ex.StackTrace;
 
             for (; ex != null; ex = ex.InnerException) {
                 if (ex is COMException && ex.Message.StartsWith("<?xml")) {
@@ -97,13 +96,13 @@ namespace log4net
                 if (ex.InnerException != null) {
                     writer.WriteLine();
                 }
+                else if (_logHierarchy.Root.Level.CompareTo(log4net.Core.Level.Fine) < 0) {
+                    writer.WriteLine();
+                    writer.WriteLine("Backtrace:");
+                    writer.Write(ex.StackTrace);
+                }
             }
 
-            if (_logHierarchy.Root.Level.CompareTo(log4net.Core.Level.Fine) < 0) {
-                writer.WriteLine();
-                writer.WriteLine("Backtrace:");
-                writer.Write(stackTrace);
-            }
         }
     }
 

@@ -296,7 +296,9 @@ namespace HFMCmd
             try {
                 _context.Invoke(command, args);
             }
-            catch(TargetInvocationException) {
+            catch(Exception ex) {
+                _log.Error(string.Format("An error occurred while attempting to invoke command {0}:",
+                           _commands[command].Name), ex);
                 ok = false;
             }
             return ok;
