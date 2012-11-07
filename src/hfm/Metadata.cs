@@ -771,7 +771,7 @@ namespace HFM
         /// These must be enclosed in { and }.
         protected static Regex MEMBER_LIST_RE = new Regex(@"^\{(?:([^.]+)\.)?([^.]+)\}$");
         /// Regular expression for matching a member range specification.
-        protected static Regex MEMBER_RANGE_RE = new Regex(@"^([^-.\[\]{}]+)\s*\-\s*([^-.\[\]{}]+)$");
+        protected static Regex MEMBER_RANGE_RE = new Regex(@"^([^-:.\[\]{}]+)\s*(\-|\:)\s*([^-:.\[\]{}]+)$");
         /// Regular expression for matching a member list specification.
         protected static Regex MEMBER_RE = new Regex(@"^(?:([^.{}]+)\.)?([^.{}]+)$");
 
@@ -898,19 +898,20 @@ namespace HFM
         {
             var match = MEMBER_RANGE_RE.Match(range);
             var first = new Member(_dimension, match.Groups[1].Value);
-            var last = new Member(_dimension, match.Groups[2].Value);
-            bool useLevel;
+            var useLevel = match.Groups[2].Value == "-";
+            var last = new Member(_dimension, match.Groups[3].Value);
             int rangeGenLevel;
 
             // Find a common level or generation to filter on
-            if(first.Level != last.Level && first.Generation != last.Generation) {
-                throw new ArgumentException(string.Format("Range {0} is invalid; the members at the " +
-                            "start and end of the range must be of the same level or generation", range));
+            if(useLevel && first.Level != last.Level) {
+                throw new ArgumentException(string.Format("Level-based range {0} is invalid; " +
+                            "the start and end members of the range are on different levels", range));
             }
-            else {
-                useLevel = first.Level == last.Level;
-                rangeGenLevel = useLevel ? first.Level : first.Generation;
+            else if(!useLevel && first.Generation != last.Generation) {
+                throw new ArgumentException(string.Format("Generation-based range {0} is invalid; " +
+                            "the start and end members of the range are on different generations", range));
             }
+            rangeGenLevel = useLevel ? first.Level : first.Generation;
 
             // Next sort members into hierarchy order
             object oIds = null, oParentIds = null, oSortedIds = null, oSortedParentIds = null;
@@ -1252,6 +1253,13 @@ namespace HFM
         {
             _log.Trace("Generating POV array");
             int numDims = _metadata.NumberOfDims;
+            if(_metadata.NumberOfDims - _memberLists.Count > 1) {
+                // Multiple dimensions have not been specified
+                throw new IncompleteSliceDefinition(string.Format(
+                            "No members have been specified for the following dimensions: {0}",
+                            string.Join(", ", _metadata.DimensionNames.
+                                Where((name, i) => !_memberLists.ContainsKey(i)).ToArray())));
+            }
             MemberList[] lists = new MemberList[numDims];
             int[] dimSizes = new int[numDims];
             int[] dimIdx = new int[numDims];
