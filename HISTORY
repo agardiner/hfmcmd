@@ -1,0 +1,8 @@
+[0.1.0] Initial release                                             07-Nov-2012
+ - Includes substantial infrastructure for defining and invoking arbitrary
+   commands, either via the command-line, or via a YAML-based .hfm command
+   file.
+ - Implementations of commands for Calculation, Document Management, and
+   Metadata loads / extracts.
+
+ 
