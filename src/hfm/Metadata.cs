@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Linq;
 
@@ -72,6 +73,8 @@ namespace HFM
         protected readonly HsvMetadata _hsvMetadata;
         // True if the installed version of HFM is >= 11.1.2.2
         protected bool _useExtDims;
+        // True if the app supports phased submission groups
+        protected bool? _usesPhasedSubmissions;
         // Cache of custom dimension ids
         protected int[] _customDimIds;
         // Cache of custom dimension names
@@ -152,6 +155,19 @@ namespace HFM
                     _dimensions[dimId] = new Dimension(dimName, dimId, dim);
                 }
                 return _dimensions[dimId];
+            }
+        }
+        /// Returns true if the application is configured to use phased submissions
+        public bool UsesPhasedSubmissions
+        {
+            get {
+                if(_usesPhasedSubmissions == null) {
+                    bool usesPhasedSubmissions = false;
+                    HFM.Try("Retrieving phased submission flag",
+                            () => _hsvMetadata.GetUseSubmissionPhaseFlag(out usesPhasedSubmissions));
+                    _usesPhasedSubmissions = usesPhasedSubmissions;
+                }
+                return (bool)_usesPhasedSubmissions;
             }
         }
 
@@ -357,6 +373,65 @@ namespace HFM
         {
             var members = this[dimension].GetMembers(memberList);
             output.WriteEnumerable(members, "Member");
+        }
+
+
+        [Command("Returns details about phased submissions")]
+        public void GetPhasedSubmissionDetails(IOutput output)
+        {
+            output.WriteSingleValue(string.Format("Phased submission groups are {0}",
+                        UsesPhasedSubmissions ? "enabled" : "disabled"));
+            if(UsesPhasedSubmissions) {
+                output.SetHeader("Dimension", "Phased Submission Enabled");
+                output.WriteRecord("Account", IsPhasedSubmissionEnabledForDimension((int)EDimension.Account));
+                output.WriteRecord("ICP", IsPhasedSubmissionEnabledForDimension((int)EDimension.ICP));
+                foreach(var id in CustomDimIds) {
+                    output.WriteRecord(CustomDimAliases[id], IsPhasedSubmissionEnabledForDimension(id));
+                }
+                output.End(true);
+            }
+        }
+
+        /// Returns true if the dimension supports phased submissions
+        public bool IsPhasedSubmissionEnabledForDimension(int dimId)
+        {
+            bool flag = false;
+            switch(dimId) {
+                case (int)EDimension.Account:
+                    HFM.Try("Retrieving Account phased submission flag",
+                            () => _hsvMetadata.GetSupportSubmissionPhaseForAccountFlag(out flag));
+                    break;
+                case (int)EDimension.ICP:
+                    HFM.Try("Retrieving ICP phased submission flag",
+                            () => _hsvMetadata.GetSupportSubmissionPhaseForICPFlag(out flag));
+                    break;
+                default:
+                    if(dimId >= (int)EDimension.CustomBase && dimId < NumberOfCustomDims) {
+                        HFM.Try("Retrieving Custom phased submission flag", () => {
+                            if(_useExtDims) {
+                                _hsvMetadata.GetSupportSubmissionPhaseForCustomXFlag(dimId, out flag);
+                            }
+                            else {
+                                switch(dimId) {
+                                    case (int)EDimension.Custom1:
+                                        _hsvMetadata.GetSupportSubmissionPhaseForCustom1Flag(out flag);
+                                        break;
+                                    case (int)EDimension.Custom2:
+                                        _hsvMetadata.GetSupportSubmissionPhaseForCustom2Flag(out flag);
+                                        break;
+                                    case (int)EDimension.Custom3:
+                                        _hsvMetadata.GetSupportSubmissionPhaseForCustom3Flag(out flag);
+                                        break;
+                                    case (int)EDimension.Custom4:
+                                        _hsvMetadata.GetSupportSubmissionPhaseForCustom4Flag(out flag);
+                                        break;
+                                }
+                            }
+                        });
+                    }
+                    break;
+            }
+            return flag;
         }
 
 
@@ -1104,6 +1179,29 @@ namespace HFM
             return this[dim];
         }
 
+
+        public override string ToString() {
+            var sb = new StringBuilder();
+            int id = 0;
+            foreach(var dim in _metadata.DimensionNames) {
+                if(dim == "View") {
+                    sb.Append('W');
+                }
+                else if(id < (int)EDimension.CustomBase) {
+                    sb.Append(dim[0]);
+                }
+                else {
+                    sb.Append(_metadata.CustomDimNames[id - (int)EDimension.CustomBase]);
+                }
+                sb.Append('#');
+                sb.Append(this[id].Name);
+                sb.Append('.');
+                id++;
+            }
+            sb.Length--;
+            return sb.ToString();
+        }
+
     }
 
 
@@ -1259,6 +1357,10 @@ namespace HFM
                             "No members have been specified for the following dimensions: {0}",
                             string.Join(", ", _metadata.DimensionNames.
                                 Where((name, i) => !_memberLists.ContainsKey(i)).ToArray())));
+            }
+            else if(!_memberLists.ContainsKey((int)EDimension.View)) {
+                // Default view to <Scenario View>
+                this["View"] = "<Scenario View>";
             }
             MemberList[] lists = new MemberList[numDims];
             int[] dimSizes = new int[numDims];
