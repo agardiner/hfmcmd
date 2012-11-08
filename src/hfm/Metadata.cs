@@ -148,7 +148,14 @@ namespace HFM
         {
             get {
                 int dimId = GetDimensionId(ref dimName);
+                return this[dimId];
+            }
+        }
+        internal Dimension this[int dimId]
+        {
+            get {
                 if(!_dimensions.ContainsKey(dimId)) {
+                    string dimName = DimensionNames[dimId];
                     IHsvTreeInfo dim = null;
                     HFM.Try("Retrieving dimension {0}", dimName,
                             () => dim = (IHsvTreeInfo)_hsvMetadata.GetDimension(dimId));
@@ -1134,24 +1141,48 @@ namespace HFM
         public Member Custom3 { get { return this[(int)EDimension.Custom3]; } }
         /// Returns the member of the Custom4 dimension
         public Member Custom4 { get { return this[(int)EDimension.Custom4]; } }
+        /// Returns the process unit corresponding to this POV
+        public string ProcessUnitLabel
+        {
+            get {
+                var sb = new StringBuilder();
+                sb.Append("S#");
+                sb.Append(Scenario.Name);
+                sb.Append(".Y#");
+                sb.Append(Year.Name);
+                sb.Append(".P#");
+                sb.Append(Period.Name);
+                sb.Append(".E#");
+                sb.Append(Entity.ParentName);
+                sb.Append('.');
+                sb.Append(Entity.Name);
+                sb.Append(".V#");
+                sb.Append(Value.Name);
+                return sb.ToString();
+            }
+        }
         /// Converts this POV to an HfmPovCOM object
         public HfmPovCOM HfmPovCOM
         {
             get {
                 var pov = new HfmPovCOM();
-                pov.Scenario = Scenario.Id;
-                pov.Year = Year.Id;
-                pov.Period = Period.Id;
-                pov.View = View.Id;
-                pov.Entity = Entity.Id;
-                pov.Parent = Entity.ParentId;
-                pov.Value = Value.Id;
-                pov.Account = Account.Id;
-                pov.ICP = ICP.Id;
                 var customs = new int[_members.Length - 8];
-                int i = 0;
-                for(i = 0; i < customs.Length; ++i) {
-                    customs[i++] = GetCustom(i+1).Id;
+                Member custom;
+
+                if(Scenario != null) { pov.Scenario = Scenario.Id; }
+                if(Year != null) { pov.Year = Year.Id; }
+                if(Period != null) { pov.Period = Period.Id; }
+                if(View != null) { pov.View = View.Id; }
+                if(Entity != null) {
+                    pov.Entity = Entity.Id;
+                    pov.Parent = Entity.ParentId;
+                }
+                if(Value != null) { pov.Value = Value.Id; }
+                if(Account != null) { pov.Account = Account.Id; }
+                if(ICP != null) { pov.ICP = ICP.Id; }
+                for(var i = 0; i < customs.Length; ++i) {
+                    custom = GetCustom(i+1);
+                    if(custom != null) { customs[i++] = custom.Id; }
                 }
                 pov.SetCustoms(_metadata.CustomDimIds, customs);
                 return pov;
@@ -1252,9 +1283,8 @@ namespace HFM
         private Metadata _metadata;
         /// The POV specification used to initialise the Slice
         private string _pov;
-        /// A map of dimension names to MemberList objects
-        private Dictionary<int, MemberList> _memberLists =
-            new Dictionary<int, MemberList>();
+        /// An array of MemberList objects, one per dimension
+        private MemberList[] _memberLists;
 
 
         /// Gets or sets the MemberList object for the specified dimension.
@@ -1265,7 +1295,7 @@ namespace HFM
                     return _pov;
                 }
                 int id = _metadata.GetDimensionId(ref dimension);
-                if(!_memberLists.ContainsKey(id)) {
+                if(_memberLists[id] == null) {
                     throw new IncompleteSliceDefinition(string.Format(
                                 "No members have been specified for the {0} dimension", dimension));
                 }
@@ -1277,15 +1307,23 @@ namespace HFM
                 }
                 else {
                     int id = _metadata.GetDimensionId(ref dimension);
-                    if(value is MemberList) {
-                        _memberLists[id] = value as MemberList;
-                    }
-                    else if(value is string) {
-                        _memberLists[id] = new MemberList(_metadata[dimension], value as string);
-                    }
-                    else {
-                        throw new ArgumentException(string.Format("Invalid type for Slice dimension {0}", dimension));
-                    }
+                    this[id] = value;
+                }
+            }
+        }
+        /// Sets a member list for the specified dimension id
+        public object this[int dimId]
+        {
+            set {
+                if(value is MemberList) {
+                    _memberLists[dimId] = value as MemberList;
+                }
+                else if(value is string) {
+                    _memberLists[dimId] = new MemberList(_metadata[dimId], value as string);
+                }
+                else {
+                    throw new ArgumentException(string.Format("Invalid type for Slice dimension {0}",
+                                _metadata[dimId].Name));
                 }
             }
         }
@@ -1300,8 +1338,33 @@ namespace HFM
                 return names;
             }
         }
+        /// Returns the member list for the Scenario dimension
+        public MemberList Scenarios { get { return MemberList((int)EDimension.Scenario); } }
+        /// Returns the member list for the Year dimension
+        public MemberList Years { get { return MemberList((int)EDimension.Year); } }
+        /// Returns the member list for the Period dimension
+        public MemberList Periods { get { return MemberList((int)EDimension.Period); } }
+        /// Returns the member list for the View dimension
+        public MemberList Views { get { return MemberList((int)EDimension.View); } }
+        /// Returns the member list for the Entity dimension
+        public MemberList Entities { get { return MemberList((int)EDimension.Entity); } }
+        /// Returns the member list for the Value dimension
+        public MemberList Values { get { return MemberList((int)EDimension.Value); } }
+        /// Returns the member list for the Account dimension
+        public MemberList Accounts { get { return MemberList((int)EDimension.Account); } }
+        /// Returns the member list for the ICP dimension
+        public MemberList ICPs { get { return MemberList((int)EDimension.ICP); } }
+        /// Returns a count of the number of dimensions that have been specified
+        public int DimensionsSpecified
+        {
+            get {
+                return _memberLists.Count(ml => ml != null);
+            }
+        }
         /// Returns an array of all cells in the slice
         public POV[] POVs { get { return GeneratePOVs(); } }
+        /// Returns an array of all process units in the slice
+        public POV[] ProcessUnits { get { return GenerateProcessUnits(); } }
 
 
         /// <summary>
@@ -1314,18 +1377,31 @@ namespace HFM
         }
 
 
+        /// Returns a MemberList for the dimension with the specified id
+        internal MemberList MemberList(int dimId)
+        {
+            if(_memberLists[dimId] == null) {
+                throw new IncompleteSliceDefinition(string.Format(
+                            "No members have been specified for the {0} dimension",
+                            _metadata.DimensionNames[dimId]));
+            }
+            return _memberLists[dimId];
+        }
+
+
         /// Constructor
         [Factory(SingleUse = true)]
         public Slice(Metadata metadata)
         {
             _metadata = metadata;
+            _memberLists = new MemberList[_metadata.NumberOfDims];
         }
 
 
         /// Constructor
         public Slice(Metadata metadata, string pov)
+            : this(metadata)
         {
-            _metadata = metadata;
             MergePOV(pov);
         }
 
@@ -1338,9 +1414,12 @@ namespace HFM
             foreach(var mbr in mbrs) {
                 var f = mbr.Split('#');
                 var dimension = _metadata[f[0]];
-                if(!_memberLists.ContainsKey(dimension.Id)) {
+                if(_memberLists[dimension.Id] == null) {
                     _log.DebugFormat("Creating {0} member list for {1}", dimension.Name, f[1]);
                     _memberLists[dimension.Id] = new MemberList(dimension, f[1]);
+                }
+                else {
+                    _log.DebugFormat("Skipping POV dimension {1}; a member list has already been defined", dimension.Name);
                 }
             }
         }
@@ -1351,37 +1430,63 @@ namespace HFM
         {
             _log.Trace("Generating POV array");
             int numDims = _metadata.NumberOfDims;
-            if(_metadata.NumberOfDims - _memberLists.Count > 1) {
+            if(numDims - DimensionsSpecified > 1) {
                 // Multiple dimensions have not been specified
                 throw new IncompleteSliceDefinition(string.Format(
                             "No members have been specified for the following dimensions: {0}",
                             string.Join(", ", _metadata.DimensionNames.
-                                Where((name, i) => !_memberLists.ContainsKey(i)).ToArray())));
+                                Where((name, i) => _memberLists[i] == null).ToArray())));
             }
-            else if(!_memberLists.ContainsKey((int)EDimension.View)) {
+            else if(_memberLists[(int)EDimension.View] == null) {
                 // Default view to <Scenario View>
                 this["View"] = "<Scenario View>";
             }
             MemberList[] lists = new MemberList[numDims];
-            int[] dimSizes = new int[numDims];
-            int[] dimIdx = new int[numDims];
 
-            int size = 1;
             int dim = 0;
             foreach(var dimName in _metadata.DimensionNames) {
                 lists[dim] = MemberList(dimName);
-                dimSizes[dim] = lists[dim].MemberIds.Length;
+                dim++;
+            }
+
+            return GenerateCombos(lists);
+        }
+
+
+        // Returns an array of POV objects for each combination of process units in this slice
+        private POV[] GenerateProcessUnits()
+        {
+            MemberList[] lists = new MemberList[] {
+                Scenarios, Years, Periods, Entities, Values
+            };
+            return GenerateCombos(lists);
+        }
+
+
+        // Returns an array of POV objects for each combination of the dimensions in lists
+        private POV[] GenerateCombos(MemberList[] lists)
+        {
+            int numDims = lists.Length;
+            int[] dimIds = new int[numDims];
+            int[] dimSizes = new int[numDims];
+            int[] dimIdx = new int[numDims];
+            int size = 1;
+            int dim = 0;
+            foreach(var list in lists) {
+                dimIds[dim] = list.Dimension.Id;
+                dimSizes[dim] = list.MemberIds.Length;
                 size = size * dimSizes[dim];
                 dim++;
             }
-            _log.DebugFormat("Number of cells in slice: {0}", size);
+            _log.DebugFormat("Number of combinations in slice: {0}", size);
 
             var povs = new POV[size];
             POV pov;
-            for(int i = 0; i < size; ++i) {
+            for(int id, i = 0; i < size; ++i) {
                 pov = new POV(_metadata);
                 for(dim = 0; dim < numDims; ++dim) {
-                    pov[dim] = lists[dim][dimIdx[dim]];
+                    id = dimIds[dim];
+                    pov[id] = lists[dim][dimIdx[dim]];
                 }
                 povs[i] = pov;
 
