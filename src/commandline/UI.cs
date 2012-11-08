@@ -104,7 +104,7 @@ namespace CommandLine
             get {
                 if(_isRedirected) { return -1; }
                 try {
-                    return System.Console.WindowWidth;
+                    return System.Console.BufferWidth;
                 }
                 catch(IOException) {
                     _isRedirected = true;
