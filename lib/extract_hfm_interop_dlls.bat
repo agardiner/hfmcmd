@@ -22,6 +22,7 @@ MKDIR %TARGET%
 %TLBIMP% %HFM_HOME%\Server\HsvData.dll /out: %OUTPUT_PATH%\Interop.HSVDATALib.dll /namespace:HSVDATALib
 %TLBIMP% %HFM_HOME%\Server\HsvJournals.dll /out: %OUTPUT_PATH%\Interop.HSVJOURNALSLib.dll /namespace:HSVJOURNALSLib
 %TLBIMP% %HFM_HOME%\Server\HsvMetadata.dll /out: %OUTPUT_PATH%\Interop.HSVMETADATALib.dll /namespace:HSVMETADATALib
+%TLBIMP% %HFM_HOME%\Server\HsvProcessFlow.dll /out: %OUTPUT_PATH%\Interop.HSVPROCESSFLOWLib.dll /namespace:HSVPROCESSFLOWLib
 %TLBIMP% %HFM_HOME%\Server\HsvSecurityAccess.dll /out: %OUTPUT_PATH%\Interop.HSVSECURITYACCESSLib.dll /namespace:HSVSECURITYACCESSLib
 %TLBIMP% %HFM_HOME%\Server\HsvSession.dll /out: %OUTPUT_PATH%\Interop.HSVSESSIONLib.dll /namespace:HSVSESSIONLib
 %TLBIMP% %HFM_HOME%\Server\HsvStarSchemaACM.dll /out: %OUTPUT_PATH%\Interop.HSVSTARSCHEMAACMLib.dll /namespace:HSVSTARSCHEMAACMLib
