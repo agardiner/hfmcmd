@@ -368,7 +368,7 @@ namespace HFMCmd
                     output.WriteSingleValue(cmd.Description, "Description");
                     output.WriteLine();
                 }
-                if(cmd.Parameters != null) {
+                if(cmd.NumUserSuppliedParameters > 0) {
                     output.SetHeader("Parameter", 30, "Default Value", 15, "Description");
                     foreach(var parm in cmd.Parameters) {
                         if(parm.HasParameterAttribute) {

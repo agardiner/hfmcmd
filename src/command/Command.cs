@@ -1,6 +1,7 @@
 using System;
 using System.Reflection;
 using System.Collections.Generic;
+using System.Linq;
 
 using log4net;
 
@@ -52,6 +53,13 @@ namespace Command
         public bool IsFactory { get { return _factory != null; } }
         /// Link to the associated Factory instance if this Command is a Factory
         public Factory Factory { get { return _factory; } }
+        /// Count of the number of parameters that have ParameterAttributes
+        public int NumUserSuppliedParameters
+        {
+            get {
+                return Parameters.Count(p => p.HasParameterAttribute);
+            }
+        }
 
 
         // Constructor
