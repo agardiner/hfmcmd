@@ -2,8 +2,8 @@
 IF "%1"=="" (SET TARGET_DOTNET=35) ELSE (SET TARGET_DOTNET=%1)
 
 
-IF NOT EXIST <%= BUILD_DIR %> MKDIR <%= BUILD_DIR %>
-IF NOT EXIST <%= RELEASE_DIR %> MKDIR <%= RELEASE_DIR %>
+IF NOT EXIST <%= BUILD_DIR.gsub('/', '\\') %> MKDIR <%= BUILD_DIR.gsub('/', '\\') %>
+IF NOT EXIST <%= RELEASE_DIR.gsub('/', '\\') %> MKDIR <%= RELEASE_DIR.gsub('/', '\\') %>
 DEL /Q <%= BUILD_DIR %>\*.*
 DEL /Q <%= RELEASE_DIR %>\*.*
 
@@ -25,6 +25,8 @@ EXIT /B 99
 
 :DOTNET35
 ECHO Targeting .NET Framework 3.5...
+IF NOT EXIST <%= BUILD35_DIR.gsub('/', '\\') %> MKDIR <%= BUILD35_DIR.gsub('/', '\\') %>
+IF NOT EXIST <%= RELEASE35_DIR.gsub('/', '\\') %> MKDIR <%= RELEASE35_DIR.gsub('/', '\\') %>
 
 ECHO Compiling HFMCmd...
 <%= @compile_35 %>
@@ -39,6 +41,8 @@ GOTO END
 
 :DOTNET40
 ECHO Targeting .NET Framework 4.0...
+IF NOT EXIST <%= BUILD40_DIR.gsub('/', '\\') %> MKDIR <%= BUILD40_DIR.gsub('/', '\\') %>
+IF NOT EXIST <%= RELEASE40_DIR.gsub('/', '\\') %> MKDIR <%= RELEASE40_DIR.gsub('/', '\\') %>
 
 ECHO Compiling HFMCmd...
 <%= @compile_40 %>
