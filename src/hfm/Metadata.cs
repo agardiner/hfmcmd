@@ -84,7 +84,7 @@ namespace HFM
         // Map of custom dimension names and aliases to ids
         protected Dictionary<string, int> _customDimMap;
         // Cache of dimensions
-        protected Dictionary<int, Dimension> _dimensions = new Dictionary<int, Dimension>();
+        protected Dimension[] _dimensions;
 
 
         /// Returns the HFM HsvMetadata object
@@ -151,10 +151,19 @@ namespace HFM
                 return this[dimId];
             }
         }
+        /// Returns a Dimension object for the specified dimension
+        internal Dimension this[EDimension dim]
+        {
+            get {
+                return this[(int)dim];
+            }
+        }
+        /// Returns a Dimension object for the specified dimension id
         internal Dimension this[int dimId]
         {
             get {
-                if(!_dimensions.ContainsKey(dimId)) {
+                CheckDimId(dimId);
+                if(_dimensions[dimId] == null) {
                     string dimName = DimensionNames[dimId];
                     IHsvTreeInfo dim = null;
                     HFM.Try("Retrieving dimension {0}", dimName,
@@ -186,6 +195,7 @@ namespace HFM
             _log.Trace("Constructing Metadata object");
             _hsvMetadata = (HsvMetadata)session.HsvSession.Metadata;
             _useExtDims = HFM.Version >= new Version("11.1.2.2");
+            _dimensions = new Dimension[NumberOfDims];
         }
 
 
@@ -302,6 +312,17 @@ namespace HFM
                 _customDimAliases = new string[] {
                     "C1", "C2", "C3", "C4"
                 };
+            }
+        }
+
+
+        /// Checks the specified dimension id is valid for this application,
+        /// throwing an IndexOutOfRangeException if it is not.
+        internal void CheckDimId(int dimId)
+        {
+            if(dimId < 0 || dimId >= NumberOfDims) {
+                throw new IndexOutOfRangeException(string.Format("Invalid dimension number {0}; " +
+                            "must be a value between 0 and {1}", dimId, NumberOfDims - 1));
             }
         }
 
@@ -1099,48 +1120,44 @@ namespace HFM
         /// An array of Members, one for each dimension in the app
         private Member[] _members;
 
+        /// Returns the Member for the specified dimension
+        public Member this[EDimension dim] { get { return this[(int)dim]; } }
         /// Returns the Member for the specified dimension number
-        public Member this[int dim]
+        public Member this[int dimId]
         {
             get {
-                if(dim < 0 || dim >= _members.Length) {
-                    throw new IndexOutOfRangeException(string.Format("Invalid dimension number {0}; " +
-                                "must be a value between 0 and {1}", dim, _members.Length - 1));
-                }
-                return _members[dim];
+                _metadata.CheckDimId(dimId);
+                return _members[dimId];
             }
             set {
-                if(dim < 0 || dim >= _members.Length) {
-                    throw new IndexOutOfRangeException(string.Format("Invalid dimension number {0}; " +
-                                "must be a value between 0 and {1}", dim, _members.Length - 1));
-                }
-                _members[dim] = value;
+                _metadata.CheckDimId(dimId);
+                _members[dimId] = value;
             }
         }
         /// Returns the member of the Scenario dimension
-        public Member Scenario { get { return this[(int)EDimension.Scenario]; } }
+        public Member Scenario { get { return this[EDimension.Scenario]; } }
         /// Returns the member of the Year dimension
-        public Member Year { get { return this[(int)EDimension.Year]; } }
+        public Member Year { get { return this[EDimension.Year]; } }
         /// Returns the member of the Period dimension
-        public Member Period { get { return this[(int)EDimension.Period]; } }
+        public Member Period { get { return this[EDimension.Period]; } }
         /// Returns the member of the View dimension
-        public Member View { get { return this[(int)EDimension.View]; } }
+        public Member View { get { return this[EDimension.View]; } }
         /// Returns the member of the Entity dimension
-        public Member Entity { get { return this[(int)EDimension.Entity]; } }
+        public Member Entity { get { return this[EDimension.Entity]; } }
         /// Returns the member of the Value dimension
-        public Member Value { get { return this[(int)EDimension.Value]; } }
+        public Member Value { get { return this[EDimension.Value]; } }
         /// Returns the member of the Account dimension
-        public Member Account { get { return this[(int)EDimension.Account]; } }
+        public Member Account { get { return this[EDimension.Account]; } }
         /// Returns the member of the ICP dimension
-        public Member ICP { get { return this[(int)EDimension.ICP]; } }
+        public Member ICP { get { return this[EDimension.ICP]; } }
         /// Returns the member of the Custom1 dimension
-        public Member Custom1 { get { return this[(int)EDimension.Custom1]; } }
+        public Member Custom1 { get { return this[EDimension.Custom1]; } }
         /// Returns the member of the Custom2 dimension
-        public Member Custom2 { get { return this[(int)EDimension.Custom2]; } }
+        public Member Custom2 { get { return this[EDimension.Custom2]; } }
         /// Returns the member of the Custom3 dimension
-        public Member Custom3 { get { return this[(int)EDimension.Custom3]; } }
+        public Member Custom3 { get { return this[EDimension.Custom3]; } }
         /// Returns the member of the Custom4 dimension
-        public Member Custom4 { get { return this[(int)EDimension.Custom4]; } }
+        public Member Custom4 { get { return this[EDimension.Custom4]; } }
         /// Returns the process unit corresponding to this POV
         public string ProcessUnitLabel
         {
@@ -1312,9 +1329,10 @@ namespace HFM
             }
         }
         /// Sets a member list for the specified dimension id
-        public object this[int dimId]
+        internal object this[int dimId]
         {
             set {
+                _metadata.CheckDimId(dimId);
                 if(value is MemberList) {
                     _memberLists[dimId] = value as MemberList;
                 }
@@ -1339,21 +1357,29 @@ namespace HFM
             }
         }
         /// Returns the member list for the Scenario dimension
-        public MemberList Scenarios { get { return MemberList((int)EDimension.Scenario); } }
+        public MemberList Scenarios { get { return MemberList(EDimension.Scenario); } }
         /// Returns the member list for the Year dimension
-        public MemberList Years { get { return MemberList((int)EDimension.Year); } }
+        public MemberList Years { get { return MemberList(EDimension.Year); } }
         /// Returns the member list for the Period dimension
-        public MemberList Periods { get { return MemberList((int)EDimension.Period); } }
+        public MemberList Periods { get { return MemberList(EDimension.Period); } }
         /// Returns the member list for the View dimension
-        public MemberList Views { get { return MemberList((int)EDimension.View); } }
+        public MemberList Views { get { return MemberList(EDimension.View); } }
         /// Returns the member list for the Entity dimension
-        public MemberList Entities { get { return MemberList((int)EDimension.Entity); } }
+        public MemberList Entities { get { return MemberList(EDimension.Entity); } }
         /// Returns the member list for the Value dimension
-        public MemberList Values { get { return MemberList((int)EDimension.Value); } }
+        public MemberList Values { get { return MemberList(EDimension.Value); } }
         /// Returns the member list for the Account dimension
-        public MemberList Accounts { get { return MemberList((int)EDimension.Account); } }
+        public MemberList Accounts { get { return MemberList(EDimension.Account); } }
         /// Returns the member list for the ICP dimension
-        public MemberList ICPs { get { return MemberList((int)EDimension.ICP); } }
+        public MemberList ICPs { get { return MemberList(EDimension.ICP); } }
+        /// Returns the member list for the Custom1 dimension
+        public MemberList Custom1 { get { return MemberList(EDimension.Custom1); } }
+        /// Returns the member list for the Custom2 dimension
+        public MemberList Custom2 { get { return MemberList(EDimension.Custom2); } }
+        /// Returns the member list for the Custom3 dimension
+        public MemberList Custom3 { get { return MemberList(EDimension.Custom3); } }
+        /// Returns the member list for the Custom4 dimension
+        public MemberList Custom4 { get { return MemberList(EDimension.Custom4); } }
         /// Returns a count of the number of dimensions that have been specified
         public int DimensionsSpecified
         {
@@ -1374,6 +1400,13 @@ namespace HFM
         public MemberList MemberList(string dimension)
         {
             return this[dimension] as MemberList;
+        }
+
+
+        /// Returns a MemberList for the specified dimension
+        internal MemberList MemberList(EDimension dim)
+        {
+            return MemberList((int)dim);
         }
 
 
