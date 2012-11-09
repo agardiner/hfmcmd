@@ -229,19 +229,21 @@ namespace HFMCmd
                 }
                 else {
                     var key = setting.Name.Capitalize();
-                    _log.DebugFormat("Adding command-line arg {0}", key);
+                    if(_cmdLine.Definition[key] == null) {
+                        _log.DebugFormat("Adding command-line arg {0}", key);
 
-                    // Add a keyword argument for this setting
-                    ValueArgument arg = setting.HasUda("PositionalArg") ?
-                        (ValueArgument)_cmdLine.AddPositionalArgument(key, setting.Description) :
-                        (ValueArgument)_cmdLine.AddKeywordArgument(key, setting.Description);
-                    arg.Alias = setting.Alias;
-                    // TODO: Argument should only be optional if prompting is valid (i.e. not headless)
-                    arg.IsRequired = false;
-                    // arg.IsRequired = !setting.HasDefaultValue;
-                    arg.IsSensitive = setting.IsSensitive;
-                    if(setting.HasDefaultValue && setting.DefaultValue != null) {
-                        arg.DefaultValue = setting.DefaultValue.ToString();
+                        // Add a keyword argument for this setting
+                        ValueArgument arg = setting.HasUda("PositionalArg") ?
+                            (ValueArgument)_cmdLine.AddPositionalArgument(key, setting.Description) :
+                            (ValueArgument)_cmdLine.AddKeywordArgument(key, setting.Description);
+                        arg.Alias = setting.Alias;
+                        // TODO: Argument should only be optional if prompting is valid (i.e. not headless)
+                        arg.IsRequired = false;
+                        // arg.IsRequired = !setting.HasDefaultValue;
+                        arg.IsSensitive = setting.IsSensitive;
+                        if(setting.HasDefaultValue && setting.DefaultValue != null) {
+                            arg.DefaultValue = setting.DefaultValue.ToString();
+                        }
                     }
                 }
             }
