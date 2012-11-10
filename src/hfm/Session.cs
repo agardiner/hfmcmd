@@ -35,6 +35,10 @@ namespace HFM
         private HsvSession _hsvSession;
         // Reference to a WebSession
         private HFMwSession _hfmwSession;
+        // Reference to a Metadata object
+        private Metadata _metadata;
+        // Reference to a ProcessFlow object
+        private ProcessFlow _processFlow;
 
 
 
@@ -76,6 +80,34 @@ namespace HFM
             }
         }
 
+
+        [Factory]
+        public Metadata Metadata
+        {
+            get {
+                if(_metadata == null) {
+                    _metadata = new Metadata(this);
+                }
+                return _metadata;
+            }
+        }
+
+
+        [Factory]
+        public ProcessFlow ProcessFlow
+        {
+            get {
+                if(_processFlow == null) {
+                    if(Metadata.UsesPhasedSubmissions) {
+                        _processFlow = new PhasedSubmissionProcessFlow(this, Metadata);
+                    }
+                    else {
+                        _processFlow = new ProcessUnitProcessFlow(this, Metadata);
+                    }
+                }
+                return _processFlow;
+            }
+        }
     }
 
 }

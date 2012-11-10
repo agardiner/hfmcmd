@@ -189,8 +189,7 @@ namespace HFM
 
 
         /// Constructor
-        [Factory]
-        public Metadata(Session session)
+        internal Metadata(Session session)
         {
             _log.Trace("Constructing Metadata object");
             _hsvMetadata = (HsvMetadata)session.HsvSession.Metadata;

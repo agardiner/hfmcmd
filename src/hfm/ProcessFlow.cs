@@ -57,7 +57,7 @@ namespace HFM
     /// <summary>
     /// Performs process management on an HFM application.
     /// </summary>
-    public class ProcessFlow
+    public abstract class ProcessFlow
     {
         // Reference to class logger
         protected static readonly ILog _log = LogManager.GetLogger(
@@ -65,31 +65,23 @@ namespace HFM
 
 
         // Reference to HFM HsvProcessFlow object
-        private HsvProcessFlow _hsvProcessFlow;
+        protected HsvProcessFlow _hsvProcessFlow;
         // Reference to Metadata object
-        private Metadata _metadata;
-        // Flag indicating whether application uses phased submission groups
-        private bool _usesPhasedSubmissions;
+        protected Metadata _metadata;
 
 
-        [Factory]
-        public ProcessFlow(Session session, Metadata metadata)
+        /// Constructor
+        internal ProcessFlow(Session session, Metadata metadata)
         {
             _hsvProcessFlow = (HsvProcessFlow)session.HsvSession.ProcessFlow;
             _metadata = metadata;
-            _usesPhasedSubmissions = metadata.UsesPhasedSubmissions;
         }
 
 
         [Command("Returns the current process state")]
         public void EnumProcessState(Slice slice, IOutput output)
         {
-            if(_usesPhasedSubmissions) {
-                GetPhasedSubmissionProcessState(slice, output);
-            }
-            else {
-                GetProcessUnitState(slice, output);
-            }
+            GetProcessState(slice, output);
         }
 
 
@@ -129,13 +121,8 @@ namespace HFM
                 string[] attachments,
                 IOutput output)
         {
-            if(_usesPhasedSubmissions) {
-                //SetPhasedSubmissionProcessState(slice, output);
-            }
-            else {
-                SetProcessUnitState(slice, EProcessAction.Start, EProcessState.FirstPass,
-                        annotation, attachments, output);
-            }
+            SetProcessState(slice, EProcessAction.Start, EProcessState.FirstPass,
+                    annotation, attachments, output);
         }
 
 
@@ -162,13 +149,8 @@ namespace HFM
                 throw new ArgumentException("Review level must be a value between 1 and 10");
             }
 
-            if(_usesPhasedSubmissions) {
-                //SetPhasedSubmissionProcessState(slice, output);
-            }
-            else {
-                SetProcessUnitState(slice, EProcessAction.Promote, targetState,
-                        annotation, attachments, output);
-            }
+            SetProcessState(slice, EProcessAction.Promote, targetState,
+                    annotation, attachments, output);
         }
 
 
@@ -183,13 +165,8 @@ namespace HFM
                 string[] attachments,
                 IOutput output)
         {
-            if(_usesPhasedSubmissions) {
-                //SetPhasedSubmissionProcessState(slice, output);
-            }
-            else {
-                SetProcessUnitState(slice, EProcessAction.Reject, EProcessState.NotSupported,
-                        annotation, attachments, output);
-            }
+            SetProcessState(slice, EProcessAction.Reject, EProcessState.NotSupported,
+                    annotation, attachments, output);
         }
 
 
@@ -206,13 +183,8 @@ namespace HFM
                 string[] attachments,
                 IOutput output)
         {
-            if(_usesPhasedSubmissions) {
-                //SetPhasedSubmissionProcessState(slice, output);
-            }
-            else {
-                SetProcessUnitState(slice, EProcessAction.SignOff, EProcessState.NotSupported,
-                        annotation, attachments, output);
-            }
+            SetProcessState(slice, EProcessAction.SignOff, EProcessState.NotSupported,
+                    annotation, attachments, output);
         }
 
 
@@ -227,13 +199,8 @@ namespace HFM
                 string[] attachments,
                 IOutput output)
         {
-            if(_usesPhasedSubmissions) {
-                //SetPhasedSubmissionProcessState(slice, output);
-            }
-            else {
-                SetProcessUnitState(slice, EProcessAction.Submit, EProcessState.Submitted,
-                        annotation, attachments, output);
-            }
+            SetProcessState(slice, EProcessAction.Submit, EProcessState.Submitted,
+                    annotation, attachments, output);
         }
 
 
@@ -248,13 +215,8 @@ namespace HFM
                 string[] attachments,
                 IOutput output)
         {
-            if(_usesPhasedSubmissions) {
-                //SetPhasedSubmissionProcessState(slice, output);
-            }
-            else {
-                SetProcessUnitState(slice, EProcessAction.Approve, EProcessState.Approved,
-                        annotation, attachments, output);
-            }
+            SetProcessState(slice, EProcessAction.Approve, EProcessState.Approved,
+                    annotation, attachments, output);
         }
 
 
@@ -269,17 +231,36 @@ namespace HFM
                 string[] attachments,
                 IOutput output)
         {
-            if(_usesPhasedSubmissions) {
-                //SetPhasedSubmissionProcessState(slice, output);
-            }
-            else {
-                SetProcessUnitState(slice, EProcessAction.Publish, EProcessState.Published,
-                        annotation, attachments, output);
-            }
+            SetProcessState(slice, EProcessAction.Publish, EProcessState.Published,
+                    annotation, attachments, output);
         }
 
 
-        private void GetProcessUnitState(Slice slice, IOutput output)
+        protected abstract void GetProcessState(Slice slice, IOutput output);
+
+        protected abstract void SetProcessState(Slice slice, EProcessAction action,
+                EProcessState targetState, string annotation, string[] documents,
+                IOutput output);
+
+    }
+
+
+
+    /// <summary>
+    /// ProcessFlow subclass for working with applications that use Process Unit
+    /// based process management. Process management is applied to process
+    /// units, which are combinations of Scenario, Year, Period, Entity and
+    /// Value.
+    /// </summary>
+    public class ProcessUnitProcessFlow : ProcessFlow
+    {
+
+        internal ProcessUnitProcessFlow(Session session, Metadata metadata)
+            : base(session, metadata)
+        { }
+
+
+        protected override void GetProcessState(Slice slice, IOutput output)
         {
             short state = 0;
 
@@ -295,7 +276,7 @@ namespace HFM
         }
 
 
-        private void SetProcessUnitState(Slice slice, EProcessAction action, EProcessState targetState,
+        protected override void SetProcessState(Slice slice, EProcessAction action, EProcessState targetState,
                 string annotation, string[] documents, IOutput output)
         {
             bool allValues = true, allPeriods = true;
@@ -318,8 +299,24 @@ namespace HFM
             output.EndProgress();
         }
 
+    }
 
-        private void GetPhasedSubmissionProcessState(Slice slice, IOutput output)
+
+
+    /// <summary>
+    /// ProcessFlow subclass for working with applications that use Phased
+    /// Submissions. This allows process management to be applied to sets of
+    /// Accounts, ICP members, and Customs, in addition to the standard Scenario
+    /// Year, Period, Entity and Value.
+    /// </summary>
+    public class PhasedSubmissionProcessFlow : ProcessFlow
+    {
+
+        internal PhasedSubmissionProcessFlow(Session session, Metadata metadata)
+            : base(session, metadata)
+        { }
+
+        protected override void GetProcessState(Slice slice, IOutput output)
         {
             short state = 0;
 
@@ -349,7 +346,8 @@ namespace HFM
         }
 
 
-        private void SetPhasedSubmissionProcessState()
+        protected override void SetProcessState(Slice slice, EProcessAction action, EProcessState targetState,
+                string annotation, string[] documents, IOutput output)
         {
             //PhasedSubmissionProcessManagementChangeStateForMultipleEntities2ExtDim
             //PhasedSubmissionProcessManagementChangeStateForMultipleEntities2

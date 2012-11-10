@@ -109,7 +109,7 @@ namespace Command
                 _settings[t] = settings;
 
                 // Process members of class
-                foreach(var mi in t.GetMembers(BindingFlags.Public|BindingFlags.Instance)) {
+                foreach(var mi in t.GetMembers(BindingFlags.Public|BindingFlags.Instance|BindingFlags.DeclaredOnly)) {
                     cmd = null;
                     factory = null;
                     foreach(var attr in mi.GetCustomAttributes(false)) {
@@ -136,6 +136,10 @@ namespace Command
         /// </summary>
         public void Add(Command cmd)
         {
+            if(_commands.ContainsKey(cmd.Name)) {
+                throw new ArgumentException(string.Format("A command has already been " +
+                            "registered with the name {0} (in class {1})", cmd.Name, cmd.Type));
+            }
             _commands.Add(cmd.Name, cmd);
         }
 
@@ -152,6 +156,10 @@ namespace Command
                 _alternates.Add(factory);
             }
             else {
+                if(_factories.ContainsKey(factory.ReturnType)) {
+                    throw new ArgumentException(string.Format("A factory has already been " +
+                                "registered for {0} objects", factory.ReturnType));
+                }
                 _factories.Add(factory.ReturnType, factory);
             }
         }
