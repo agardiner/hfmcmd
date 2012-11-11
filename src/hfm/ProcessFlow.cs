@@ -236,8 +236,13 @@ namespace HFM
         }
 
 
+        /// Method to be implemented in sub-classes for retrieving the state of
+        /// process unit(s) represented by the Slice.
         protected abstract void GetProcessState(Slice slice, IOutput output);
 
+
+        /// Method to be implemented in sub-classes for setting the state of
+        /// process unit(s) represented by the Slice.
         protected abstract void SetProcessState(Slice slice, EProcessAction action,
                 EProcessState targetState, string annotation, string[] documents,
                 IOutput output);
@@ -279,7 +284,7 @@ namespace HFM
         protected override void SetProcessState(Slice slice, EProcessAction action, EProcessState targetState,
                 string annotation, string[] documents, IOutput output)
         {
-            bool allValues = true, allPeriods = true;
+            bool allValues = slice.Values == null, allPeriods = slice.Periods == null;
             string[] paths = null, files = null;
             short newState = 0;
 
@@ -297,6 +302,7 @@ namespace HFM
                 }
             }
             output.EndProgress();
+            _log.InfoFormat("{0} process units are now at {1}", PUs.Length, (EProcessState)newState);
         }
 
     }
@@ -323,7 +329,7 @@ namespace HFM
             // Default each dimension for which phased submission is not enabled
             foreach(var id in _metadata.CustomDimIds) {
                 if(!_metadata.IsPhasedSubmissionEnabledForDimension(id)) {
-                    slice[id] = new MemberList(_metadata[id], "[None]");
+                   slice[id] = new MemberList(_metadata[id], "[None]");
                 }
             }
 
@@ -349,8 +355,34 @@ namespace HFM
         protected override void SetProcessState(Slice slice, EProcessAction action, EProcessState targetState,
                 string annotation, string[] documents, IOutput output)
         {
-            //PhasedSubmissionProcessManagementChangeStateForMultipleEntities2ExtDim
-            //PhasedSubmissionProcessManagementChangeStateForMultipleEntities2
+            bool allValues = slice.Values == null, allPeriods = slice.Periods == null;
+            string[] paths = null, files = null;
+            short newState = 0;
+
+            var POVs = slice.POVs;
+            output.InitProgress("Processing " + action.ToString(), POVs.Length);
+            foreach(var pov in POVs) {
+                if(_metadata.HasVariableCustoms) {
+                    HFM.Try("Setting phased submission state",
+                            () => _hsvProcessFlow.PhasedSubmissionProcessManagementChangeStateForMultipleEntities2ExtDim(
+                                        pov.HfmSliceCOM, annotation, (int)action, allValues, allPeriods,
+                                        (short)targetState, paths, files, out newState));
+                }
+                else {
+                    HFM.Try("Setting phased submission state",
+                            () => _hsvProcessFlow.PhasedSubmissionProcessManagementChangeStateForMultipleEntities2(
+                                        pov.Scenario.Id, pov.Year.Id, pov.Period.Id, new int[] { pov.Entity.Id },
+                                        new int[] { pov.Entity.ParentId }, pov.Value.Id, new int[] { pov.Account.Id },
+                                        new int[] { pov.ICP.Id }, new int[] { pov.Custom1.Id }, new int[] { pov.Custom2.Id },
+                                        new int[] { pov.Custom3.Id }, new int[] { pov.Custom4.Id },
+                                        annotation, (int)action, allValues, allPeriods, (short)targetState,
+                                        paths, files, out newState));
+                }
+                if(output.IterationComplete()) {
+                    break;
+                }
+            }
+            _log.InfoFormat("{0} phased submissions are now at {1}", POVs.Length, (EProcessState)newState);
         }
 
     }

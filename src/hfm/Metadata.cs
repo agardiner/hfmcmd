@@ -326,6 +326,17 @@ namespace HFM
         }
 
 
+        /// Converts a Custom dimension number to a dimension id
+        internal int GetDimIdForCustom(int customNum)
+        {
+            if(customNum < 1 || customNum > NumberOfCustomDims) {
+                throw new IndexOutOfRangeException(string.Format("Invalid Custom dimension number {0}; " +
+                            "must be a value between 1 and {1}", customNum, NumberOfCustomDims));
+            }
+            return (int)EDimension.CustomBase + customNum - 1;
+        }
+
+
         [Command("Lists the cell text labels for an application",
                  Since = "11.1.2.2")]
         public void EnumCellTextLabels(IOutput output)
@@ -419,7 +430,10 @@ namespace HFM
             }
         }
 
+
+        /// <summary>
         /// Returns true if the dimension supports phased submissions
+        /// </summary>
         public bool IsPhasedSubmissionEnabledForDimension(int dimId)
         {
             bool flag = false;
@@ -742,6 +756,8 @@ namespace HFM
                 return _parentName;
             }
         }
+        /// The Dimension this member belongs to
+        public Dimension Dimension { get { return _dimension; } }
         /// The generation of the member (below its default parent)
         public int Generation
         {
@@ -1181,27 +1197,42 @@ namespace HFM
         public HfmPovCOM HfmPovCOM
         {
             get {
+                Member member;
+                var customIds = new int[_metadata.NumberOfCustomDims];
                 var pov = new HfmPovCOM();
-                var customs = new int[_members.Length - 8];
-                Member custom;
-
-                if(Scenario != null) { pov.Scenario = Scenario.Id; }
-                if(Year != null) { pov.Year = Year.Id; }
-                if(Period != null) { pov.Period = Period.Id; }
-                if(View != null) { pov.View = View.Id; }
-                if(Entity != null) {
-                    pov.Entity = Entity.Id;
-                    pov.Parent = Entity.ParentId;
+                for(int i = 0, c = 0; i < _members.Length; ++i) {
+                    member = _members[i];
+                    if(member != null) {
+                        c = i - (int)EDimension.CustomBase;
+                        if(c < 0) {
+                            pov.SetDimensionMember(member.Dimension.Id, member.Id);
+                            if(member.Dimension.IsEntity) {
+                                pov.SetDimensionMember((int)tagHFMDIMENSIONS2.DIMID_PARENT, member.ParentId);
+                            }
+                        }
+                        else {
+                            customIds[c] = member.Id;
+                        }
+                    }
                 }
-                if(Value != null) { pov.Value = Value.Id; }
-                if(Account != null) { pov.Account = Account.Id; }
-                if(ICP != null) { pov.ICP = ICP.Id; }
-                for(var i = 0; i < customs.Length; ++i) {
-                    custom = GetCustom(i+1);
-                    if(custom != null) { customs[i++] = custom.Id; }
-                }
-                pov.SetCustoms(_metadata.CustomDimIds, customs);
+                pov.SetCustoms(_metadata.CustomDimIds, customIds);
                 return pov;
+            }
+        }
+        /// Converts this POV to an HfmSliceCOM object
+        public HfmSliceCOM HfmSliceCOM
+        {
+            get {
+                var slice = new HfmSliceCOM();
+                foreach(var member in _members) {
+                    if(member != null) {
+                        slice.SetFixedMember(member.Dimension.Id, member.Id);
+                        if(member.Dimension.IsEntity) {
+                            slice.SetFixedMember((int)tagHFMDIMENSIONS2.DIMID_PARENT, member.ParentId);
+                        }
+                    }
+                }
+                return slice;
             }
         }
 
@@ -1210,20 +1241,6 @@ namespace HFM
         public POV(Metadata metadata) {
             _metadata = metadata;
             _members = new Member[_metadata.NumberOfDims];
-        }
-
-
-        /// <summary>
-        /// Returns the member for Custom dimension 1 to n (where n is the
-        /// number of custom dimensions in the app).
-        /// </summary>
-        public Member GetCustom(int custom) {
-            int dim = custom + 7;
-            if(custom < 1 || custom > _members.Length - 8) {
-                throw new IndexOutOfRangeException(string.Format("Invalid Custom dimension number {0}; " +
-                            "must be a value between 1 and {1}", custom, _members.Length - 8));
-            }
-            return this[dim];
         }
 
 
@@ -1386,10 +1403,47 @@ namespace HFM
                 return _memberLists.Count(ml => ml != null);
             }
         }
+        /// Returns a count of the number of cells currently specified in the slice
+        public int CellCount
+        {
+            get {
+                int size = 0;
+                for(var i = 0; i < _memberLists.Length; ++i) {
+                    if(_memberLists[i] != null) {
+                        size = (size > 0 ? size : 1) * _memberLists[i].Count;
+                    }
+                }
+                return size;
+            }
+        }
         /// Returns an array of all cells in the slice
         public POV[] POVs { get { return GeneratePOVs(); } }
         /// Returns an array of all process units in the slice
         public POV[] ProcessUnits { get { return GenerateProcessUnits(); } }
+        /// Converts this Slice to an HfmSliceCOM object
+        public HfmSliceCOM HfmSliceCOM
+        {
+            get {
+                var slice = new HfmSliceCOM();
+                foreach(var ml in _memberLists) {
+                    if(ml != null) {
+                        if(ml.Count > 1) {
+                            slice.SetMemberArrayForDim(ml.Dimension.Id, ml.MemberIds);
+                            if(ml.Dimension.IsEntity) {
+                                slice.SetMemberArrayForDim((int)tagHFMDIMENSIONS2.DIMID_PARENT, ml.ParentIds);
+                            }
+                        }
+                        else if(ml.Count == 1) {
+                            slice.SetFixedMember(ml.Dimension.Id, ml.MemberIds[0]);
+                            if(ml.Dimension.IsEntity) {
+                                slice.SetFixedMember((int)tagHFMDIMENSIONS2.DIMID_PARENT, ml.ParentIds[0]);
+                            }
+                        }
+                    }
+                }
+                return slice;
+            }
+        }
 
 
         /// <summary>
@@ -1473,15 +1527,7 @@ namespace HFM
                 // Default view to <Scenario View>
                 this["View"] = "<Scenario View>";
             }
-            MemberList[] lists = new MemberList[numDims];
-
-            int dim = 0;
-            foreach(var dimName in _metadata.DimensionNames) {
-                lists[dim] = MemberList(dimName);
-                dim++;
-            }
-
-            return GenerateCombos(lists);
+            return GenerateCombos(_memberLists);
         }
 
 
@@ -1506,7 +1552,7 @@ namespace HFM
             int dim = 0;
             foreach(var list in lists) {
                 dimIds[dim] = list.Dimension.Id;
-                dimSizes[dim] = list.MemberIds.Length;
+                dimSizes[dim] = list.Count;
                 size = size * dimSizes[dim];
                 dim++;
             }
