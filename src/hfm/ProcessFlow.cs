@@ -42,7 +42,7 @@ namespace HFM
     /// <summary>
     /// Enumeration of process management actions
     /// </summary>
-    public enum EProcessAction
+    public enum EProcessAction : short
     {
         Approve = CEnumProcessFlowActions.PROCESS_FLOW_ACTION_APPROVE,
         Promote = CEnumProcessFlowActions.PROCESS_FLOW_ACTION_PROMOTE,
@@ -107,6 +107,33 @@ namespace HFM
                 output.WriteRecord(pov, group, phase);
             }
             output.End();
+        }
+
+
+        [Command("Returns the history of process management actions performed on process units")]
+        public void GetProcessHistory(Slice slice, IOutput output)
+        {
+            GetHistory(slice, output);
+        }
+
+
+        protected void OutputHistory(IOutput output, string label, object oDates, object oUsers,
+                object oActions, object oStates, object oAnnotations, object oPaths, object oFiles)
+        {
+            var dates = (double[])oDates;
+            var users = HFM.Object2Array<string>(oUsers);
+            var actions = (EProcessAction[])oActions;
+            var states = (EProcessState[])oStates;
+            var annotations = HFM.Object2Array<string>(oAnnotations);
+            var paths = HFM.Object2Array<string>(oPaths);
+            var files = HFM.Object2Array<string>(oFiles);
+
+            output.WriteLine("Process history for {0}:", label);
+            output.SetHeader("Date", "User", 30, "Action", 10, "Process State", 14, "Annotation");
+            for(int i = 0; i < dates.Length; ++i) {
+                output.WriteRecord(DateTime.FromOADate(dates[i]), users[i], actions[i], states[i], annotations[i]);
+            }
+            output.End(true);
         }
 
 
@@ -241,6 +268,11 @@ namespace HFM
         protected abstract void GetProcessState(Slice slice, IOutput output);
 
 
+        /// Method to be implemented in sub-classes for retrieving the state of
+        /// process unit(s) represented by the Slice.
+        protected abstract void GetHistory(Slice slice, IOutput output);
+
+
         /// Method to be implemented in sub-classes for setting the state of
         /// process unit(s) represented by the Slice.
         protected abstract void SetProcessState(Slice slice, EProcessAction action,
@@ -278,6 +310,23 @@ namespace HFM
                 output.WriteRecord(pu.ProcessUnitLabel, (EProcessState)state);
             }
             output.End();
+        }
+
+
+        protected override void GetHistory(Slice slice, IOutput output)
+        {
+            object oDates = null, oUsers = null, oActions = null, oStates = null,
+                   oAnnotations = null, oPaths = null, oFiles = null;
+
+            foreach(var pu in slice.ProcessUnits) {
+                HFM.Try("Retrieving process history",
+                        () => _hsvProcessFlow.GetHistory2(pu.Scenario.Id, pu.Year.Id, pu.Period.Id,
+                                        pu.Entity.Id, pu.Entity.ParentId, pu.Value.Id,
+                                        out oDates, out oUsers, out oActions, out oStates,
+                                        out oAnnotations, out oPaths, out oFiles));
+                OutputHistory(output, pu.ProcessUnitLabel, oDates, oUsers, oActions, oStates,
+                        oAnnotations, oPaths, oFiles);
+            }
         }
 
 
@@ -349,6 +398,32 @@ namespace HFM
                 output.WriteRecord(pov, (EProcessState)state);
             }
             output.End();
+        }
+
+
+        protected override void GetHistory(Slice slice, IOutput output)
+        {
+            object oDates = null, oUsers = null, oActions = null, oStates = null,
+                   oAnnotations = null, oPaths = null, oFiles = null;
+
+            foreach(var pov in slice.POVs) {
+                if(_metadata.HasVariableCustoms) {
+                    HFM.Try("Retrieving process history",
+                            () => _hsvProcessFlow.PhasedSubmissionGetHistory2ExtDim(pov.HfmPovCOM,
+                                            out oDates, out oUsers, out oActions, out oStates,
+                                            out oAnnotations, out oPaths, out oFiles));
+                }
+                else {
+                    HFM.Try("Retrieving process history",
+                            () => _hsvProcessFlow.PhasedSubmissionGetHistory2(pov.Scenario.Id, pov.Year.Id, pov.Period.Id,
+                                            pov.Entity.Id, pov.Entity.ParentId, pov.Value.Id, pov.Account.Id, pov.ICP.Id,
+                                            pov.Custom1.Id, pov.Custom2.Id, pov.Custom3.Id, pov.Custom4.Id,
+                                            out oDates, out oUsers, out oActions, out oStates,
+                                            out oAnnotations, out oPaths, out oFiles));
+                }
+                OutputHistory(output, pov.ToString(), oDates, oUsers, oActions, oStates,
+                        oAnnotations, oPaths, oFiles);
+            }
         }
 
 
