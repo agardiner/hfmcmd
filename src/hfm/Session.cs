@@ -39,6 +39,8 @@ namespace HFM
         private Metadata _metadata;
         // Reference to a ProcessFlow object
         private ProcessFlow _processFlow;
+        // Reference to a Security object
+        private Security _security;
 
 
 
@@ -99,13 +101,25 @@ namespace HFM
             get {
                 if(_processFlow == null) {
                     if(Metadata.UsesPhasedSubmissions) {
-                        _processFlow = new PhasedSubmissionProcessFlow(this, Metadata);
+                        _processFlow = new PhasedSubmissionProcessFlow(this);
                     }
                     else {
-                        _processFlow = new ProcessUnitProcessFlow(this, Metadata);
+                        _processFlow = new ProcessUnitProcessFlow(this);
                     }
                 }
                 return _processFlow;
+            }
+        }
+
+
+        [Factory]
+        public Security Security
+        {
+            get {
+                if(_security == null) {
+                    _security = new Security(this);
+                }
+                return _security;
             }
         }
     }

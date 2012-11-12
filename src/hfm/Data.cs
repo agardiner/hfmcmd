@@ -37,13 +37,12 @@ namespace HFM
                  "all dimensions are ultimately specified. If a dimension is specified both in the POV " +
                  "and in a dimension setting, the dimension setting takes precedence.")]
         public void SetCell(
-                Metadata metadata,
                 Slice slice,
                 [Parameter("The amount to set the cell(s) to")]
                 double amount,
                 IOutput output)
         {
-            SetCellInternal(metadata, slice, amount, false, output);
+            SetCellInternal(slice, amount, false, output);
         }
 
 
@@ -53,20 +52,19 @@ namespace HFM
                  "all dimensions are ultimately specified. If a dimension is specified both in the POV " +
                  "and in a dimension setting, the dimension setting takes precedence.")]
         public void ClearCell(
-                Metadata metadata,
                 Slice slice,
                 IOutput output)
         {
-            SetCellInternal(metadata, slice, 0, true, output);
+            SetCellInternal(slice, 0, true, output);
         }
 
 
-        protected void SetCellInternal(Metadata metadata, Slice slice, double amount, bool clear, IOutput output)
+        protected void SetCellInternal(Slice slice, double amount, bool clear, IOutput output)
         {
             var povs = slice.POVs;
             output.InitProgress(string.Format("{0} cells", clear ? "Clearing" : "Setting"), povs.Length);
             foreach(var pov in povs) {
-                if(metadata.HasVariableCustoms) {
+                if(HFM.HasVariableCustoms) {
                     HFM.Try("Setting cell",
                             () => _hsvData.SetCellExtDim(pov.HfmPovCOM, amount, clear));
                 }

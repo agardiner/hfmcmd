@@ -24,9 +24,17 @@ namespace HFM
         protected static readonly ILog _log = LogManager.GetLogger(
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
+        public static Version HFM_11_1_2_2 = new Version("11.1.2.2");
 
         /// Returns the current installed HFM version
         public static Version Version { get { return ResourceManager.Version; } }
+        /// Returns true if the current HFM instance supports variable number of customs
+        public static bool HasVariableCustoms
+        {
+            get {
+                return Version >= HFM_11_1_2_2;
+            }
+        }
 
 
         /// <summary>

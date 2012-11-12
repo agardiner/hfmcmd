@@ -71,8 +71,6 @@ namespace HFM
 
         // Reference to HFM HsvMetadata object
         protected readonly HsvMetadata _hsvMetadata;
-        // True if the installed version of HFM is >= 11.1.2.2
-        protected bool _useExtDims;
         // True if the app supports phased submission groups
         protected bool? _usesPhasedSubmissions;
         // Cache of custom dimension ids
@@ -99,8 +97,6 @@ namespace HFM
                 return names;
             }
         }
-        /// Returns true if this application is 11.1.2.2 or later
-        public bool HasVariableCustoms { get { return _useExtDims; } }
         /// Returns a count of the total number of dimensions in the current app
         public int NumberOfDims { get { return FixedDimNames.Length + NumberOfCustomDims; } }
         /// Returns a count of the number of custom dimensions in the current app
@@ -193,7 +189,6 @@ namespace HFM
         {
             _log.Trace("Constructing Metadata object");
             _hsvMetadata = (HsvMetadata)session.HsvSession.Metadata;
-            _useExtDims = HFM.Version >= new Version("11.1.2.2");
             _dimensions = new Dimension[NumberOfDims];
         }
 
@@ -248,7 +243,7 @@ namespace HFM
                     if(_customDimNames == null) {
                         GetCustomDims();
                     }
-                    if(_useExtDims) {
+                    if(HFM.HasVariableCustoms) {
                         var re = new Regex(@"^Custom(\d+)$", RegexOptions.IgnoreCase);
                         var match = re.Match(dimName);
                         int custom = -1;
@@ -287,7 +282,7 @@ namespace HFM
         private void GetCustomDims()
         {
             _customDimMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-            if(_useExtDims) {
+            if(HFM.HasVariableCustoms) {
                 object oDimIds = null, oDimNames = null, oDimAliases = null, oSizes = null;
                 HFM.Try("Retrieving custom dimension details",
                         () => _hsvMetadata.EnumCustomDimsForAppEx(out oDimIds, out oDimNames,
@@ -449,7 +444,7 @@ namespace HFM
                 default:
                     if(dimId >= (int)EDimension.CustomBase && dimId < NumberOfCustomDims) {
                         HFM.Try("Retrieving Custom phased submission flag", () => {
-                            if(_useExtDims) {
+                            if(HFM.HasVariableCustoms) {
                                 _hsvMetadata.GetSupportSubmissionPhaseForCustomXFlag(dimId, out flag);
                             }
                             else {

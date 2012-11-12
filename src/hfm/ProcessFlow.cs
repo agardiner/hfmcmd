@@ -71,10 +71,10 @@ namespace HFM
 
 
         /// Constructor
-        internal ProcessFlow(Session session, Metadata metadata)
+        internal ProcessFlow(Session session)
         {
             _hsvProcessFlow = (HsvProcessFlow)session.HsvSession.ProcessFlow;
-            _metadata = metadata;
+            _metadata = session.Metadata;
         }
 
 
@@ -92,7 +92,7 @@ namespace HFM
 
             output.SetHeader("Cell", 50, "Submission Group", "Submission Phase", 20);
             foreach(var pov in slice.POVs) {
-                if(_metadata.HasVariableCustoms) {
+                if(HFM.HasVariableCustoms) {
                     HFM.Try("Retrieving submission group and phase",
                             () => _hsvProcessFlow.GetGroupPhaseFromCellExtDim(pov.HfmPovCOM,
                                          out group, out phase));
@@ -292,8 +292,8 @@ namespace HFM
     public class ProcessUnitProcessFlow : ProcessFlow
     {
 
-        internal ProcessUnitProcessFlow(Session session, Metadata metadata)
-            : base(session, metadata)
+        internal ProcessUnitProcessFlow(Session session)
+            : base(session)
         { }
 
 
@@ -367,8 +367,8 @@ namespace HFM
     public class PhasedSubmissionProcessFlow : ProcessFlow
     {
 
-        internal PhasedSubmissionProcessFlow(Session session, Metadata metadata)
-            : base(session, metadata)
+        internal PhasedSubmissionProcessFlow(Session session)
+            : base(session)
         { }
 
         protected override void GetProcessState(Slice slice, IOutput output)
@@ -384,7 +384,7 @@ namespace HFM
 
             output.SetHeader("POV", 58, "Process State", 15);
             foreach(var pov in slice.POVs) {
-                if(_metadata.HasVariableCustoms) {
+                if(HFM.HasVariableCustoms) {
                     HFM.Try("Retrieving phased submission process state",
                             () => _hsvProcessFlow.GetPhasedSubmissionStateExtDim(pov.HfmPovCOM, out state));
                 }
@@ -407,7 +407,7 @@ namespace HFM
                    oAnnotations = null, oPaths = null, oFiles = null;
 
             foreach(var pov in slice.POVs) {
-                if(_metadata.HasVariableCustoms) {
+                if(HFM.HasVariableCustoms) {
                     HFM.Try("Retrieving process history",
                             () => _hsvProcessFlow.PhasedSubmissionGetHistory2ExtDim(pov.HfmPovCOM,
                                             out oDates, out oUsers, out oActions, out oStates,
@@ -437,7 +437,7 @@ namespace HFM
             var POVs = slice.POVs;
             output.InitProgress("Processing " + action.ToString(), POVs.Length);
             foreach(var pov in POVs) {
-                if(_metadata.HasVariableCustoms) {
+                if(HFM.HasVariableCustoms) {
                     HFM.Try("Setting phased submission state",
                             () => _hsvProcessFlow.PhasedSubmissionProcessManagementChangeStateForMultipleEntities2ExtDim(
                                         pov.HfmSliceCOM, annotation, (int)action, allValues, allPeriods,
