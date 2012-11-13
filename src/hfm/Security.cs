@@ -9,6 +9,18 @@ using Command;
 namespace HFM
 {
 
+    /// <summary>
+    /// Enumeration of tasks
+    /// </summary>
+    public enum ETask
+    {
+        ProcessManagement = tagHFM_TASK_ENUM.HFM_TASK_DATA_EXPLORER_MANAGE_PROCESS
+    }
+
+
+    /// <summary>
+    /// Enumeration of access levels
+    /// </summary>
     public enum EAccessRights
     {
         None = HFM_NUM_ACCESS_TYPES.HFM_ACCESS_RIGHTS_NONE,
@@ -17,6 +29,14 @@ namespace HFM
         Metadata = HFM_NUM_ACCESS_TYPES.HFM_ACCESS_RIGHTS_VIEW,
         All = HFM_NUM_ACCESS_TYPES.HFM_ACCESS_RIGHTS_ALL
     }
+
+
+
+    public class AccessDeniedException : Exception
+    {
+        public AccessDeniedException(string msg) : base(msg) { }
+    }
+
 
 
     /// <summary>
@@ -41,11 +61,25 @@ namespace HFM
 
 
 
-        [Factory]
         public Security(Session session)
         {
             _hsvSecurity = (HsvSecurityAccess)session.HsvSession.Security;
             _metadata = session.Metadata;
+        }
+
+
+        /// <summary>
+        /// Returns true if the user has access sufficient to perform the specified task.
+        /// </summary>
+        public void CheckPermissionFor(ETask task)
+        {
+            bool allowed = false;
+
+            HFM.Try("Checking task permission",
+                    () => _hsvSecurity.IsConnectedUserAllowedToPerformTask((int)task, out allowed));
+            if(!allowed) {
+                throw new AccessDeniedException(string.Format("You do not have permission to perform {0}", task));
+            }
         }
 
 
@@ -74,29 +108,31 @@ namespace HFM
         /// <summary>
         /// Returns the current user's access rights to the specified process unit
         /// </summary>
-        public EAccessRights GetProcessUnitAccessRights(POV pov)
+        public EAccessRights GetProcessUnitAccessRights(POV pov, out EProcessState state)
         {
             int accessRights = 0;
+            short currentState = 0;
             if(_metadata.UsesPhasedSubmissions) {
                 if(HFM.HasVariableCustoms) {
                     HFM.Try("Retrieving phased submission access rights",
-                            () => HsvDataSecurity.GetProcessUnitAccessRightsExExtDim(pov.HfmPovCOM,
-                                        -1, out accessRights));
+                            () => HsvDataSecurity.GetProcessUnitAccessRightsAndStateExExtDim(pov.HfmPovCOM,
+                                        -1, out accessRights, out currentState));
                 }
                 else {
                     HFM.Try("Retrieving phased submission access rights",
-                            () => HsvDataSecurity.GetProcessUnitAccessRightsEx(pov.Scenario.Id, pov.Year.Id,
+                            () => HsvDataSecurity.GetProcessUnitAccessRightsAndStateEx(pov.Scenario.Id, pov.Year.Id,
                                         pov.Period.Id, pov.Entity.Id, pov.Entity.ParentId, pov.Value.Id,
                                         pov.Account.Id, pov.ICP.Id, pov.Custom1.Id, pov.Custom2.Id,
-                                        pov.Custom3.Id, pov.Custom4.Id, -1, out accessRights));
+                                        pov.Custom3.Id, pov.Custom4.Id, -1, out accessRights, out currentState));
                 }
             }
             else {
                 HFM.Try("Retrieving process unit access rights",
-                        () => HsvDataSecurity.GetProcessUnitAccessRights(pov.Scenario.Id, pov.Year.Id,
+                        () => HsvDataSecurity.GetProcessUnitAccessRightsAndState(pov.Scenario.Id, pov.Year.Id,
                                         pov.Period.Id, pov.Entity.Id, pov.Entity.ParentId, pov.Value.Id,
-                                        out accessRights));
+                                        out accessRights, out currentState));
             }
+            state = (EProcessState)currentState;
             return (EAccessRights)accessRights;
         }
 

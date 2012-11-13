@@ -68,6 +68,8 @@ namespace HFM
         protected HsvProcessFlow _hsvProcessFlow;
         // Reference to Metadata object
         protected Metadata _metadata;
+        // Reference to Security object
+        protected Security _security;
 
 
         /// Constructor
@@ -75,6 +77,7 @@ namespace HFM
         {
             _hsvProcessFlow = (HsvProcessFlow)session.HsvSession.ProcessFlow;
             _metadata = session.Metadata;
+            _security = session.Security;
         }
 
 
@@ -263,6 +266,20 @@ namespace HFM
         }
 
 
+        /// Returns true if it is possible to go from start state to end state
+        protected bool IsValidStateTransition(EProcessAction action, EProcessState start, EProcessState end)
+        {
+            return (action == EProcessAction.Start && start == EProcessState.NotStarted) ||
+                   (action == EProcessAction.Promote && start < EProcessState.Submitted  && end >= EProcessState.ReviewLevel1 && end <= EProcessState.ReviewLevel10) ||
+                   (action == EProcessAction.Reject && start > EProcessState.NotStarted) ||
+                   (action == EProcessAction.SignOff && start >= EProcessState.ReviewLevel1 && start <= EProcessState.ReviewLevel10) ||
+                   (action == EProcessAction.Submit && start >= EProcessState.FirstPass && start <= EProcessState.Submitted) ||
+                   (action == EProcessAction.Approve && start >= EProcessState.Submitted) ||
+                   // TODO: Publish also needs a data status of OK, OK SC, or NODATA
+                   (action == EProcessAction.Publish && start >= EProcessState.Submitted && start < EProcessState.Published);
+        }
+
+
         /// Method to be implemented in sub-classes for retrieving the state of
         /// process unit(s) represented by the Slice.
         protected abstract void GetProcessState(Slice slice, IOutput output);
@@ -336,22 +353,41 @@ namespace HFM
             bool allValues = slice.Values == null, allPeriods = slice.Periods == null;
             string[] paths = null, files = null;
             short newState = 0;
+            int processed = 0;
+            EProcessState state;
+
+            _security.CheckPermissionFor(ETask.ProcessManagement);
 
             var PUs = slice.ProcessUnits;
             output.InitProgress("Processing " + action.ToString(), PUs.Length);
             foreach(var pu in PUs) {
-                HFM.Try("Setting process unit state",
-                        () => _hsvProcessFlow.ProcessManagementChangeStateForMultipleEntities2(
-                                    pu.Scenario.Id, pu.Year.Id, pu.Period.Id,
-                                    new int[] { pu.Entity.Id }, new int[] { pu.Entity.ParentId },
-                                    pu.Value.Id, annotation, (int)action, allValues, allPeriods,
-                                    (short)targetState, paths, files, out newState));
+                var access = _security.GetProcessUnitAccessRights(pu, out state);
+                if(access == EAccessRights.All && IsValidStateTransition(action, state, targetState)) {
+                    HFM.Try("Setting process unit state",
+                            () => _hsvProcessFlow.ProcessManagementChangeStateForMultipleEntities2(
+                                        pu.Scenario.Id, pu.Year.Id, pu.Period.Id,
+                                        new int[] { pu.Entity.Id }, new int[] { pu.Entity.ParentId },
+                                        pu.Value.Id, annotation, (int)action, allValues, allPeriods,
+                                        (short)targetState, paths, files, out newState));
+                    processed++;
+                }
+                else if(access != EAccessRights.All) {
+                    _log.WarnFormat("Insufficient privileges to change process state for {0}", pu);
+                }
+                else {
+                    _log.WarnFormat("Process unit {0} is in the wrong state ({1}) to {2}", pu.ProcessUnitLabel, state, action);
+                }
                 if(output.IterationComplete()) {
                     break;
                 }
             }
             output.EndProgress();
-            _log.InfoFormat("{0} process units are now at {1}", PUs.Length, (EProcessState)newState);
+            if(processed > 0) {
+                _log.InfoFormat("{0} process units are now at {1}", processed, (EProcessState)newState);
+            }
+            else {
+                // TODO: Throw an exception?
+            }
         }
 
     }
@@ -433,31 +469,50 @@ namespace HFM
             bool allValues = slice.Values == null, allPeriods = slice.Periods == null;
             string[] paths = null, files = null;
             short newState = 0;
+            int processed = 0;
+            EProcessState state;
+
+            _security.CheckPermissionFor(ETask.ProcessManagement);
 
             var POVs = slice.POVs;
             output.InitProgress("Processing " + action.ToString(), POVs.Length);
             foreach(var pov in POVs) {
-                if(HFM.HasVariableCustoms) {
-                    HFM.Try("Setting phased submission state",
-                            () => _hsvProcessFlow.PhasedSubmissionProcessManagementChangeStateForMultipleEntities2ExtDim(
-                                        pov.HfmSliceCOM, annotation, (int)action, allValues, allPeriods,
-                                        (short)targetState, paths, files, out newState));
+                var access = _security.GetProcessUnitAccessRights(pov, out state);
+                if(access == EAccessRights.All && IsValidStateTransition(action, state, targetState)) {
+                    if(HFM.HasVariableCustoms) {
+                        HFM.Try("Setting phased submission state",
+                                () => _hsvProcessFlow.PhasedSubmissionProcessManagementChangeStateForMultipleEntities2ExtDim(
+                                            pov.HfmSliceCOM, annotation, (int)action, allValues, allPeriods,
+                                            (short)targetState, paths, files, out newState));
+                    }
+                    else {
+                        HFM.Try("Setting phased submission state",
+                                () => _hsvProcessFlow.PhasedSubmissionProcessManagementChangeStateForMultipleEntities2(
+                                            pov.Scenario.Id, pov.Year.Id, pov.Period.Id, new int[] { pov.Entity.Id },
+                                            new int[] { pov.Entity.ParentId }, pov.Value.Id, new int[] { pov.Account.Id },
+                                            new int[] { pov.ICP.Id }, new int[] { pov.Custom1.Id }, new int[] { pov.Custom2.Id },
+                                            new int[] { pov.Custom3.Id }, new int[] { pov.Custom4.Id },
+                                            annotation, (int)action, allValues, allPeriods, (short)targetState,
+                                            paths, files, out newState));
+                    }
+                }
+                else if(access != EAccessRights.All) {
+                    _log.WarnFormat("Insufficient privileges to change process state for {0}", pov);
                 }
                 else {
-                    HFM.Try("Setting phased submission state",
-                            () => _hsvProcessFlow.PhasedSubmissionProcessManagementChangeStateForMultipleEntities2(
-                                        pov.Scenario.Id, pov.Year.Id, pov.Period.Id, new int[] { pov.Entity.Id },
-                                        new int[] { pov.Entity.ParentId }, pov.Value.Id, new int[] { pov.Account.Id },
-                                        new int[] { pov.ICP.Id }, new int[] { pov.Custom1.Id }, new int[] { pov.Custom2.Id },
-                                        new int[] { pov.Custom3.Id }, new int[] { pov.Custom4.Id },
-                                        annotation, (int)action, allValues, allPeriods, (short)targetState,
-                                        paths, files, out newState));
+                    _log.WarnFormat("Process unit {0} is in the wrong state ({1}) to {2}", pov, state, action);
                 }
                 if(output.IterationComplete()) {
                     break;
                 }
             }
-            _log.InfoFormat("{0} phased submissions are now at {1}", POVs.Length, (EProcessState)newState);
+            output.EndProgress();
+            if(processed > 0) {
+                _log.InfoFormat("{0} phased submissions are now at {1}", POVs.Length, (EProcessState)newState);
+            }
+            else {
+                // TODO: Throw an exception?
+            }
         }
 
     }

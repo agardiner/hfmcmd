@@ -1253,7 +1253,7 @@ namespace HFM
                     sb.Append(_metadata.CustomDimNames[id - (int)EDimension.CustomBase]);
                 }
                 sb.Append('#');
-                sb.Append(this[id].Name);
+                sb.Append(this[id] != null ? this[id].Name : "MEMBERNOTSPECIFIED");
                 sb.Append('.');
                 id++;
             }
