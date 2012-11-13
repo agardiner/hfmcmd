@@ -22,6 +22,7 @@ RESOURCES       = FileList['resources/*.resx']
 PROPERTIES      = FileList['properties/*']
 SOURCE_FILES    = FileList['src/**/*.cs']
 
+
 def settings_for_version(version)
   s = {}
   case version
@@ -121,6 +122,7 @@ end
 task :properties => 'gen/AssemblyInfo.cs'
 
 
+desc "Updates the build to the current build number"
 task :set_build do
   increment_build
 end
