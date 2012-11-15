@@ -687,6 +687,9 @@ namespace HFM
         protected static readonly ILog _log = LogManager.GetLogger(
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
+
+        // Regular expression class for matching allowed member names
+        internal const string NAME_RE_CLASS = @"[^*@,{}""\-#.+;/ !][^*@,{}""\-#.+;/]*";
         /// Id indicating a parent id that has not been specified
         public const int NOT_USED = -1;
         /// Id value used when a member id has not yet been retrieved
@@ -895,14 +898,16 @@ namespace HFM
         protected static readonly ILog _log = LogManager.GetLogger(
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-        // TODO: Make these regexes more correct
         /// Regular expression for matching a member list specification.
         /// These must be enclosed in { and }.
-        protected static Regex MEMBER_LIST_RE = new Regex(@"^\{(?:([^.]+)\.)?([^.]+)\}$");
+        protected static Regex MEMBER_LIST_RE = new Regex(@"^\{(?:(" + Member.NAME_RE_CLASS +
+                @")\.)?(" + Member.NAME_RE_CLASS + @")\}$");
         /// Regular expression for matching a member range specification.
-        protected static Regex MEMBER_RANGE_RE = new Regex(@"^([^-:.\[\]{}]+)\s*(\-|\:)\s*([^-:.\[\]{}]+)$");
+        protected static Regex MEMBER_RANGE_RE = new Regex(@"^(" + Member.NAME_RE_CLASS +
+                @")\s*(\-|\:)\s*(" + Member.NAME_RE_CLASS + ")$");
         /// Regular expression for matching a member list specification.
-        protected static Regex MEMBER_RE = new Regex(@"^(?:([^.{}]+)\.)?([^.{}]+)$");
+        protected static Regex MEMBER_RE = new Regex(@"^(?:(" + Member.NAME_RE_CLASS +
+                @")\.)?(" + Member.NAME_RE_CLASS + ")$");
 
         /// Dimension this member set is for
         Dimension _dimension;
