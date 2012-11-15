@@ -97,7 +97,7 @@ namespace HFMCmd
 
         // Characters at which line breaks can be created
         public static char[] WHITESPACE = new char[] { ' ', '\n', '\t' };
-        public static char[] WORDBREAKS = new char[] { '-', ',', '.', ';', '(', ')', '[', ']' };
+        public static char[] WORDBREAKS = new char[] { '-', ',', '.', ';', '#', ')', ']', '}' };
 
 
         /// <summary>
