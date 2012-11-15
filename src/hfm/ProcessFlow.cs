@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 
@@ -93,6 +94,7 @@ namespace HFM
         {
             string group = null, phase = null;
 
+            DefaultMembers(slice, false);
             output.SetHeader("Cell", 50, "Submission Group", "Submission Phase", 20);
             foreach(var pov in slice.POVs) {
                 if(HFM.HasVariableCustoms) {
@@ -266,6 +268,26 @@ namespace HFM
         }
 
 
+        protected void DefaultMembers(Slice slice, bool overrideExisting)
+        {
+            // Default each dimension for which phased submission is not enabled
+            if(!_metadata.IsPhasedSubmissionEnabledForDimension((int)EDimension.Account) &&
+                (overrideExisting || !slice.IsSpecified(EDimension.Account))) {
+                slice[EDimension.Account] = "[None]";
+            }
+            if(!_metadata.IsPhasedSubmissionEnabledForDimension((int)EDimension.ICP) &&
+                (overrideExisting || !slice.IsSpecified(EDimension.ICP))) {
+                slice[EDimension.ICP] = "[ICP None]";
+            }
+            foreach(var id in _metadata.CustomDimIds) {
+                if(!_metadata.IsPhasedSubmissionEnabledForDimension(id) &&
+                    (overrideExisting || !slice.IsSpecified(id))) {
+                   slice[id] = "[None]";
+                }
+            }
+        }
+
+
         /// Returns true if it is possible to go from start state to end state
         protected bool IsValidStateTransition(EProcessAction action, EProcessState start, EProcessState end)
         {
@@ -318,6 +340,7 @@ namespace HFM
         {
             short state = 0;
 
+            DefaultMembers(slice, true);
             output.SetHeader("Process Unit", 58, "Process State", 15);
             foreach(var pu in slice.ProcessUnits) {
                 HFM.Try("Retrieving process state",
@@ -335,6 +358,7 @@ namespace HFM
             object oDates = null, oUsers = null, oActions = null, oStates = null,
                    oAnnotations = null, oPaths = null, oFiles = null;
 
+            DefaultMembers(slice, true);
             foreach(var pu in slice.ProcessUnits) {
                 HFM.Try("Retrieving process history",
                         () => _hsvProcessFlow.GetHistory2(pu.Scenario.Id, pu.Year.Id, pu.Period.Id,
@@ -358,6 +382,7 @@ namespace HFM
 
             _security.CheckPermissionFor(ETask.ProcessManagement);
 
+            DefaultMembers(slice, true);
             var PUs = slice.ProcessUnits;
             output.InitProgress("Processing " + action.ToString(), PUs.Length);
             foreach(var pu in PUs) {
@@ -374,6 +399,9 @@ namespace HFM
                 else if(access != EAccessRights.All) {
                     _log.WarnFormat("Insufficient privileges to change process state for {0}", pu);
                 }
+                else if(state == targetState) {
+                    processed++;
+                }
                 else {
                     _log.WarnFormat("Process unit {0} is in the wrong state ({1}) to {2}", pu.ProcessUnitLabel, state, action);
                 }
@@ -383,10 +411,10 @@ namespace HFM
             }
             output.EndProgress();
             if(processed > 0) {
-                _log.InfoFormat("{0} process units are now at {1}", processed, (EProcessState)newState);
+                _log.InfoFormat("{0} successful for {1} process units", action, processed);
             }
             else {
-                // TODO: Throw an exception?
+                throw new Exception(string.Format("Failed to {0} any process units", action));
             }
         }
 
@@ -407,17 +435,12 @@ namespace HFM
             : base(session)
         { }
 
+
         protected override void GetProcessState(Slice slice, IOutput output)
         {
             short state = 0;
 
-            // Default each dimension for which phased submission is not enabled
-            foreach(var id in _metadata.CustomDimIds) {
-                if(!_metadata.IsPhasedSubmissionEnabledForDimension(id)) {
-                   slice[id] = new MemberList(_metadata[id], "[None]");
-                }
-            }
-
+            DefaultMembers(slice, true);
             output.SetHeader("POV", 58, "Process State", 15);
             foreach(var pov in slice.POVs) {
                 if(HFM.HasVariableCustoms) {
@@ -442,6 +465,7 @@ namespace HFM
             object oDates = null, oUsers = null, oActions = null, oStates = null,
                    oAnnotations = null, oPaths = null, oFiles = null;
 
+            DefaultMembers(slice, true);
             foreach(var pov in slice.POVs) {
                 if(HFM.HasVariableCustoms) {
                     HFM.Try("Retrieving process history",
@@ -474,6 +498,7 @@ namespace HFM
 
             _security.CheckPermissionFor(ETask.ProcessManagement);
 
+            DefaultMembers(slice, true);
             var POVs = slice.POVs;
             output.InitProgress("Processing " + action.ToString(), POVs.Length);
             foreach(var pov in POVs) {
@@ -495,9 +520,13 @@ namespace HFM
                                             annotation, (int)action, allValues, allPeriods, (short)targetState,
                                             paths, files, out newState));
                     }
+                    processed++;
                 }
                 else if(access != EAccessRights.All) {
                     _log.WarnFormat("Insufficient privileges to change process state for {0}", pov);
+                }
+                else if(state == targetState) {
+                    processed++;
                 }
                 else {
                     _log.WarnFormat("Process unit {0} is in the wrong state ({1}) to {2}", pov, state, action);
@@ -508,11 +537,37 @@ namespace HFM
             }
             output.EndProgress();
             if(processed > 0) {
-                _log.InfoFormat("{0} phased submissions are now at {1}", POVs.Length, (EProcessState)newState);
+                _log.InfoFormat("{0} successful for {1} phased submissions", processed, action);
             }
             else {
-                // TODO: Throw an exception?
+                throw new Exception(string.Format("Failed to {0} any phased submissions", action));
             }
+        }
+
+
+        /// Returns a sequence of unique phase ids corresponding to the slice
+        protected IEnumerable<int> GetPhaseIds(Slice slice)
+        {
+            string group = null, phase = null;
+            var phaseIds = new List<int>(50);
+
+            DefaultMembers(slice, true);
+            foreach(var pov in slice.POVs) {
+                if(HFM.HasVariableCustoms) {
+                    HFM.Try("Retrieving submission group and phase",
+                            () => _hsvProcessFlow.GetGroupPhaseFromCellExtDim(pov.HfmPovCOM,
+                                         out group, out phase));
+                }
+                else {
+                    HFM.Try("Retrieving submission group and phase",
+                            () => _hsvProcessFlow.GetGroupPhaseFromCell(pov.Scenario.Id, pov.Year.Id,
+                                         pov.Period.Id, pov.Entity.Id, pov.Entity.ParentId, pov.Value.Id,
+                                         pov.Account.Id, pov.ICP.Id, pov.Custom1.Id, pov.Custom2.Id,
+                                         pov.Custom3.Id, pov.Custom4.Id, out group, out phase));
+                }
+                phaseIds.Add(int.Parse(phase));
+            }
+            return phaseIds.Distinct();
         }
 
     }

@@ -674,6 +674,11 @@ namespace HFM
             }
         }
 
+
+        public override string ToString()
+        {
+            return _name;
+        }
     }
 
 
@@ -1363,12 +1368,26 @@ namespace HFM
             }
         }
         /// Sets a member list for the specified dimension id
+        internal object this[EDimension dim] { set { this[(int)dim] = value; } }
+        /// Sets a member list for the specified dimension id
         internal object this[int dimId]
         {
+            get {
+                _metadata.CheckDimId(dimId);
+                return _memberLists[dimId];
+            }
             set {
                 _metadata.CheckDimId(dimId);
                 if(value is MemberList) {
-                    _memberLists[dimId] = value as MemberList;
+                    var ml = value as MemberList;
+                    if(dimId == ml.Dimension.Id) {
+                        _memberLists[dimId] = value as MemberList;
+                    }
+                    else {
+                        throw new ArgumentException(string.Format(
+                                    "Member list for {0} cannot be set using a member list for {1}",
+                                    (EDimension)dimId, ml.Dimension));
+                    }
                 }
                 else if(value is string) {
                     _memberLists[dimId] = new MemberList(_metadata[dimId], value as string);
@@ -1484,12 +1503,26 @@ namespace HFM
         /// Returns a MemberList for the dimension with the specified id
         internal MemberList MemberList(int dimId)
         {
+            _metadata.CheckDimId(dimId);
             if(_memberLists[dimId] == null) {
                 throw new IncompleteSliceDefinition(string.Format(
                             "No members have been specified for the {0} dimension",
                             _metadata.DimensionNames[dimId]));
             }
             return _memberLists[dimId];
+        }
+
+
+        internal bool IsSpecified(EDimension dim)
+        {
+            return IsSpecified((int)dim);
+        }
+
+
+        internal bool IsSpecified(int dimId)
+        {
+            _metadata.CheckDimId(dimId);
+            return _memberLists[dimId] != null;
         }
 
 
