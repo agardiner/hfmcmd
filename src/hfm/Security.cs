@@ -116,14 +116,15 @@ namespace HFM
                 if(HFM.HasVariableCustoms) {
                     HFM.Try("Retrieving phased submission access rights",
                             () => HsvDataSecurity.GetProcessUnitAccessRightsAndStateExExtDim(pov.HfmPovCOM,
-                                        -1, out accessRights, out currentState));
+                                        Member.NOT_USED, out accessRights, out currentState));
                 }
                 else {
                     HFM.Try("Retrieving phased submission access rights",
                             () => HsvDataSecurity.GetProcessUnitAccessRightsAndStateEx(pov.Scenario.Id, pov.Year.Id,
                                         pov.Period.Id, pov.Entity.Id, pov.Entity.ParentId, pov.Value.Id,
                                         pov.Account.Id, pov.ICP.Id, pov.Custom1.Id, pov.Custom2.Id,
-                                        pov.Custom3.Id, pov.Custom4.Id, -1, out accessRights, out currentState));
+                                        pov.Custom3.Id, pov.Custom4.Id, Member.NOT_USED,
+                                        out accessRights, out currentState));
                 }
             }
             else {

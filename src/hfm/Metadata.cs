@@ -399,12 +399,13 @@ namespace HFM
         public void EnumMembersInList(
             [Parameter("The dimension whose member lists are to be returned")]
             string dimension,
-            [Parameter("The member list whose members are to be returned; " +
-                       "should be enclosed in { and }, e.g. {[Base]}")]
-            string memberList,
+            [Parameter("The member list(s) whose members are to be returned; " +
+                       "should be enclosed in { and }, e.g. {[Base]}",
+                       Alias = "MemberList")]
+            string[] memberLists,
             IOutput output)
         {
-            var members = this[dimension].GetMembers(memberList);
+            var members = this[dimension].GetMembers(memberLists);
             output.WriteEnumerable(members, "Member");
         }
 
@@ -656,7 +657,7 @@ namespace HFM
         /// </summary>
         public Member GetMember(int id)
         {
-            return GetMember(id, Member.ID_NOT_SPECIFIED);
+            return GetMember(id, Member.NOT_USED);
         }
 
 
@@ -680,16 +681,16 @@ namespace HFM
     /// <summary>
     /// Represents a member of a dimension (other than Entity).
     /// <summary>
-    public class Member
+    public class Member : IEquatable<Member>
     {
         // Reference to class logger
         protected static readonly ILog _log = LogManager.GetLogger(
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
         /// Id indicating a parent id that has not been specified
-        public const int ID_NOT_SPECIFIED = -1;
+        public const int NOT_USED = -1;
         /// Id value used when a member id has not yet been retrieved
-        public const int ID_NEEDS_RETRIEVAL = -2;
+        public const int ID_NEEDS_RETRIEVAL = -9;
         /// Reference to the Dimension to which this Member belongs
         protected Dimension _dimension;
         /// Name of this member
@@ -735,7 +736,7 @@ namespace HFM
                                 () => _dimension.HsvTreeInfo.GetDefaultParent(Id, out _parentId));
                     }
                     else {
-                        _parentId = ID_NOT_SPECIFIED;
+                        _parentId = NOT_USED;
                     }
                 }
                 return _parentId;
@@ -820,6 +821,21 @@ namespace HFM
             _dimension = dimension;
             _id = id;
             _parentId = parentId;
+        }
+
+
+        public bool Equals(Member m)
+        {
+            if(m != null) {
+                return ReferenceEquals(m.Dimension, Dimension) &&
+                    m.Id == Id && m.ParentId == ParentId;
+            }
+            return false;
+        }
+
+
+        public override int GetHashCode() {
+            return Id.GetHashCode();
         }
 
 
@@ -908,7 +924,7 @@ namespace HFM
                                 "value must be between 0 and {1}", i, Count - 1));
                 }
                 return _dimension.GetMember(_members[i], _parents != null ?
-                        _parents[i] : Member.ID_NOT_SPECIFIED);
+                        _parents[i] : Member.NOT_USED);
             }
         }
         /// Returns the number of members in the list
@@ -967,10 +983,7 @@ namespace HFM
 
         public IEnumerator<Member> GetEnumerator()
         {
-            for(var i = 0; i < _members.Length; ++i) {
-                yield return _dimension.GetMember(_members[i],
-                        _parents != null ? _parents[i] : Member.ID_NOT_SPECIFIED);
-            }
+            return IterateMembers(_members, _parents).GetEnumerator();
         }
 
 
@@ -1095,19 +1108,24 @@ namespace HFM
                 _members = members;
                 _parents = parents;
             }
+            else if(_parents == null) {
+                _members = _members.Union(members).ToArray();
+            }
             else {
-                int oldLen = _members.Length;
-                int newLen = oldLen + members.Length;
+                // Need to keep unique combos of member + parent
+                var combined = IterateMembers(_members, _parents).
+                                    Union(IterateMembers(members, parents));
+                _members = combined.Select(m => m.Id).ToArray();
+                _parents = combined.Select(m => m.ParentId).ToArray();
+            }
+        }
 
-                Array.Resize<int>(ref _members, newLen);
-                Array.ConstrainedCopy(members, 0, _members, oldLen, members.Length);
 
-                if(parents != null) {
-                    System.Array.Resize<int>(ref _parents, newLen);
-                    if(parents != null) {
-                        Array.ConstrainedCopy(parents, 0, _parents, oldLen, parents.Length);
-                    }
-                }
+        protected IEnumerable<Member> IterateMembers(int[] members, int[] parents)
+        {
+            for(var i = 0; i < members.Length; ++i) {
+                yield return _dimension.GetMember(members[i],
+                        parents != null ? parents[i] : Member.NOT_USED);
             }
         }
 
