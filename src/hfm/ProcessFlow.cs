@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.IO;
 
 using log4net;
 using HSVSESSIONLib;
@@ -67,6 +68,8 @@ namespace HFM
 
         // Reference to HFM HsvProcessFlow object
         protected HsvProcessFlow _hsvProcessFlow;
+        // Refernece to the Session object
+        protected Session _session;
         // Reference to Metadata object
         protected Metadata _metadata;
         // Reference to Security object
@@ -76,6 +79,7 @@ namespace HFM
         /// Constructor
         internal ProcessFlow(Session session)
         {
+            _session = session;
             _hsvProcessFlow = (HsvProcessFlow)session.HsvSession.ProcessFlow;
             _metadata = session.Metadata;
             _security = session.Security;
@@ -118,11 +122,19 @@ namespace HFM
         [Command("Returns the history of process management actions performed on process units")]
         public void GetProcessHistory(Slice slice, IOutput output)
         {
-            GetHistory(slice, output);
+            POV[] PUs = GetProcessUnits(slice);
+            foreach(var pu in PUs) {
+                GetHistory(pu, output);
+            }
         }
 
 
-        protected void OutputHistory(IOutput output, string label, object oDates, object oUsers,
+        /// Method to be implemented in sub-classes for retrieving the state of
+        /// process unit(s) represented by the Slice.
+        protected abstract void GetHistory(POV processUnit, IOutput output);
+
+
+        protected void OutputHistory(IOutput output, POV pu, object oDates, object oUsers,
                 object oActions, object oStates, object oAnnotations, object oPaths, object oFiles)
         {
             var dates = (double[])oDates;
@@ -133,7 +145,7 @@ namespace HFM
             var paths = HFM.Object2Array<string>(oPaths);
             var files = HFM.Object2Array<string>(oFiles);
 
-            output.WriteLine("Process history for {0}:", label);
+            output.WriteLine("Process history for {0} {1}:", ProcessUnitLabel, pu);
             output.SetHeader("Date", "User", 30, "Action", 10, "Process State", 14, "Annotation");
             for(int i = 0; i < dates.Length; ++i) {
                 output.WriteRecord(DateTime.FromOADate(dates[i]), users[i], actions[i], states[i], annotations[i]);
@@ -297,9 +309,17 @@ namespace HFM
                    (action == EProcessAction.SignOff && start >= EProcessState.ReviewLevel1 && start <= EProcessState.ReviewLevel10) ||
                    (action == EProcessAction.Submit && start >= EProcessState.FirstPass && start <= EProcessState.Submitted) ||
                    (action == EProcessAction.Approve && start >= EProcessState.Submitted) ||
-                   // TODO: Publish also needs a data status of OK, OK SC, or NODATA
                    (action == EProcessAction.Publish && start >= EProcessState.Submitted && start < EProcessState.Published);
         }
+
+
+        /// Property to return a label for a unit of process management
+        protected abstract string ProcessUnitLabel { get; }
+
+
+        /// Method to be implemented in sub-classes to return an array of POV
+        /// instances for each process unit represented by the slice.
+        protected abstract POV[] GetProcessUnits(Slice slice);
 
 
         /// Method to be implemented in sub-classes for retrieving the state of
@@ -307,16 +327,78 @@ namespace HFM
         protected abstract void GetProcessState(Slice slice, IOutput output);
 
 
-        /// Method to be implemented in sub-classes for retrieving the state of
-        /// process unit(s) represented by the Slice.
-        protected abstract void GetHistory(Slice slice, IOutput output);
-
 
         /// Method to be implemented in sub-classes for setting the state of
         /// process unit(s) represented by the Slice.
-        protected abstract void SetProcessState(Slice slice, EProcessAction action,
+        protected void SetProcessState(Slice slice, EProcessAction action,
                 EProcessState targetState, string annotation, string[] documents,
-                IOutput output);
+                IOutput output)
+        {
+            string[] paths = null, files = null;
+            int processed = 0, skipped = 0;
+            EProcessState state;
+
+            _security.CheckPermissionFor(ETask.ProcessManagement);
+
+            // Convert document references to path(s) to files
+            if(documents != null) {
+                paths = new string[documents.Length];
+                files = new string[documents.Length];
+                for(int i = 0; i < documents.Length; ++i) {
+                    Utilities.EnsureFileExists(documents[i]);
+                    paths[i] = Path.GetDirectoryName(documents[i]);
+                    files[i] = Path.GetFileName(documents[i]);
+                }
+            }
+
+            // Iterate over process units, performing action
+            var PUs = GetProcessUnits(slice);
+            output.InitProgress("Processing " + action.ToString(), PUs.Length);
+            foreach(var pu in PUs) {
+                var access = _security.GetProcessUnitAccessRights(pu, out state);
+                if(access == EAccessRights.All && IsValidStateTransition(action, state, targetState)) {
+                    if(action == EProcessAction.Publish) {
+                        // Publish also needs a data status of OK, OK SC, or NODATA
+                        var calcStatus = _session.Data.GetCalcStatus(pu);
+                        if(!(((calcStatus & (int)ECalcStatus.OK) == (int)ECalcStatus.OK) ||
+                             ((calcStatus & (int)ECalcStatus.OKButSystemChanged) == (int)ECalcStatus.OKButSystemChanged) ||
+                             ((calcStatus & (int)ECalcStatus.NoData) == (int)ECalcStatus.NoData))) {
+                            _log.ErrorFormat("Cannot publish {0} {1} until it has been consolidated", ProcessUnitLabel, pu);
+                            goto skip;
+                        }
+                    }
+                    SetProcessState(pu, action, targetState, annotation, paths, files);
+                    processed++;
+                }
+                else if(access != EAccessRights.All) {
+                    _log.WarnFormat("Insufficient privileges to change process state for {0} {1}", ProcessUnitLabel, pu);
+                }
+                else if(state == targetState) {
+                    skipped++;
+                }
+                else {
+                    _log.WarnFormat("{0} {1} is in the wrong state ({2}) to {3}", ProcessUnitLabel.Capitalize(),
+                            pu, state, action);
+                }
+            skip:
+                if(output.IterationComplete()) {
+                    break;
+                }
+            }
+            output.EndProgress();
+            if(processed > 0) {
+                _log.InfoFormat("{0} action successful for {1} {2}s", action, processed, ProcessUnitLabel);
+            }
+            else if(skipped == 0) {
+                throw new Exception(string.Format("Failed to {0} any {1}s", action, ProcessUnitLabel));
+            }
+        }
+
+
+        /// Method to be implemented in sub-classes for setting the state of a
+        /// single process unit represented by the POV.
+        protected abstract EProcessState SetProcessState(POV processUnit, EProcessAction action,
+                EProcessState targetState, string annotation, string[] paths, string[] files);
 
     }
 
@@ -331,91 +413,64 @@ namespace HFM
     public class ProcessUnitProcessFlow : ProcessFlow
     {
 
+        protected override string ProcessUnitLabel { get { return "process unit"; } }
+
+
         internal ProcessUnitProcessFlow(Session session)
             : base(session)
         { }
+
+
+        protected override POV[] GetProcessUnits(Slice slice)
+        {
+            DefaultMembers(slice, true);
+            return slice.ProcessUnits;
+        }
 
 
         protected override void GetProcessState(Slice slice, IOutput output)
         {
             short state = 0;
 
-            DefaultMembers(slice, true);
             output.SetHeader("Process Unit", 58, "Process State", 15);
-            foreach(var pu in slice.ProcessUnits) {
+            foreach(var pu in GetProcessUnits(slice)) {
                 HFM.Try("Retrieving process state",
                         () => _hsvProcessFlow.GetState(pu.Scenario.Id, pu.Year.Id, pu.Period.Id,
                                        pu.Entity.Id, pu.Entity.ParentId, pu.Value.Id,
                                        out state));
-                output.WriteRecord(pu.ProcessUnitLabel, (EProcessState)state);
+                output.WriteRecord(pu, (EProcessState)state);
             }
             output.End();
         }
 
 
-        protected override void GetHistory(Slice slice, IOutput output)
+        protected override void GetHistory(POV pu, IOutput output)
         {
             object oDates = null, oUsers = null, oActions = null, oStates = null,
                    oAnnotations = null, oPaths = null, oFiles = null;
 
-            DefaultMembers(slice, true);
-            foreach(var pu in slice.ProcessUnits) {
-                HFM.Try("Retrieving process history",
-                        () => _hsvProcessFlow.GetHistory2(pu.Scenario.Id, pu.Year.Id, pu.Period.Id,
-                                        pu.Entity.Id, pu.Entity.ParentId, pu.Value.Id,
-                                        out oDates, out oUsers, out oActions, out oStates,
-                                        out oAnnotations, out oPaths, out oFiles));
-                OutputHistory(output, pu.ProcessUnitLabel, oDates, oUsers, oActions, oStates,
-                        oAnnotations, oPaths, oFiles);
-            }
+            HFM.Try("Retrieving process history",
+                    () => _hsvProcessFlow.GetHistory2(pu.Scenario.Id, pu.Year.Id, pu.Period.Id,
+                                    pu.Entity.Id, pu.Entity.ParentId, pu.Value.Id,
+                                    out oDates, out oUsers, out oActions, out oStates,
+                                    out oAnnotations, out oPaths, out oFiles));
+            OutputHistory(output, pu, oDates, oUsers, oActions, oStates,
+                    oAnnotations, oPaths, oFiles);
         }
 
 
-        protected override void SetProcessState(Slice slice, EProcessAction action, EProcessState targetState,
-                string annotation, string[] documents, IOutput output)
+        protected override EProcessState SetProcessState(POV pu, EProcessAction action, EProcessState targetState,
+                string annotation, string[] paths, string[] files)
         {
-            bool allValues = slice.Values == null, allPeriods = slice.Periods == null;
-            string[] paths = null, files = null;
             short newState = 0;
-            int processed = 0;
-            EProcessState state;
 
-            _security.CheckPermissionFor(ETask.ProcessManagement);
-
-            DefaultMembers(slice, true);
-            var PUs = slice.ProcessUnits;
-            output.InitProgress("Processing " + action.ToString(), PUs.Length);
-            foreach(var pu in PUs) {
-                var access = _security.GetProcessUnitAccessRights(pu, out state);
-                if(access == EAccessRights.All && IsValidStateTransition(action, state, targetState)) {
-                    HFM.Try("Setting process unit state",
-                            () => _hsvProcessFlow.ProcessManagementChangeStateForMultipleEntities2(
-                                        pu.Scenario.Id, pu.Year.Id, pu.Period.Id,
-                                        new int[] { pu.Entity.Id }, new int[] { pu.Entity.ParentId },
-                                        pu.Value.Id, annotation, (int)action, allValues, allPeriods,
-                                        (short)targetState, paths, files, out newState));
-                    processed++;
-                }
-                else if(access != EAccessRights.All) {
-                    _log.WarnFormat("Insufficient privileges to change process state for {0}", pu);
-                }
-                else if(state == targetState) {
-                    processed++;
-                }
-                else {
-                    _log.WarnFormat("Process unit {0} is in the wrong state ({1}) to {2}", pu.ProcessUnitLabel, state, action);
-                }
-                if(output.IterationComplete()) {
-                    break;
-                }
-            }
-            output.EndProgress();
-            if(processed > 0) {
-                _log.InfoFormat("{0} successful for {1} process units", action, processed);
-            }
-            else {
-                throw new Exception(string.Format("Failed to {0} any process units", action));
-            }
+            HFM.Try("Setting process unit state",
+                    () => _hsvProcessFlow.ProcessManagementChangeStateForMultipleEntities2(
+                                pu.Scenario.Id, pu.Year.Id, pu.Period.Id,
+                                new int[] { pu.Entity.Id }, new int[] { pu.Entity.ParentId },
+                                pu.Value.Id, annotation, (int)action, false, false,
+                                (short)targetState, paths, files, out newState));
+            return (EProcessState)newState;
         }
 
     }
@@ -431,18 +486,27 @@ namespace HFM
     public class PhasedSubmissionProcessFlow : ProcessFlow
     {
 
+        protected override string ProcessUnitLabel { get { return "phased submission"; } }
+
+
         internal PhasedSubmissionProcessFlow(Session session)
             : base(session)
         { }
+
+
+        protected override POV[] GetProcessUnits(Slice slice)
+        {
+            DefaultMembers(slice, true);
+            return slice.POVs;
+        }
 
 
         protected override void GetProcessState(Slice slice, IOutput output)
         {
             short state = 0;
 
-            DefaultMembers(slice, true);
             output.SetHeader("POV", 58, "Process State", 15);
-            foreach(var pov in slice.POVs) {
+            foreach(var pov in GetProcessUnits(slice)) {
                 if(HFM.HasVariableCustoms) {
                     HFM.Try("Retrieving phased submission process state",
                             () => _hsvProcessFlow.GetPhasedSubmissionStateExtDim(pov.HfmPovCOM, out state));
@@ -460,114 +524,52 @@ namespace HFM
         }
 
 
-        protected override void GetHistory(Slice slice, IOutput output)
+        protected override void GetHistory(POV pov, IOutput output)
         {
             object oDates = null, oUsers = null, oActions = null, oStates = null,
                    oAnnotations = null, oPaths = null, oFiles = null;
 
-            DefaultMembers(slice, true);
-            foreach(var pov in slice.POVs) {
-                if(HFM.HasVariableCustoms) {
-                    HFM.Try("Retrieving process history",
-                            () => _hsvProcessFlow.PhasedSubmissionGetHistory2ExtDim(pov.HfmPovCOM,
-                                            out oDates, out oUsers, out oActions, out oStates,
-                                            out oAnnotations, out oPaths, out oFiles));
-                }
-                else {
-                    HFM.Try("Retrieving process history",
-                            () => _hsvProcessFlow.PhasedSubmissionGetHistory2(pov.Scenario.Id, pov.Year.Id, pov.Period.Id,
-                                            pov.Entity.Id, pov.Entity.ParentId, pov.Value.Id, pov.Account.Id, pov.ICP.Id,
-                                            pov.Custom1.Id, pov.Custom2.Id, pov.Custom3.Id, pov.Custom4.Id,
-                                            out oDates, out oUsers, out oActions, out oStates,
-                                            out oAnnotations, out oPaths, out oFiles));
-                }
-                OutputHistory(output, pov.ToString(), oDates, oUsers, oActions, oStates,
-                        oAnnotations, oPaths, oFiles);
-            }
-        }
-
-
-        protected override void SetProcessState(Slice slice, EProcessAction action, EProcessState targetState,
-                string annotation, string[] documents, IOutput output)
-        {
-            bool allValues = slice.Values == null, allPeriods = slice.Periods == null;
-            string[] paths = null, files = null;
-            short newState = 0;
-            int processed = 0;
-            EProcessState state;
-
-            _security.CheckPermissionFor(ETask.ProcessManagement);
-
-            DefaultMembers(slice, true);
-            var POVs = slice.POVs;
-            output.InitProgress("Processing " + action.ToString(), POVs.Length);
-            foreach(var pov in POVs) {
-                var access = _security.GetProcessUnitAccessRights(pov, out state);
-                if(access == EAccessRights.All && IsValidStateTransition(action, state, targetState)) {
-                    if(HFM.HasVariableCustoms) {
-                        HFM.Try("Setting phased submission state",
-                                () => _hsvProcessFlow.PhasedSubmissionProcessManagementChangeStateForMultipleEntities2ExtDim(
-                                            pov.HfmSliceCOM, annotation, (int)action, allValues, allPeriods,
-                                            (short)targetState, paths, files, out newState));
-                    }
-                    else {
-                        HFM.Try("Setting phased submission state",
-                                () => _hsvProcessFlow.PhasedSubmissionProcessManagementChangeStateForMultipleEntities2(
-                                            pov.Scenario.Id, pov.Year.Id, pov.Period.Id, new int[] { pov.Entity.Id },
-                                            new int[] { pov.Entity.ParentId }, pov.Value.Id, new int[] { pov.Account.Id },
-                                            new int[] { pov.ICP.Id }, new int[] { pov.Custom1.Id }, new int[] { pov.Custom2.Id },
-                                            new int[] { pov.Custom3.Id }, new int[] { pov.Custom4.Id },
-                                            annotation, (int)action, allValues, allPeriods, (short)targetState,
-                                            paths, files, out newState));
-                    }
-                    processed++;
-                }
-                else if(access != EAccessRights.All) {
-                    _log.WarnFormat("Insufficient privileges to change process state for {0}", pov);
-                }
-                else if(state == targetState) {
-                    processed++;
-                }
-                else {
-                    _log.WarnFormat("Process unit {0} is in the wrong state ({1}) to {2}", pov, state, action);
-                }
-                if(output.IterationComplete()) {
-                    break;
-                }
-            }
-            output.EndProgress();
-            if(processed > 0) {
-                _log.InfoFormat("{0} successful for {1} phased submissions", processed, action);
+            if(HFM.HasVariableCustoms) {
+                HFM.Try("Retrieving process history",
+                        () => _hsvProcessFlow.PhasedSubmissionGetHistory2ExtDim(pov.HfmPovCOM,
+                                        out oDates, out oUsers, out oActions, out oStates,
+                                        out oAnnotations, out oPaths, out oFiles));
             }
             else {
-                throw new Exception(string.Format("Failed to {0} any phased submissions", action));
+                HFM.Try("Retrieving process history",
+                        () => _hsvProcessFlow.PhasedSubmissionGetHistory2(pov.Scenario.Id, pov.Year.Id, pov.Period.Id,
+                                        pov.Entity.Id, pov.Entity.ParentId, pov.Value.Id, pov.Account.Id, pov.ICP.Id,
+                                        pov.Custom1.Id, pov.Custom2.Id, pov.Custom3.Id, pov.Custom4.Id,
+                                        out oDates, out oUsers, out oActions, out oStates,
+                                        out oAnnotations, out oPaths, out oFiles));
             }
+            OutputHistory(output, pov, oDates, oUsers, oActions, oStates,
+                    oAnnotations, oPaths, oFiles);
         }
 
 
-        /// Returns a sequence of unique phase ids corresponding to the slice
-        protected IEnumerable<int> GetPhaseIds(Slice slice)
+        protected override EProcessState SetProcessState(POV pov, EProcessAction action, EProcessState targetState,
+                string annotation, string[] paths, string[] files)
         {
-            string group = null, phase = null;
-            var phaseIds = new List<int>(50);
+            short newState = 0;
 
-            DefaultMembers(slice, true);
-            foreach(var pov in slice.POVs) {
-                if(HFM.HasVariableCustoms) {
-                    HFM.Try("Retrieving submission group and phase",
-                            () => _hsvProcessFlow.GetGroupPhaseFromCellExtDim(pov.HfmPovCOM,
-                                         out group, out phase));
-                }
-                else {
-                    HFM.Try("Retrieving submission group and phase",
-                            () => _hsvProcessFlow.GetGroupPhaseFromCell(pov.Scenario.Id, pov.Year.Id,
-                                         pov.Period.Id, pov.Entity.Id, pov.Entity.ParentId, pov.Value.Id,
-                                         pov.Account.Id, pov.ICP.Id, pov.Custom1.Id, pov.Custom2.Id,
-                                         pov.Custom3.Id, pov.Custom4.Id, out group, out phase));
-                }
-                phaseIds.Add(int.Parse(phase));
+            if(HFM.HasVariableCustoms) {
+                HFM.Try("Setting phased submission state",
+                        () => _hsvProcessFlow.PhasedSubmissionProcessManagementChangeStateForMultipleEntities2ExtDim(
+                                    pov.HfmSliceCOM, annotation, (int)action, false, false,
+                                    (short)targetState, paths, files, out newState));
             }
-            return phaseIds.Distinct();
+            else {
+                HFM.Try("Setting phased submission state",
+                        () => _hsvProcessFlow.PhasedSubmissionProcessManagementChangeStateForMultipleEntities2(
+                                    pov.Scenario.Id, pov.Year.Id, pov.Period.Id, new int[] { pov.Entity.Id },
+                                    new int[] { pov.Entity.ParentId }, pov.Value.Id, new int[] { pov.Account.Id },
+                                    new int[] { pov.ICP.Id }, new int[] { pov.Custom1.Id }, new int[] { pov.Custom2.Id },
+                                    new int[] { pov.Custom3.Id }, new int[] { pov.Custom4.Id },
+                                    annotation, (int)action, false, false, (short)targetState,
+                                    paths, files, out newState));
+            }
+            return (EProcessState)newState;
         }
 
     }

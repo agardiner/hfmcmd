@@ -41,6 +41,8 @@ namespace HFM
         private ProcessFlow _processFlow;
         // Reference to a Security object
         private Security _security;
+        // Reference to a Security object
+        private Data _data;
 
 
 
@@ -122,6 +124,21 @@ namespace HFM
                 return _security;
             }
         }
+
+
+        [Factory]
+        public Data Data
+        {
+            get {
+                if(_data == null) {
+                    _data = new Data(this);
+                }
+                return _data;
+            }
+        }
+
+
+
     }
 
 }

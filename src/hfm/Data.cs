@@ -3,6 +3,7 @@ using System.Linq;
 
 using log4net;
 using HSVDATALib;
+using HFMCONSTANTSLib;
 
 using Command;
 using HFMCmd;
@@ -12,6 +13,40 @@ namespace HFM
 {
 
     /// <summary>
+    /// Enumeration of calculation statuses.
+    /// </summary>
+    public enum ECalcStatus
+    {
+        AdjIsNoData = tagCALCULATIONSTATUS.CALCSTATUS_ADJ_IS_NODATA,
+        AdjNeedsCalc = tagCALCULATIONSTATUS.CALCSTATUS_ADJ_NEEDS_CALC,
+        ConsolidationTransactionsAreInvalid = tagCALCULATIONSTATUS.CALCSTATUS_CONSOLIDATION_TRANSACTIONS_ARE_INVALID,
+        ContributionAdjIsNoData = tagCALCULATIONSTATUS.CALCSTATUS_CONTRIBUTIONADJ_IS_NODATA,
+        ContributionAdjNeedsCalc = tagCALCULATIONSTATUS.CALCSTATUS_CONTRIBUTIONADJ_NEEDS_CALC,
+        EliminationIsNoData = tagCALCULATIONSTATUS.CALCSTATUS_ELIMINATION_IS_NODATA,
+        EliminationNeedsCalc = tagCALCULATIONSTATUS.CALCSTATUS_ELIMINATION_NEEDS_CALC,
+        InputIsNoData = tagCALCULATIONSTATUS.CALCSTATUS_INPUT_IS_NODATA,
+        InputNeedsCalc = tagCALCULATIONSTATUS.CALCSTATUS_INPUT_NEEDS_CALC,
+        InUse = tagCALCULATIONSTATUS.CALCSTATUS_INUSE,
+        Locked = tagCALCULATIONSTATUS.CALCSTATUS_LOCKED,
+        NeedsCalculate = tagCALCULATIONSTATUS.CALCSTATUS_NEEDSCHARTLOGIC,
+        NeedsConsolidation = tagCALCULATIONSTATUS.CALCSTATUS_NEEDSCONSOLIDATION,
+        NeedsTranslation = tagCALCULATIONSTATUS.CALCSTATUS_NEEDSTRANSLATION,
+        NoData = tagCALCULATIONSTATUS.CALCSTATUS_NODATA,
+        OK = 0,
+        OKButSystemChanged = tagCALCULATIONSTATUS.CALCSTATUS_OK_BUT_SYSTEM_CHANGED,
+        ParentAdjIsNoData = tagCALCULATIONSTATUS.CALCSTATUS_PARENTADJ_IS_NODATA,
+        ParentAdjNeedsCalc = tagCALCULATIONSTATUS.CALCSTATUS_PARENTADJ_NEEDS_CALC,
+        ProcessFlowBit1 = tagCALCULATIONSTATUS.CALCSTATUS_PROCESS_FLOW_BIT1,
+        ProcessFlowBit2 = tagCALCULATIONSTATUS.CALCSTATUS_PROCESS_FLOW_BIT2,
+        ProcessFlowBit3 = tagCALCULATIONSTATUS.CALCSTATUS_PROCESS_FLOW_BIT3,
+        ProcessFlowBit4 = tagCALCULATIONSTATUS.CALCSTATUS_PROCESS_FLOW_BIT4,
+        ProportionIsNoData = tagCALCULATIONSTATUS.CALCSTATUS_PROPORTION_IS_NODATA,
+        ProportionNeedsCalc = tagCALCULATIONSTATUS.CALCSTATUS_PROPORTION_NEEDS_CALC
+    }
+
+
+    /// <summary>
+    /// Class for interacting with data / cells in an HFM application.
     /// </summary>
     public class Data
     {
@@ -24,7 +59,6 @@ namespace HFM
         private HsvData _hsvData;
 
 
-        [Factory]
         public Data(Session session)
         {
             _hsvData = (HsvData)session.HsvSession.Data;
@@ -81,6 +115,18 @@ namespace HFM
                 }
             }
             output.EndProgress();
+        }
+
+
+        /// Returns a bit-field representing the calculation status for a subcube
+        internal int GetCalcStatus(POV pov)
+        {
+            int status = 0;
+            HFM.Try("Retrieving calc status",
+                    () => _hsvData.GetCalcStatus(pov.Scenario.Id, pov.Year.Id, pov.Period.Id,
+                                                 pov.Entity.Id, pov.Entity.ParentId, pov.Value.Id,
+                                                 out status));
+            return status;
         }
 
     }

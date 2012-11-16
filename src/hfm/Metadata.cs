@@ -1196,26 +1196,6 @@ namespace HFM
         public Member Custom3 { get { return this[EDimension.Custom3]; } }
         /// Returns the member of the Custom4 dimension
         public Member Custom4 { get { return this[EDimension.Custom4]; } }
-        /// Returns the process unit corresponding to this POV
-        public string ProcessUnitLabel
-        {
-            get {
-                var sb = new StringBuilder();
-                sb.Append("S#");
-                sb.Append(Scenario.Name);
-                sb.Append(".Y#");
-                sb.Append(Year.Name);
-                sb.Append(".P#");
-                sb.Append(Period.Name);
-                sb.Append(".E#");
-                sb.Append(Entity.ParentName);
-                sb.Append('.');
-                sb.Append(Entity.Name);
-                sb.Append(".V#");
-                sb.Append(Value.Name);
-                return sb.ToString();
-            }
-        }
         /// Converts this POV to an HfmPovCOM object
         public HfmPovCOM HfmPovCOM
         {
@@ -1269,19 +1249,23 @@ namespace HFM
 
         public override string ToString() {
             var sb = new StringBuilder();
-            int id = 0;
-            foreach(var dim in _metadata.DimensionNames) {
-                if(dim == "View") {
+            for(int id = 0; id < _metadata.NumberOfDims; ++id) {
+                if(this[id] == null || this[id].Id == Member.NOT_USED) { continue; }
+                if(_metadata.DimensionNames[id] == "View") {
                     sb.Append('W');
                 }
                 else if(id < (int)EDimension.CustomBase) {
-                    sb.Append(dim[0]);
+                    sb.Append(_metadata.DimensionNames[id][0]);
                 }
                 else {
-                    sb.Append(_metadata.CustomDimNames[id - (int)EDimension.CustomBase]);
+                    sb.Append(_metadata.DimensionNames[id]);
                 }
                 sb.Append('#');
-                sb.Append(this[id] != null ? this[id].Name : "MEMBERNOTSPECIFIED");
+                if(id == (int)EDimension.Entity) {
+                    sb.Append(this[id].ParentName);
+                    sb.Append('.');
+                }
+                sb.Append(this[id].Name);
                 sb.Append('.');
                 id++;
             }
