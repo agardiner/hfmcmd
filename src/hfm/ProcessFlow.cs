@@ -189,6 +189,9 @@ namespace HFM
                 [Parameter("File attachment(s) to be applied to each process unit or phased submission",
                            DefaultValue = null)]
                 string[] attachments,
+                [Parameter("Consolidate the process unit if consolidation is necessary to promote.",
+                           DefaultValue = true)]
+                bool consolidateIfNeeded,
                 IOutput output)
         {
             var re = new Regex("^(?:ReviewLevel)?([0-9]|10)$", RegexOptions.IgnoreCase);
@@ -197,14 +200,14 @@ namespace HFM
             ERole roleNeeded;
             if(match.Success) {
                 targetState = (EProcessState)Enum.Parse(typeof(EProcessState), "ReviewLevel" + match.Groups[1].Value);
-                roleNeeded = (ERole)Enum.Parse(typeof(ERole), "ProcessFlowRole" + (int.Parse(match.Groups[1].Value) - 1));
+                roleNeeded = (ERole)Enum.Parse(typeof(ERole), "ProcessFlowReviewer" + (int.Parse(match.Groups[1].Value) - 1));
             }
             else {
                 throw new ArgumentException("Review level must be a value between 1 and 10");
             }
 
             SetProcessState(slice, EProcessAction.Promote, roleNeeded, targetState,
-                    annotation, attachments, false, output);
+                    annotation, attachments, consolidateIfNeeded, output);
         }
 
 
@@ -235,10 +238,13 @@ namespace HFM
                 [Parameter("File attachment(s) to be applied to each process unit or phased submission",
                            DefaultValue = null)]
                 string[] attachments,
+                [Parameter("Consolidate the process unit if consolidation is necessary to submit.",
+                           DefaultValue = true)]
+                bool consolidateIfNeeded,
                 IOutput output)
         {
             SetProcessState(slice, EProcessAction.SignOff, ERole.ProcessFlowReviewer1, EProcessState.NotSupported,
-                    annotation, attachments, false, output);
+                    annotation, attachments, consolidateIfNeeded, output);
         }
 
 
@@ -251,10 +257,13 @@ namespace HFM
                 [Parameter("File attachment(s) to be applied to each process unit or phased submission",
                            DefaultValue = null)]
                 string[] attachments,
+                [Parameter("Consolidate the process unit if consolidation is necessary to submit.",
+                           DefaultValue = true)]
+                bool consolidateIfNeeded,
                 IOutput output)
         {
             SetProcessState(slice, EProcessAction.Submit, ERole.ProcessFlowSubmitter, EProcessState.Submitted,
-                    annotation, attachments, false, output);
+                    annotation, attachments, consolidateIfNeeded, output);
         }
 
 
@@ -267,10 +276,13 @@ namespace HFM
                 [Parameter("File attachment(s) to be applied to each process unit or phased submission",
                            DefaultValue = null)]
                 string[] attachments,
+                [Parameter("Consolidate the process unit if consolidation is necessary to approve.",
+                           DefaultValue = true)]
+                bool consolidateIfNeeded,
                 IOutput output)
         {
             SetProcessState(slice, EProcessAction.Approve, ERole.ProcessFlowSupervisor, EProcessState.Approved,
-                    annotation, attachments, false, output);
+                    annotation, attachments, consolidateIfNeeded, output);
         }
 
 
@@ -350,7 +362,8 @@ namespace HFM
                         processed++;
                     }
                     catch(HFMException ex) {
-                        _log.Error(ex);
+                        _log.Error(string.Format("Unable to {0} {1} {2}",
+                                   action, ProcessUnitType, pu), ex);
                     }
                 }
                 if(output.IterationComplete()) {
@@ -398,7 +411,8 @@ namespace HFM
                     break;
                 case EProcessAction.Promote:
                     ok = start >= EProcessState.FirstPass && end < EProcessState.ReviewLevel10 &&
-                         end >= EProcessState.ReviewLevel1 && end <= EProcessState.ReviewLevel10;
+                         end >= EProcessState.ReviewLevel1 && end <= EProcessState.ReviewLevel10 &&
+                         end > start;
                     break;
                 case EProcessAction.Reject:
                     ok = start != EProcessState.NotStarted;
@@ -416,7 +430,11 @@ namespace HFM
                     ok = start >= EProcessState.Submitted && start < EProcessState.Published;
                     break;
             }
-            if(!ok) {
+            if(ok) {
+                _log.TraceFormat("{0} {1} is in a valid state to {2}",
+                        ProcessUnitType.Capitalize(), pu, action);
+            }
+            else {
                 _log.WarnFormat("{0} {1} is in the wrong state ({2}) to {3}",
                         ProcessUnitType.Capitalize(), pu, start, action);
             }
@@ -454,9 +472,13 @@ namespace HFM
                     ok = access == EAccessRights.All;
                     break;
             }
-            if(!ok) {
-                _log.WarnFormat("Insufficient privileges to change process state for {0} {1}",
-                        ProcessUnitType, pu);
+            if(ok) {
+                _log.TraceFormat("User has sufficient privileges to {0} {1} {2}",
+                        action, ProcessUnitType, pu);
+            }
+            else {
+                _log.WarnFormat("Insufficient privileges to {0} {1} {2}",
+                        action, ProcessUnitType, pu);
             }
             return ok;
         }
@@ -490,6 +512,7 @@ namespace HFM
                             action, ProcessUnitType, pu);
                 }
                 else {
+                    _log.TraceFormat("Calculation status check passed for {0} of {1}", action, pu);
                     ok = true;
                 }
             }
@@ -498,6 +521,7 @@ namespace HFM
                         () => _session.Calculate.HsvCalculate.Consolidate(pu.Scenario.Id, pu.Year.Id,
                                        pu.Period.Id, pu.Entity.Id, pu.Entity.ParentId,
                                        (short)EConsolidationType.Impacted));
+                ok = true;
             }
             else {
                 _log.ErrorFormat("Cannot {0} {1} {2} until it has been consolidated",
@@ -520,15 +544,19 @@ namespace HFM
             if(account.Id != Member.NOT_USED) {
                 var pov = pu.Copy();
                 // Set validation account POV
+                pov.Account = account;
                 pov.View = _metadata.View.GetMember("<Scenario View>");
                 pov.ICP = _metadata.ICP.GetMember("[ICP Top]");
                 foreach(var id in _metadata.CustomDimIds) {
                     pov[id] = account.GetTopCustomMember(id);
                 }
-                var valAmt = _session.Data.GetCellValue(pu);
+                var valAmt = _session.Data.GetCellValue(pov);
                 ok = valAmt == null || valAmt == 0;
-                if(!ok) {
-                    _log.ErrorFormat("Cannot {0} {1} {2} until it passes all validations",
+                if(ok) {
+                    _log.TraceFormat("Validation status passed for {0}", pu);
+                }
+                else {
+                    _log.ErrorFormat("Cannot {0} {1} {2} until it passes validation",
                             action, ProcessUnitType, pu);
                 }
             }

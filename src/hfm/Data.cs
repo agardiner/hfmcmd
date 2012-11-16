@@ -151,11 +151,11 @@ namespace HFM
             double amount = 0;
             int status = 0;
             if(HFM.HasVariableCustoms) {
-                HFM.Try("Getting cell value",
+                HFM.Try("Getting cell data value for {0}", pov,
                         () => _hsvData.GetCellExtDim(pov.HfmPovCOM, out amount, out status));
             }
             else {
-                HFM.Try("Setting cell value",
+                HFM.Try("Getting cell data value for {0}", pov,
                         () => _hsvData.GetCell(pov.Scenario.Id, pov.Year.Id, pov.Period.Id, pov.View.Id,
                                                pov.Entity.Id, pov.Entity.ParentId, pov.Value.Id,
                                                pov.Account.Id, pov.ICP.Id, pov.Custom1.Id,

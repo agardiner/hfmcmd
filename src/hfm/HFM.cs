@@ -58,7 +58,7 @@ namespace HFM
         /// <summary>
         /// Encapsulate a common pattern for performing an API call against HFM.
         /// </summary>
-        public static void Try(string format, object arg0, string arg1, Action op)
+        public static void Try(string format, object arg0, object arg1, Action op)
         {
             Try(string.Format(format, arg0, arg1), op);
         }
@@ -67,7 +67,7 @@ namespace HFM
         /// <summary>
         /// Encapsulate a common pattern for performing an API call against HFM.
         /// </summary>
-        public static void Try(string format, object arg0, string arg1, string arg2, Action op)
+        public static void Try(string format, object arg0, object arg1, object arg2, Action op)
         {
             Try(string.Format(format, arg0, arg1, arg2), op);
         }
@@ -76,7 +76,7 @@ namespace HFM
         /// <summary>
         /// Encapsulate a common pattern for performing an API call against HFM.
         /// </summary>
-        public static void Try(string format, object arg0, string arg1, string arg2, string arg3, Action op)
+        public static void Try(string format, object arg0, object arg1, object arg2, object arg3, Action op)
         {
             Try(string.Format(format, arg0, arg1, arg2, arg3), op);
         }

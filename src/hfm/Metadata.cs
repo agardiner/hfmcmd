@@ -582,14 +582,14 @@ namespace HFM
         {
             int id = -1;
 
-            HFM.Try("Retrieving member id for {0}", member,
+            HFM.Try("Retrieving member id for {0} {1}", Name, member,
                     () => id = HsvTreeInfo.GetItemID(member));
 
             if (id >= 0) {
                 return id;
             }
             else {
-                throw new ArgumentException("No member named '" + member + "' exists in dimension " + _name);
+                throw new ArgumentException("No member named '" + member + "' exists in dimension " + Name);
             }
         }
 
@@ -601,7 +601,7 @@ namespace HFM
         {
             string label = null;
 
-            HFM.Try("Retrieving member label for {0}", id,
+            HFM.Try("Retrieving member label for {0} id {1}", Name, id,
                     () => id = HsvTreeInfo.GetLabel(id, out label));
 
             return label;
@@ -615,7 +615,7 @@ namespace HFM
         {
             int id = -1;
 
-            HFM.Try("Retrieving id for member list {0}", listName,
+            HFM.Try("Retrieving id for {0} member list {0}", Name, listName,
                     () => HsvTreeInfo.GetMemberListID(listName, out id));
 
             if (id >= 0) {
@@ -623,7 +623,7 @@ namespace HFM
             }
             else {
                 throw new ArgumentException("No member list named '" + listName +
-                        "' exists in dimension " + _name);
+                        "' exists in dimension " + Name);
             }
         }
 
@@ -792,7 +792,8 @@ namespace HFM
                         _parentId = _dimension.GetId(_parentName);
                     }
                     else if(_dimension.IsEntity) {
-                        HFM.Try("Retrieving default parent id for {0} {1}", _dimension.Name, _name != null ? _name : _id.ToString(),
+                        HFM.Try("Retrieving default parent id for {0} {1}", _dimension.Name,
+                                _name != null ? _name : _id.ToString(),
                                 () => _dimension.HsvTreeInfo.GetDefaultParent(Id, out _parentId));
                     }
                     else {
@@ -930,7 +931,7 @@ namespace HFM
         public int DefaultCurrencyId {
             get {
                 int currId = -1;
-                HFM.Try("Retrieving default currency",
+                HFM.Try("Retrieving default currency for entity {0}", Name,
                         () => ((HsvEntities)_dimension.HsvTreeInfo).GetDefaultValueID(Id, out currId));
                 return currId;
             }
@@ -967,26 +968,26 @@ namespace HFM
             int customNum = _dimension.Metadata.CheckCustomDimId(customDimId);
 
             if(HFM.HasVariableCustoms) {
-                HFM.Try("Retrieving top member of custom {0} hierarchy", customNum,
-                        () => HsvAccounts.GetTopMemberOfValidCustomXHierarchy(customDimId, this.Id, out topCustomId));
+                HFM.Try("Retrieving top member of custom {0} hierarchy for account {1}", customNum, Name,
+                        () => HsvAccounts.GetTopMemberOfValidCustomXHierarchy(customDimId, Id, out topCustomId));
             }
             else {
                 switch(customDimId) {
                     case (int)EDimension.Custom1:
-                        HFM.Try("Retrieving top member of custom 1 hierarchy",
-                                () => HsvAccounts.GetTopMemberOfValidCustom1Hierarchy(this.Id, out topCustomId));
+                        HFM.Try("Retrieving top member of custom 1 hierarchy for account {0} ", Name,
+                                () => HsvAccounts.GetTopMemberOfValidCustom1Hierarchy(Id, out topCustomId));
                         break;
                     case (int)EDimension.Custom2:
-                        HFM.Try("Retrieving top member of custom 2 hierarchy",
-                                () => HsvAccounts.GetTopMemberOfValidCustom2Hierarchy(this.Id, out topCustomId));
+                        HFM.Try("Retrieving top member of custom 2 hierarchy for account {0} ", Name,
+                                () => HsvAccounts.GetTopMemberOfValidCustom2Hierarchy(Id, out topCustomId));
                         break;
                     case (int)EDimension.Custom3:
-                        HFM.Try("Retrieving top member of custom 3 hierarchy",
-                                () => HsvAccounts.GetTopMemberOfValidCustom3Hierarchy(this.Id, out topCustomId));
+                        HFM.Try("Retrieving top member of custom 3 hierarchy for account {0} ", Name,
+                                () => HsvAccounts.GetTopMemberOfValidCustom3Hierarchy(Id, out topCustomId));
                         break;
                     case (int)EDimension.Custom4:
-                        HFM.Try("Retrieving top member of custom 4 hierarchy",
-                                () => HsvAccounts.GetTopMemberOfValidCustom4Hierarchy(this.Id, out topCustomId));
+                        HFM.Try("Retrieving top member of custom 4 hierarchy for account {0}", Name,
+                                () => HsvAccounts.GetTopMemberOfValidCustom4Hierarchy(Id, out topCustomId));
                         break;
                 }
             }
@@ -1415,7 +1416,6 @@ namespace HFM
                 }
                 sb.Append(this[id].Name);
                 sb.Append('.');
-                id++;
             }
             sb.Length--;
             return sb.ToString();
@@ -1688,7 +1688,7 @@ namespace HFM
                     _memberLists[dimension.Id] = new MemberList(dimension, f[1]);
                 }
                 else {
-                    _log.DebugFormat("Skipping POV dimension {1}; a member list has already been defined", dimension.Name);
+                    _log.DebugFormat("Skipping POV dimension {0}; a member list has already been defined", dimension.Name);
                 }
             }
         }
