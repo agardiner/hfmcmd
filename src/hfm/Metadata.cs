@@ -87,6 +87,22 @@ namespace HFM
 
         /// Returns the HFM HsvMetadata object
         internal HsvMetadata HsvMetadata { get { return _hsvMetadata; } }
+        /// Returns the Scenario dimension
+        public Dimension Scenario { get { return this[EDimension.Scenario]; } }
+        /// Returns the Year dimension
+        public Dimension Year { get { return this[EDimension.Year]; } }
+        /// Returns the Period dimension
+        public Dimension Period { get { return this[EDimension.Period]; } }
+        /// Returns the View dimension
+        public Dimension View { get { return this[EDimension.View]; } }
+        /// Returns the Entity dimension
+        public Dimension Entity { get { return this[EDimension.Entity]; } }
+        /// Returns the Value dimension
+        public Dimension Value { get { return this[EDimension.Value]; } }
+        /// Returns the Account dimension
+        public Dimension Account { get { return this[EDimension.Account]; } }
+        /// Returns the ICP dimension
+        public Dimension ICP { get { return this[EDimension.ICP]; } }
         /// Returns the names of all dimensions in the current app
         public string[] DimensionNames
         {
@@ -164,7 +180,7 @@ namespace HFM
                     IHsvTreeInfo dim = null;
                     HFM.Try("Retrieving dimension {0}", dimName,
                             () => dim = (IHsvTreeInfo)_hsvMetadata.GetDimension(dimId));
-                    _dimensions[dimId] = new Dimension(dimName, dimId, dim);
+                    _dimensions[dimId] = new Dimension(dimName, dimId, this, dim);
                 }
                 return _dimensions[dimId];
             }
@@ -321,6 +337,19 @@ namespace HFM
         }
 
 
+        /// Checks the specified dimension id is a valid Custom dimension for
+        /// this application, throwing an IndexOutOfRangeException if it is not.
+        internal int CheckCustomDimId(int dimId)
+        {
+            if(dimId < (int)EDimension.CustomBase || dimId >= NumberOfDims) {
+                throw new IndexOutOfRangeException(string.Format("Invalid custom dimension id {0}; " +
+                            "must be a value between {1} and {2}", dimId,
+                            (int)EDimension.CustomBase, NumberOfDims - 1));
+            }
+            return dimId - (int)EDimension.CustomBase + 1;
+        }
+
+
         /// Converts a Custom dimension number to a dimension id
         internal int GetDimIdForCustom(int customNum)
         {
@@ -329,6 +358,26 @@ namespace HFM
                             "must be a value between 1 and {1}", customNum, NumberOfCustomDims));
             }
             return (int)EDimension.CustomBase + customNum - 1;
+        }
+
+
+        /// Returns the Account member that is the prinary validation account
+        internal Account GetValidationAccount()
+        {
+            int id = Member.NOT_USED;
+            HFM.Try("Retrieving validation account",
+                    () => _hsvMetadata.GetValidationAccount(out id));
+            return new Account(this[EDimension.Account], id);
+        }
+
+
+        /// Returns the Account member that is the prinary validation account
+        internal Account GetPhaseValidationAccount(int phaseId)
+        {
+            int id = Member.NOT_USED;
+            HFM.Try("Retrieving phased validation account",
+                    () => _hsvMetadata.GetByIndexValidationAccount(phaseId, out id));
+            return new Account(this[EDimension.Account], id);
         }
 
 
@@ -349,7 +398,7 @@ namespace HFM
         }
 
 
-        [Command("Lists the valid custom dimensions for an application",
+        [Command("Lists the custom dimension names, aliases, and sizes for an application",
                  Since = "11.1.2.2")]
         public void EnumCustomDims(IOutput output)
         {
@@ -375,17 +424,7 @@ namespace HFM
         }
 
 
-        [Command("Returns all members of a dimension")]
-        public string[] EnumMembers(
-            [Parameter("The dimension whose members are to be returned")]
-            string dimension,
-            IOutput output)
-        {
-            return this[dimension].EnumAllMembers(output);
-        }
-
-
-        [Command("Returns all member lists for a dimension")]
+        [Command("Returns the names of the member lists for a dimension")]
         public string[] EnumMemberLists(
             [Parameter("The dimension whose member lists are to be returned")]
             string dimension,
@@ -395,13 +434,15 @@ namespace HFM
         }
 
 
-        [Command("Returns all members in a member list")]
-        public void EnumMembersInList(
-            [Parameter("The dimension whose member lists are to be returned")]
+        [Command("Returns the members in a dimension. If no member list(s) are " +
+                 "specified, all dimension members are returned.")]
+        public void EnumMembers(
+            [Parameter("The dimension whose members are to be returned")]
             string dimension,
-            [Parameter("The member list(s) whose members are to be returned; " +
-                       "should be enclosed in { and }, e.g. {[Base]}",
-                       Alias = "MemberList")]
+            [Parameter("The member list(s) containing the members are to be returned; " +
+                       "should be enclosed in { and }, e.g. {[Base]}, {Sports Equipment}, etc. " +
+                       "If no member lists are specified, all members in the dimension are returned.",
+                       Alias = "MemberList", DefaultValue = "{[Hierarchy]}")]
             string[] memberLists,
             IOutput output)
         {
@@ -494,6 +535,8 @@ namespace HFM
         protected static readonly ILog _log = LogManager.GetLogger(
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
+        // Reference to the Metadata object
+        protected Metadata _metadata;
         // Reference to HFM HsvTreeInfo object
         protected IHsvTreeInfo _hsvTreeInfo;
         // Name of the dimension
@@ -508,6 +551,8 @@ namespace HFM
 
         // Properties
 
+        /// Internal access to the Metadata object
+        internal Metadata Metadata { get { return _metadata; } }
         /// Internal access to the underlying HsvTreeInfo COM object
         internal IHsvTreeInfo HsvTreeInfo { get { return _hsvTreeInfo; } }
         /// The name of the dimension
@@ -515,14 +560,17 @@ namespace HFM
         /// The id of the dimension
         public int Id { get { return _id; } }
         /// True if this is the Entity dimension
-        public bool IsEntity { get { return _name == "Entity"; } }
+        public bool IsEntity { get { return _id == (int)EDimension.Entity; } }
+        /// True if this is the Accounts dimension
+        public bool IsAccount { get { return _id == (int)EDimension.Account; } }
 
 
         /// Constructor
-        internal Dimension(string dimension, int id, IHsvTreeInfo treeInfo)
+        internal Dimension(string dimension, int id, Metadata metadata, IHsvTreeInfo treeInfo)
         {
             _name = dimension;
             _id = id;
+            _metadata = metadata;
             _hsvTreeInfo = treeInfo;
         }
 
@@ -643,11 +691,13 @@ namespace HFM
         /// </summary>
         public Member GetMember(string name)
         {
-            if(IsEntity) {
-                return new Entity(this, name);
-            }
-            else {
-                return new Member(this, name);
+            switch(Id) {
+                case (int)EDimension.Entity:
+                    return new Entity(this, name);
+                case (int)EDimension.Account:
+                    return new Account(this, name);
+                default:
+                    return new Member(this, name);
             }
         }
 
@@ -666,11 +716,13 @@ namespace HFM
         /// </summary>
         public Member GetMember(int id, int parentId)
         {
-            if(IsEntity) {
-                return new Entity(this, id, parentId);
-            }
-            else {
-                return new Member(this, id, parentId);
+            switch(Id) {
+                case (int)EDimension.Entity:
+                    return new Entity(this, id, parentId);
+                case (int)EDimension.Account:
+                    return new Account(this, id);
+                default:
+                    return new Member(this, id);
             }
         }
 
@@ -892,6 +944,56 @@ namespace HFM
 
     }
 
+
+    public class Account : Member
+    {
+        internal HsvAccounts HsvAccounts { get { return (HsvAccounts)_dimension.HsvTreeInfo; } }
+
+        /// Constructor
+        internal Account(Dimension dimension, string name)
+            : base(dimension, name)
+        { }
+
+        /// Constructor
+        public Account(Dimension dimension, int id)
+            : base(dimension, id)
+        { }
+
+
+        /// Returns the top custom member for this account for the specified custom dimension
+        public Member GetTopCustomMember(int customDimId)
+        {
+            int topCustomId = Member.NOT_USED;
+            int customNum = _dimension.Metadata.CheckCustomDimId(customDimId);
+
+            if(HFM.HasVariableCustoms) {
+                HFM.Try("Retrieving top member of custom {0} hierarchy", customNum,
+                        () => HsvAccounts.GetTopMemberOfValidCustomXHierarchy(customDimId, this.Id, out topCustomId));
+            }
+            else {
+                switch(customDimId) {
+                    case (int)EDimension.Custom1:
+                        HFM.Try("Retrieving top member of custom 1 hierarchy",
+                                () => HsvAccounts.GetTopMemberOfValidCustom1Hierarchy(this.Id, out topCustomId));
+                        break;
+                    case (int)EDimension.Custom2:
+                        HFM.Try("Retrieving top member of custom 2 hierarchy",
+                                () => HsvAccounts.GetTopMemberOfValidCustom2Hierarchy(this.Id, out topCustomId));
+                        break;
+                    case (int)EDimension.Custom3:
+                        HFM.Try("Retrieving top member of custom 3 hierarchy",
+                                () => HsvAccounts.GetTopMemberOfValidCustom3Hierarchy(this.Id, out topCustomId));
+                        break;
+                    case (int)EDimension.Custom4:
+                        HFM.Try("Retrieving top member of custom 4 hierarchy",
+                                () => HsvAccounts.GetTopMemberOfValidCustom4Hierarchy(this.Id, out topCustomId));
+                        break;
+                }
+            }
+            return new Member(_dimension.Metadata[customDimId], topCustomId);
+        }
+
+    }
 
 
     /// <summary>
@@ -1159,7 +1261,10 @@ namespace HFM
         private Member[] _members;
 
         /// Returns the Member for the specified dimension
-        public Member this[EDimension dim] { get { return this[(int)dim]; } }
+        public Member this[EDimension dim] {
+            get { return this[(int)dim]; }
+            set { this[(int)dim] = value; }
+        }
         /// Returns the Member for the specified dimension number
         public Member this[int dimId]
         {
@@ -1173,29 +1278,65 @@ namespace HFM
             }
         }
         /// Returns the member of the Scenario dimension
-        public Member Scenario { get { return this[EDimension.Scenario]; } }
+        public Member Scenario {
+            get { return this[EDimension.Scenario]; }
+            set { this[EDimension.Scenario] = value; }
+        }
         /// Returns the member of the Year dimension
-        public Member Year { get { return this[EDimension.Year]; } }
+        public Member Year {
+            get { return this[EDimension.Year]; }
+            set { this[EDimension.Year] = value; }
+        }
         /// Returns the member of the Period dimension
-        public Member Period { get { return this[EDimension.Period]; } }
+        public Member Period {
+            get { return this[EDimension.Period]; }
+            set { this[EDimension.Period] = value; }
+        }
         /// Returns the member of the View dimension
-        public Member View { get { return this[EDimension.View]; } }
+        public Member View {
+            get { return this[EDimension.View]; }
+            set { this[EDimension.View] = value; }
+        }
         /// Returns the member of the Entity dimension
-        public Member Entity { get { return this[EDimension.Entity]; } }
+        public Member Entity {
+            get { return this[EDimension.Entity]; }
+            set { this[EDimension.Entity] = value; }
+        }
         /// Returns the member of the Value dimension
-        public Member Value { get { return this[EDimension.Value]; } }
+        public Member Value {
+            get { return this[EDimension.Value]; }
+            set { this[EDimension.Value] = value; }
+        }
         /// Returns the member of the Account dimension
-        public Member Account { get { return this[EDimension.Account]; } }
+        public Member Account {
+            get { return this[EDimension.Account]; }
+            set { this[EDimension.Account] = value; }
+        }
         /// Returns the member of the ICP dimension
-        public Member ICP { get { return this[EDimension.ICP]; } }
+        public Member ICP {
+            get { return this[EDimension.ICP]; }
+            set { this[EDimension.ICP] = value; }
+        }
         /// Returns the member of the Custom1 dimension
-        public Member Custom1 { get { return this[EDimension.Custom1]; } }
+        public Member Custom1 {
+            get { return this[EDimension.Custom1]; }
+            set { this[EDimension.Custom1] = value; }
+        }
         /// Returns the member of the Custom2 dimension
-        public Member Custom2 { get { return this[EDimension.Custom2]; } }
+        public Member Custom2 {
+            get { return this[EDimension.Custom2]; }
+            set { this[EDimension.Custom2] = value; }
+        }
         /// Returns the member of the Custom3 dimension
-        public Member Custom3 { get { return this[EDimension.Custom3]; } }
+        public Member Custom3 {
+            get { return this[EDimension.Custom3]; }
+            set { this[EDimension.Custom3] = value; }
+        }
         /// Returns the member of the Custom4 dimension
-        public Member Custom4 { get { return this[EDimension.Custom4]; } }
+        public Member Custom4 {
+            get { return this[EDimension.Custom4]; }
+            set { this[EDimension.Custom4] = value; }
+        }
         /// Converts this POV to an HfmPovCOM object
         public HfmPovCOM HfmPovCOM
         {
@@ -1244,6 +1385,13 @@ namespace HFM
         public POV(Metadata metadata) {
             _metadata = metadata;
             _members = new Member[_metadata.NumberOfDims];
+        }
+
+
+        public POV Copy() {
+            var pov = new POV(_metadata);
+            Array.Copy(_members, pov._members, _members.Length);
+            return pov;
         }
 
 

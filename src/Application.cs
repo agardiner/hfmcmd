@@ -366,8 +366,10 @@ namespace HFMCmd
             else {
                 // Display help for the requested command
                 var cmd = _commands[command];
-                if(cmd.Description != null) {
-                    output.WriteSingleValue(cmd.Description, "Description");
+                var desc = cmd.Description;
+                if(desc != null) {
+                    if(!desc.EndsWith(".")) { desc = desc + "."; }
+                    output.WriteSingleValue(desc, "Description");
                     output.WriteLine();
                 }
                 if(cmd.NumUserSuppliedParameters > 0) {

@@ -96,26 +96,34 @@ namespace HFM
         [Command("Returns the submission group and submission phase for each cell in the slice")]
         public void EnumGroupPhases(Slice slice, IOutput output)
         {
-            string group = null, phase = null;
-
+            int group, phase;
             DefaultMembers(slice, false);
             output.SetHeader("Cell", 50, "Submission Group", "Submission Phase", 20);
             foreach(var pov in slice.POVs) {
-                if(HFM.HasVariableCustoms) {
-                    HFM.Try("Retrieving submission group and phase",
-                            () => _hsvProcessFlow.GetGroupPhaseFromCellExtDim(pov.HfmPovCOM,
-                                         out group, out phase));
-                }
-                else {
-                    HFM.Try("Retrieving submission group and phase",
-                            () => _hsvProcessFlow.GetGroupPhaseFromCell(pov.Scenario.Id, pov.Year.Id,
-                                         pov.Period.Id, pov.Entity.Id, pov.Entity.ParentId, pov.Value.Id,
-                                         pov.Account.Id, pov.ICP.Id, pov.Custom1.Id, pov.Custom2.Id,
-                                         pov.Custom3.Id, pov.Custom4.Id, out group, out phase));
-                }
+                GetGroupPhase(pov, out group, out phase);
                 output.WriteRecord(pov, group, phase);
             }
             output.End();
+        }
+
+
+        protected void GetGroupPhase(POV pov, out int group, out int phase)
+        {
+            string sGroup = null, sPhase = null;
+            if(HFM.HasVariableCustoms) {
+                HFM.Try("Retrieving submission group and phase",
+                        () => _hsvProcessFlow.GetGroupPhaseFromCellExtDim(pov.HfmPovCOM,
+                                     out sGroup, out sPhase));
+            }
+            else {
+                HFM.Try("Retrieving submission group and phase",
+                        () => _hsvProcessFlow.GetGroupPhaseFromCell(pov.Scenario.Id, pov.Year.Id,
+                                     pov.Period.Id, pov.Entity.Id, pov.Entity.ParentId, pov.Value.Id,
+                                     pov.Account.Id, pov.ICP.Id, pov.Custom1.Id, pov.Custom2.Id,
+                                     pov.Custom3.Id, pov.Custom4.Id, out sGroup, out sPhase));
+            }
+            group = int.Parse(sGroup);
+            phase = int.Parse(sPhase);
         }
 
 
@@ -145,7 +153,7 @@ namespace HFM
             var paths = HFM.Object2Array<string>(oPaths);
             var files = HFM.Object2Array<string>(oFiles);
 
-            output.WriteLine("Process history for {0} {1}:", ProcessUnitLabel, pu);
+            output.WriteLine("Process history for {0} {1}:", ProcessUnitType, pu);
             output.SetHeader("Date", "User", 30, "Action", 10, "Process State", 14, "Annotation");
             for(int i = 0; i < dates.Length; ++i) {
                 output.WriteRecord(DateTime.FromOADate(dates[i]), users[i], actions[i], states[i], annotations[i]);
@@ -165,8 +173,8 @@ namespace HFM
                 string[] attachments,
                 IOutput output)
         {
-            SetProcessState(slice, EProcessAction.Start, EProcessState.FirstPass,
-                    annotation, attachments, output);
+            SetProcessState(slice, EProcessAction.Start, ERole.ProcessFlowSupervisor,
+                    EProcessState.FirstPass, annotation, attachments, false, output);
         }
 
 
@@ -186,15 +194,17 @@ namespace HFM
             var re = new Regex("^(?:ReviewLevel)?([0-9]|10)$", RegexOptions.IgnoreCase);
             var match = re.Match(reviewLevel);
             EProcessState targetState;
+            ERole roleNeeded;
             if(match.Success) {
                 targetState = (EProcessState)Enum.Parse(typeof(EProcessState), "ReviewLevel" + match.Groups[1].Value);
+                roleNeeded = (ERole)Enum.Parse(typeof(ERole), "ProcessFlowRole" + (int.Parse(match.Groups[1].Value) - 1));
             }
             else {
                 throw new ArgumentException("Review level must be a value between 1 and 10");
             }
 
-            SetProcessState(slice, EProcessAction.Promote, targetState,
-                    annotation, attachments, output);
+            SetProcessState(slice, EProcessAction.Promote, roleNeeded, targetState,
+                    annotation, attachments, false, output);
         }
 
 
@@ -209,8 +219,8 @@ namespace HFM
                 string[] attachments,
                 IOutput output)
         {
-            SetProcessState(slice, EProcessAction.Reject, EProcessState.NotSupported,
-                    annotation, attachments, output);
+            SetProcessState(slice, EProcessAction.Reject, ERole.ProcessFlowReviewer1, EProcessState.NotSupported,
+                    annotation, attachments, false, output);
         }
 
 
@@ -227,8 +237,8 @@ namespace HFM
                 string[] attachments,
                 IOutput output)
         {
-            SetProcessState(slice, EProcessAction.SignOff, EProcessState.NotSupported,
-                    annotation, attachments, output);
+            SetProcessState(slice, EProcessAction.SignOff, ERole.ProcessFlowReviewer1, EProcessState.NotSupported,
+                    annotation, attachments, false, output);
         }
 
 
@@ -243,8 +253,8 @@ namespace HFM
                 string[] attachments,
                 IOutput output)
         {
-            SetProcessState(slice, EProcessAction.Submit, EProcessState.Submitted,
-                    annotation, attachments, output);
+            SetProcessState(slice, EProcessAction.Submit, ERole.ProcessFlowSubmitter, EProcessState.Submitted,
+                    annotation, attachments, false, output);
         }
 
 
@@ -259,8 +269,8 @@ namespace HFM
                 string[] attachments,
                 IOutput output)
         {
-            SetProcessState(slice, EProcessAction.Approve, EProcessState.Approved,
-                    annotation, attachments, output);
+            SetProcessState(slice, EProcessAction.Approve, ERole.ProcessFlowSupervisor, EProcessState.Approved,
+                    annotation, attachments, false, output);
         }
 
 
@@ -273,10 +283,87 @@ namespace HFM
                 [Parameter("File attachment(s) to be applied to each process unit or phased submission",
                            DefaultValue = null)]
                 string[] attachments,
+                [Parameter("Consolidate the process unit if consolidation is necessary to publish.",
+                           DefaultValue = true)]
+                bool consolidateIfNeeded,
                 IOutput output)
         {
-            SetProcessState(slice, EProcessAction.Publish, EProcessState.Published,
-                    annotation, attachments, output);
+            SetProcessState(slice, EProcessAction.Publish, ERole.ProcessFlowSupervisor, EProcessState.Published,
+                    annotation, attachments, consolidateIfNeeded, output);
+        }
+
+
+        /// Property to return a label for a unit of process management
+        protected abstract string ProcessUnitType { get; }
+
+
+        /// Method to be implemented in sub-classes to return an array of POV
+        /// instances for each process unit represented by the slice.
+        protected abstract POV[] GetProcessUnits(Slice slice);
+
+
+        /// Method to be implemented in sub-classes for retrieving the state of
+        /// process unit(s) represented by the Slice.
+        protected abstract void GetProcessState(Slice slice, IOutput output);
+
+
+
+        /// Method to be implemented in sub-classes for setting the state of
+        /// process unit(s) represented by the Slice.
+        protected void SetProcessState(Slice slice, EProcessAction action, ERole role,
+                EProcessState targetState, string annotation, string[] documents,
+                bool consolidateIfNeeded, IOutput output)
+        {
+            string[] paths = null, files = null;
+            int processed = 0, skipped = 0;
+            EProcessState state;
+
+            _security.CheckPermissionFor(ETask.ProcessManagement);
+            if(role != ERole.Default) {
+                _security.CheckRole(role);
+            }
+
+            // Convert document references to path(s) to files
+            if(documents != null) {
+                paths = new string[documents.Length];
+                files = new string[documents.Length];
+                for(int i = 0; i < documents.Length; ++i) {
+                    Utilities.EnsureFileExists(documents[i]);
+                    paths[i] = Path.GetDirectoryName(documents[i]);
+                    files[i] = Path.GetFileName(documents[i]);
+                }
+            }
+
+            // Iterate over process units, performing action
+            var PUs = GetProcessUnits(slice);
+            output.InitProgress("Processing " + action.ToString(), PUs.Length);
+            foreach(var pu in PUs) {
+                var access = _security.GetProcessUnitAccessRights(pu, out state);
+                if(state == targetState) {
+                    skipped++;
+                }
+                else if(IsValidStateTransition(action, pu, state, targetState) &&
+                        HasSufficientAccess(action, pu, access, state) &&
+                        CanAction(action, pu, consolidateIfNeeded)) {
+                    try {
+                        SetProcessState(pu, action, targetState, annotation, paths, files);
+                        processed++;
+                    }
+                    catch(HFMException ex) {
+                        _log.Error(ex);
+                    }
+                }
+                if(output.IterationComplete()) {
+                    break;
+                }
+            }
+            output.EndProgress();
+            if(processed > 0) {
+                _log.InfoFormat("{0} action successful for {1} {2}s", action, processed, ProcessUnitType);
+            }
+            else if(skipped == 0) {
+                throw new Exception(string.Format("Failed to {0} any {1}s", action, ProcessUnitType));
+            }
         }
 
 
@@ -301,97 +388,151 @@ namespace HFM
 
 
         /// Returns true if it is possible to go from start state to end state
-        protected bool IsValidStateTransition(EProcessAction action, EProcessState start, EProcessState end)
+        protected bool IsValidStateTransition(EProcessAction action, POV pu,
+                EProcessState start, EProcessState end)
         {
-            return (action == EProcessAction.Start && start == EProcessState.NotStarted) ||
-                   (action == EProcessAction.Promote && start < EProcessState.Submitted  && end >= EProcessState.ReviewLevel1 && end <= EProcessState.ReviewLevel10) ||
-                   (action == EProcessAction.Reject && start > EProcessState.NotStarted) ||
-                   (action == EProcessAction.SignOff && start >= EProcessState.ReviewLevel1 && start <= EProcessState.ReviewLevel10) ||
-                   (action == EProcessAction.Submit && start >= EProcessState.FirstPass && start <= EProcessState.Submitted) ||
-                   (action == EProcessAction.Approve && start >= EProcessState.Submitted) ||
-                   (action == EProcessAction.Publish && start >= EProcessState.Submitted && start < EProcessState.Published);
+            bool ok = false;
+            switch(action) {
+                case EProcessAction.Start:
+                    ok = start == EProcessState.NotStarted;
+                    break;
+                case EProcessAction.Promote:
+                    ok = start >= EProcessState.FirstPass && end < EProcessState.ReviewLevel10 &&
+                         end >= EProcessState.ReviewLevel1 && end <= EProcessState.ReviewLevel10;
+                    break;
+                case EProcessAction.Reject:
+                    ok = start != EProcessState.NotStarted;
+                    break;
+                case EProcessAction.SignOff:
+                    ok = start >= EProcessState.ReviewLevel1;
+                    break;
+                case EProcessAction.Submit:
+                    ok = start >= EProcessState.FirstPass && start < EProcessState.Submitted;
+                    break;
+                case EProcessAction.Approve:
+                    ok = start == EProcessState.Submitted;
+                    break;
+                case EProcessAction.Publish:
+                    ok = start >= EProcessState.Submitted && start < EProcessState.Published;
+                    break;
+            }
+            if(!ok) {
+                _log.WarnFormat("{0} {1} is in the wrong state ({2}) to {3}",
+                        ProcessUnitType.Capitalize(), pu, start, action);
+            }
+            return ok;
         }
 
 
-        /// Property to return a label for a unit of process management
-        protected abstract string ProcessUnitLabel { get; }
-
-
-        /// Method to be implemented in sub-classes to return an array of POV
-        /// instances for each process unit represented by the slice.
-        protected abstract POV[] GetProcessUnits(Slice slice);
-
-
-        /// Method to be implemented in sub-classes for retrieving the state of
-        /// process unit(s) represented by the Slice.
-        protected abstract void GetProcessState(Slice slice, IOutput output);
-
-
-
-        /// Method to be implemented in sub-classes for setting the state of
-        /// process unit(s) represented by the Slice.
-        protected void SetProcessState(Slice slice, EProcessAction action,
-                EProcessState targetState, string annotation, string[] documents,
-                IOutput output)
+        // Check user has sufficient access rights for action
+        protected bool HasSufficientAccess(EProcessAction action, POV pu, EAccessRights access, EProcessState state)
         {
-            string[] paths = null, files = null;
-            int processed = 0, skipped = 0;
-            EProcessState state;
-
-            _security.CheckPermissionFor(ETask.ProcessManagement);
-
-            // Convert document references to path(s) to files
-            if(documents != null) {
-                paths = new string[documents.Length];
-                files = new string[documents.Length];
-                for(int i = 0; i < documents.Length; ++i) {
-                    Utilities.EnsureFileExists(documents[i]);
-                    paths[i] = Path.GetDirectoryName(documents[i]);
-                    files[i] = Path.GetFileName(documents[i]);
-                }
+            bool ok = false;
+            switch(action) {
+                case EProcessAction.Start:
+                    ok = access == EAccessRights.All;
+                    break;
+                case EProcessAction.Promote:
+                    ok = access == EAccessRights.Promote || access == EAccessRights.All;
+                    break;
+                case EProcessAction.Reject:
+                    ok = access == EAccessRights.All ||
+                         ((access == EAccessRights.Read || access == EAccessRights.Promote) &&
+                          state != EProcessState.Published);
+                    break;
+                case EProcessAction.SignOff:
+                    ok = access == EAccessRights.Read || access == EAccessRights.Promote ||
+                         access == EAccessRights.All;
+                    break;
+                case EProcessAction.Submit:
+                    ok = access == EAccessRights.Promote || access == EAccessRights.All;
+                    break;
+                case EProcessAction.Approve:
+                    ok = access == EAccessRights.Promote || access == EAccessRights.All;
+                    break;
+                case EProcessAction.Publish:
+                    ok = access == EAccessRights.All;
+                    break;
             }
+            if(!ok) {
+                _log.WarnFormat("Insufficient privileges to change process state for {0} {1}",
+                        ProcessUnitType, pu);
+            }
+            return ok;
+        }
 
-            // Iterate over process units, performing action
-            var PUs = GetProcessUnits(slice);
-            output.InitProgress("Processing " + action.ToString(), PUs.Length);
-            foreach(var pu in PUs) {
-                var access = _security.GetProcessUnitAccessRights(pu, out state);
-                if(access == EAccessRights.All && IsValidStateTransition(action, state, targetState)) {
-                    if(action == EProcessAction.Publish) {
-                        // Publish also needs a data status of OK, OK SC, or NODATA
-                        var calcStatus = _session.Data.GetCalcStatus(pu);
-                        if(!(((calcStatus & (int)ECalcStatus.OK) == (int)ECalcStatus.OK) ||
-                             ((calcStatus & (int)ECalcStatus.OKButSystemChanged) == (int)ECalcStatus.OKButSystemChanged) ||
-                             ((calcStatus & (int)ECalcStatus.NoData) == (int)ECalcStatus.NoData))) {
-                            _log.ErrorFormat("Cannot publish {0} {1} until it has been consolidated", ProcessUnitLabel, pu);
-                            goto skip;
-                        }
-                    }
-                    SetProcessState(pu, action, targetState, annotation, paths, files);
-                    processed++;
-                }
-                else if(access != EAccessRights.All) {
-                    _log.WarnFormat("Insufficient privileges to change process state for {0} {1}", ProcessUnitLabel, pu);
-                }
-                else if(state == targetState) {
-                    skipped++;
+
+
+        // To be able to change the status of a process unit, it needs to be:
+        // unlocked, calculated, and valid
+        protected bool CanAction(EProcessAction action, POV pu, bool consolidateIfNeeded)
+        {
+            bool ok = true;
+            if(action == EProcessAction.Promote || action == EProcessAction.SignOff ||
+               action == EProcessAction.Submit || action == EProcessAction.Approve ||
+               action == EProcessAction.Publish) {
+                ok = CheckCalcStatus(action, pu, consolidateIfNeeded);
+                ok = ok && CheckValidationStatus(action, pu);
+            }
+            return ok;
+        }
+
+
+        protected bool CheckCalcStatus(EProcessAction action, POV pu, bool consolidateIfNeeded)
+        {
+            bool ok = false;
+            var calcStatus = _session.Data.GetCalcStatus(pu);
+            if(ECalcStatus.OK.IsSet(calcStatus) ||
+               ECalcStatus.OKButSystemChanged.IsSet(calcStatus) ||
+               ECalcStatus.NoData.IsSet(calcStatus)) {
+                if(ECalcStatus.Locked.IsSet(calcStatus)) {
+                    _log.ErrorFormat("Cannot {0} {1} {2} as it has been locked",
+                            action, ProcessUnitType, pu);
                 }
                 else {
-                    _log.WarnFormat("{0} {1} is in the wrong state ({2}) to {3}", ProcessUnitLabel.Capitalize(),
-                            pu, state, action);
-                }
-            skip:
-                if(output.IterationComplete()) {
-                    break;
+                    ok = true;
                 }
             }
-            output.EndProgress();
-            if(processed > 0) {
-                _log.InfoFormat("{0} action successful for {1} {2}s", action, processed, ProcessUnitLabel);
+            else if(consolidateIfNeeded) {
+                HFM.Try("Consolidating {0}", pu,
+                        () => _session.Calculate.HsvCalculate.Consolidate(pu.Scenario.Id, pu.Year.Id,
+                                       pu.Period.Id, pu.Entity.Id, pu.Entity.ParentId,
+                                       (short)EConsolidationType.Impacted));
             }
-            else if(skipped == 0) {
-                throw new Exception(string.Format("Failed to {0} any {1}s", action, ProcessUnitLabel));
+            else {
+                _log.ErrorFormat("Cannot {0} {1} {2} until it has been consolidated",
+                        action, ProcessUnitType, pu);
             }
+            return ok;
+        }
+
+
+        protected bool CheckValidationStatus(EProcessAction action, POV pu)
+        {
+            bool ok = true;
+            int group, phase;
+            GetGroupPhase(pu, out group, out phase);
+            if(phase == 0) {
+                // Cell does not participate in process management
+                throw new ArgumentException(string.Format("POV {0} is not valid for process management", pu));
+            }
+            var account = _metadata.GetPhaseValidationAccount(phase);
+            if(account.Id != Member.NOT_USED) {
+                var pov = pu.Copy();
+                // Set validation account POV
+                pov.View = _metadata.View.GetMember("<Scenario View>");
+                pov.ICP = _metadata.ICP.GetMember("[ICP Top]");
+                foreach(var id in _metadata.CustomDimIds) {
+                    pov[id] = account.GetTopCustomMember(id);
+                }
+                var valAmt = _session.Data.GetCellValue(pu);
+                ok = valAmt == null || valAmt == 0;
+                if(!ok) {
+                    _log.ErrorFormat("Cannot {0} {1} {2} until it passes all validations",
+                            action, ProcessUnitType, pu);
+                }
+            }
+            return ok;
         }
 
 
@@ -413,7 +554,7 @@ namespace HFM
     public class ProcessUnitProcessFlow : ProcessFlow
     {
 
-        protected override string ProcessUnitLabel { get { return "process unit"; } }
+        protected override string ProcessUnitType { get { return "process unit"; } }
 
 
         internal ProcessUnitProcessFlow(Session session)
@@ -486,7 +627,7 @@ namespace HFM
     public class PhasedSubmissionProcessFlow : ProcessFlow
     {
 
-        protected override string ProcessUnitLabel { get { return "phased submission"; } }
+        protected override string ProcessUnitType { get { return "phased submission"; } }
 
 
         internal PhasedSubmissionProcessFlow(Session session)

@@ -5,4 +5,7 @@
  - Implementations of commands for Calculation, Document Management, and
    Metadata loads / extracts.
 
- 
+
+[0.2.0] Process Management                                          16-Nov-2012
+- Implementation of all process management commands for both process units and
+  phased submission groups.

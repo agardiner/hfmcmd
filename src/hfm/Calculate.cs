@@ -36,7 +36,9 @@ namespace HFM
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
 
-        // Reference to HFM HsvCalculate object
+        // Reference to a Metadata object
+        protected readonly Metadata _metadata;
+        // Reference to HFM HsvCalculate COM object
         protected readonly HsvCalculate _hsvCalculate;
 
         internal HsvCalculate HsvCalculate { get { return _hsvCalculate; } }
@@ -45,24 +47,24 @@ namespace HFM
                                        Member entity, Member value);
 
 
-        [Factory]
         public Calculate(Session session)
         {
+            _metadata = session.Metadata;
             _hsvCalculate = (HsvCalculate)session.HsvSession.Calculate;
         }
 
 
         /// Generic method for performing a calculation operation over a series
         /// of scenario, year, period, entity, and value members.
-        protected void DoCalcOp(string op, Metadata metadata, string[] scenarios,
-                string[] years, string[] periods, string[] entities, string[] values,
+        protected void DoCalcOp(string op, string[] scenarios, string[] years,
+                string[] periods, string[] entities, string[] values,
                 IOutput output, CalcOp calcOp)
         {
-            var scenMembers = metadata["Scenario"].GetMembers(scenarios);
-            var yearMembers = metadata["Year"].GetMembers(years);
-            var periodMembers = metadata["Period"].GetMembers(periods);
-            var entityMembers = metadata["Entity"].GetMembers(entities);
-            var valueMembers = metadata["Value"].GetMembers(values);
+            var scenMembers = _metadata["Scenario"].GetMembers(scenarios);
+            var yearMembers = _metadata["Year"].GetMembers(years);
+            var periodMembers = _metadata["Period"].GetMembers(periods);
+            var entityMembers = _metadata["Entity"].GetMembers(entities);
+            var valueMembers = _metadata["Value"].GetMembers(values);
 
             // Cross-join the selections for scenario, year, entity, and value
             var loop =
@@ -91,7 +93,6 @@ namespace HFM
 
         [Command("Performs an allocation")]
         public void Allocate(
-                Metadata metadata,
                 [Parameter("The scenario(s) in which to perform the allocation",
                            Alias = "Scenario")]
                 string[] scenarios,
@@ -109,7 +110,7 @@ namespace HFM
                 string[] values,
                 IOutput output)
         {
-            DoCalcOp("Allocating", metadata, scenarios, years, periods, entities, values, output,
+            DoCalcOp("Allocating", scenarios, years, periods, entities, values, output,
                      (scenario, year, period, entity, value) =>
                 {
                     HFM.Try("Allocating",
@@ -122,7 +123,6 @@ namespace HFM
 
         [Command("Performs a calculation", Name = "Calculate")]
         public void ChartLogic(
-                Metadata metadata,
                 [Parameter("The scenario(s) in which to perform the calculation",
                            Alias = "Scenario")]
                 string[] scenarios,
@@ -143,7 +143,7 @@ namespace HFM
                 bool force,
                 IOutput output)
         {
-            DoCalcOp("Caclulating", metadata, scenarios, years, periods, entities, values, output,
+            DoCalcOp("Caclulating", scenarios, years, periods, entities, values, output,
                      (scenario, year, period, entity, value) =>
                 {
                     HFM.Try("Calculating",
@@ -157,7 +157,6 @@ namespace HFM
 
         [Command("Performs a translation")]
         public void Translate(
-                Metadata metadata,
                 [Parameter("The scenario(s) in which to perform the translation",
                            Alias = "Scenario")]
                 string[] scenarios,
@@ -178,7 +177,7 @@ namespace HFM
                 bool force,
                 IOutput output)
         {
-            DoCalcOp("Translating", metadata, scenarios, years, periods, entities, values, output,
+            DoCalcOp("Translating", scenarios, years, periods, entities, values, output,
                      (scenario, year, period, entity, value) =>
                 {
                     HFM.Try("Translating",
@@ -192,7 +191,6 @@ namespace HFM
 
         [Command("Performs a consolidation")]
         public void Consolidate(
-                Metadata metadata,
                 [Parameter("The scenario(s) in which to perform the consolidation",
                            Alias = "Scenario")]
                 string[] scenarios,
@@ -211,10 +209,10 @@ namespace HFM
                 SystemInfo si,
                 IOutput output)
         {
-            var scenMembers = metadata["Scenario"].GetMembers(scenarios);
-            var yearMembers = metadata["Year"].GetMembers(years);
-            var periodMembers = metadata["Period"].GetMembers(periods);
-            var entityMembers = metadata["Entity"].GetMembers(entities);
+            var scenMembers = _metadata["Scenario"].GetMembers(scenarios);
+            var yearMembers = _metadata["Year"].GetMembers(years);
+            var periodMembers = _metadata["Period"].GetMembers(periods);
+            var entityMembers = _metadata["Entity"].GetMembers(entities);
 
             // Cross-join the selections for scenario, year, and entity
             var loop =
@@ -249,7 +247,6 @@ namespace HFM
         [Command("Performs an Equity Pick-up adjustment calculation",
                  Since = "11.1.2.2")]
         public void CalculateEPU(
-                Metadata metadata,
                 [Parameter("The scenario in which to perform the equity pick-up",
                            Alias = "Scenario")]
                 string[] scenarios,
@@ -265,9 +262,9 @@ namespace HFM
                 bool force,
                 IOutput output)
         {
-            var scenMembers = metadata["Scenario"].GetMembers(scenarios);
-            var yearMembers = metadata["Year"].GetMembers(years);
-            var periodMembers = metadata["Period"].GetMembers(periods);
+            var scenMembers = _metadata["Scenario"].GetMembers(scenarios);
+            var yearMembers = _metadata["Year"].GetMembers(years);
+            var periodMembers = _metadata["Period"].GetMembers(periods);
 
             var loop =
               from s in scenMembers

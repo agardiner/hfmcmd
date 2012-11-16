@@ -19,6 +19,27 @@ namespace HFM
 
 
     /// <summary>
+    /// Enumeration of roles
+    /// </summary>
+    public enum ERole
+    {
+        Default = HFM_ROLE_ENUM.HFM_ROLE_DEFAULT,
+        ProcessFlowReviewer1 = HFM_ROLE_ENUM.HFM_ROLE_PROCESS_FLOW_REVIEWER1,
+        ProcessFlowReviewer2 = HFM_ROLE_ENUM.HFM_ROLE_PROCESS_FLOW_REVIEWER2,
+        ProcessFlowReviewer3 = HFM_ROLE_ENUM.HFM_ROLE_PROCESS_FLOW_REVIEWER3,
+        ProcessFlowReviewer4 = HFM_ROLE_ENUM.HFM_ROLE_PROCESS_FLOW_REVIEWER4,
+        ProcessFlowReviewer5 = HFM_ROLE_ENUM.HFM_ROLE_PROCESS_FLOW_REVIEWER5,
+        ProcessFlowReviewer6 = HFM_ROLE_ENUM.HFM_ROLE_PROCESS_FLOW_REVIEWER6,
+        ProcessFlowReviewer7 = HFM_ROLE_ENUM.HFM_ROLE_PROCESS_FLOW_REVIEWER7,
+        ProcessFlowReviewer8 = HFM_ROLE_ENUM.HFM_ROLE_PROCESS_FLOW_REVIEWER8,
+        ProcessFlowReviewer9 = HFM_ROLE_ENUM.HFM_ROLE_PROCESS_FLOW_REVIEWER9,
+        ProcessFlowReviewer10 = HFM_ROLE_ENUM.HFM_ROLE_PROCESS_FLOW_REVIEWER10,
+        ProcessFlowSubmitter = HFM_ROLE_ENUM.HFM_ROLE_PROCESS_FLOW_SUBMITTER,
+        ProcessFlowSupervisor = HFM_ROLE_ENUM.HFM_ROLE_PROCESS_FLOW_SUPERVISOR
+    }
+
+
+    /// <summary>
     /// Enumeration of access levels
     /// </summary>
     public enum EAccessRights
@@ -79,6 +100,22 @@ namespace HFM
                     () => _hsvSecurity.IsConnectedUserAllowedToPerformTask((int)task, out allowed));
             if(!allowed) {
                 throw new AccessDeniedException(string.Format("You do not have permission to perform {0}", task));
+            }
+        }
+
+
+        /// <summary>
+        /// Returns true if the user has the specified role assigned (directly
+        /// or indirectly through group membership).
+        /// </summary>
+        public void CheckRole(ERole role)
+        {
+            bool allowed = false;
+
+            HFM.Try("Checking role permission",
+                    () => _hsvSecurity.IsConnectedUserInRole((int)role, out allowed));
+            if(!allowed) {
+                throw new AccessDeniedException(string.Format("You have not been assigned the role {0}", role));
             }
         }
 

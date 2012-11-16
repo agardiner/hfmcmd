@@ -41,8 +41,10 @@ namespace HFM
         private ProcessFlow _processFlow;
         // Reference to a Security object
         private Security _security;
-        // Reference to a Security object
+        // Reference to a Data object
         private Data _data;
+        // Reference to a Calculate object
+        private Calculate _calculate;
 
 
 
@@ -134,6 +136,18 @@ namespace HFM
                     _data = new Data(this);
                 }
                 return _data;
+            }
+        }
+
+
+        [Factory]
+        public Calculate Calculate
+        {
+            get {
+                if(_calculate == null) {
+                    _calculate = new Calculate(this);
+                }
+                return _calculate;
             }
         }
 

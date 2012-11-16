@@ -45,6 +45,22 @@ namespace HFM
     }
 
 
+    public static class ECalcStatusExtensions
+    {
+        public static bool IsSet(this ECalcStatus status, int cellStatus)
+        {
+            if(status == ECalcStatus.OK) {
+                // OK is 0, cell status must be 0 as well to match
+                return cellStatus == (int)ECalcStatus.OK;
+            }
+            else {
+                return (cellStatus & (int)status) == (int)status;
+            }
+        }
+    }
+
+
+
     /// <summary>
     /// Class for interacting with data / cells in an HFM application.
     /// </summary>
@@ -127,6 +143,31 @@ namespace HFM
                                                  pov.Entity.Id, pov.Entity.ParentId, pov.Value.Id,
                                                  out status));
             return status;
+        }
+
+
+        internal double? GetCellValue(POV pov)
+        {
+            double amount = 0;
+            int status = 0;
+            if(HFM.HasVariableCustoms) {
+                HFM.Try("Getting cell value",
+                        () => _hsvData.GetCellExtDim(pov.HfmPovCOM, out amount, out status));
+            }
+            else {
+                HFM.Try("Setting cell value",
+                        () => _hsvData.GetCell(pov.Scenario.Id, pov.Year.Id, pov.Period.Id, pov.View.Id,
+                                               pov.Entity.Id, pov.Entity.ParentId, pov.Value.Id,
+                                               pov.Account.Id, pov.ICP.Id, pov.Custom1.Id,
+                                               pov.Custom2.Id, pov.Custom3.Id, pov.Custom4.Id,
+                                               out amount, out status));
+            }
+            if(ECalcStatus.NoData.IsSet(status)) {
+                return null;
+            }
+            else {
+                return amount;
+            }
         }
 
     }
