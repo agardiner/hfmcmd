@@ -168,7 +168,7 @@ namespace HFM
                 [Parameter("Annotations to be applied to each process unit or phased submission",
                            DefaultValue = null)]
                 string annotation,
-                [Parameter("File attachment(s) to be applied to each process unit or phased submission",
+                [Parameter("Document attachment(s) to be applied to each process unit or phased submission",
                            DefaultValue = null)]
                 string[] attachments,
                 IOutput output)
@@ -186,7 +186,7 @@ namespace HFM
                 [Parameter("Annotations to be applied to each process unit or phased submission",
                            DefaultValue = null)]
                 string annotation,
-                [Parameter("File attachment(s) to be applied to each process unit or phased submission",
+                [Parameter("Document attachment(s) to be applied to each process unit or phased submission",
                            DefaultValue = null)]
                 string[] attachments,
                 [Parameter("Consolidate the process unit if consolidation is necessary to promote.",
@@ -217,7 +217,7 @@ namespace HFM
                 [Parameter("Annotations to be applied to each process unit or phased submission",
                            DefaultValue = null)]
                 string annotation,
-                [Parameter("File attachment(s) to be applied to each process unit or phased submission",
+                [Parameter("Document attachment(s) to be applied to each process unit or phased submission",
                            DefaultValue = null)]
                 string[] attachments,
                 IOutput output)
@@ -235,7 +235,7 @@ namespace HFM
                 [Parameter("Annotations to be applied to each process unit or phased submission",
                            DefaultValue = null)]
                 string annotation,
-                [Parameter("File attachment(s) to be applied to each process unit or phased submission",
+                [Parameter("Document attachment(s) to be applied to each process unit or phased submission",
                            DefaultValue = null)]
                 string[] attachments,
                 [Parameter("Consolidate the process unit if consolidation is necessary to submit.",
@@ -254,7 +254,7 @@ namespace HFM
                 [Parameter("Annotations to be applied to each process unit or phased submission",
                            DefaultValue = null)]
                 string annotation,
-                [Parameter("File attachment(s) to be applied to each process unit or phased submission",
+                [Parameter("Document attachment(s) to be applied to each process unit or phased submission",
                            DefaultValue = null)]
                 string[] attachments,
                 [Parameter("Consolidate the process unit if consolidation is necessary to submit.",
@@ -273,7 +273,7 @@ namespace HFM
                 [Parameter("Annotations to be applied to each process unit or phased submission",
                            DefaultValue = null)]
                 string annotation,
-                [Parameter("File attachment(s) to be applied to each process unit or phased submission",
+                [Parameter("Document attachment(s) to be applied to each process unit or phased submission",
                            DefaultValue = null)]
                 string[] attachments,
                 [Parameter("Consolidate the process unit if consolidation is necessary to approve.",
@@ -292,7 +292,7 @@ namespace HFM
                 [Parameter("Annotations to be applied to each process unit or phased submission",
                            DefaultValue = null)]
                 string annotation,
-                [Parameter("File attachment(s) to be applied to each process unit or phased submission",
+                [Parameter("Document attachment(s) to be applied to each process unit or phased submission",
                            DefaultValue = null)]
                 string[] attachments,
                 [Parameter("Consolidate the process unit if consolidation is necessary to publish.",
@@ -335,12 +335,11 @@ namespace HFM
                 _security.CheckRole(role);
             }
 
-            // Convert document references to path(s) to files
+            // Convert document references
             if(documents != null) {
                 paths = new string[documents.Length];
                 files = new string[documents.Length];
                 for(int i = 0; i < documents.Length; ++i) {
-                    Utilities.EnsureFileExists(documents[i]);
                     paths[i] = Path.GetDirectoryName(documents[i]);
                     files[i] = Path.GetFileName(documents[i]);
                 }

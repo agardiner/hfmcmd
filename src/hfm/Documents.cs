@@ -30,6 +30,7 @@ namespace HFM
         public enum EDocumentType
         {
             All = tagDOCUMENTTYPES.WEBOM_DOCTYPE_ALL,
+            Custom = tagDOCUMENTTYPES.WEBOM_DOCTYPE_CUSTOM,
             Folder = tagDOCUMENTTYPES.WEBOM_DOCTYPE_FOLDER,
             Invalid = tagDOCUMENTTYPES.WEBOM_DOCTYPE_INVALID,
             Link = tagDOCUMENTTYPES.WEBOM_DOCTYPE_LINK,
@@ -54,6 +55,7 @@ namespace HFM
         public enum EDocumentFileType
         {
             All = tagDOCUMENTFILETYPES.WEBOM_DOCFILETYPE_ALL,
+            Custom = tagDOCUMENTFILETYPES.WEBOM_DOCFILETYPE_CUSTOM,
             Folder = tagDOCUMENTFILETYPES.WEBOM_DOCFILETYPE_FOLDER,
             WebFormDef = tagDOCUMENTFILETYPES.WEBOM_DOCFILETYPE_FORMDEF,
             ReportDefRPT = tagDOCUMENTFILETYPES.WEBOM_DOCFILETYPE_RPTDEF,
@@ -99,6 +101,7 @@ namespace HFM
                 get {
                     switch(DocumentType) {
                         case EDocumentType.Folder:
+                        case EDocumentType.Custom:
                             return Name;
                         case EDocumentType.DataExplorerReport:
                             return Name + ".hde";
@@ -198,7 +201,7 @@ namespace HFM
                     }
                 }
                 if(DocumentType == EDocumentType.Invalid) {
-                    throw new DocumentException("Cannot determine valid document type for file {0}", filePath);
+                    DocumentType = EDocumentType.Custom;
                 }
                 _log.TraceFormat("File {0} has document type {1}", filePath, DocumentType);
             }
