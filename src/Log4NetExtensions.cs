@@ -20,6 +20,11 @@ namespace log4net
     public static class ILogExtentions
     {
 
+        public static bool IsFineEnabled(this ILog log)
+        {
+            return log.Logger.IsEnabledFor(log4net.Core.Level.Fine);
+        }
+
         public static void Fine(this ILog log, string message, Exception exception)
         {
             log.Logger.Log(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType,
@@ -36,6 +41,12 @@ namespace log4net
             if(log.Logger.IsEnabledFor(log4net.Core.Level.Fine)) {
                 log.Fine(string.Format(message, args), null);
             }
+        }
+
+
+        public static bool IsTraceEnabled(this ILog log)
+        {
+            return log.Logger.IsEnabledFor(log4net.Core.Level.Trace);
         }
 
         public static void Trace(this ILog log, string message, Exception exception)

@@ -100,9 +100,6 @@ namespace HFM
                 object formattedError, techError;
                 _resourceManager.GetFormattedError((int)lang, errorCode, message,
                         "Unknown error", out formattedError, out techError);
-                if(_log.IsDebugEnabled && techError != null) {
-                    _log.Debug(techError);
-                }
                 return formattedError as string;
             }
             else {

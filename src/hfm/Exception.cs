@@ -49,7 +49,6 @@ namespace HFM
             : base("An exception occurred while interacting with HFM", inner)
         {
             _formattedMessage = ResourceManager.GetErrorMessage(inner.ErrorCode, inner.Message);
-            LogException();
         }
 
 
@@ -59,7 +58,6 @@ namespace HFM
         public HFMException(int errorCode)
         {
             _formattedMessage = ResourceManager.GetErrorMessage(errorCode, "Unknown Error");
-            LogException();
         }
 
 
@@ -69,7 +67,6 @@ namespace HFM
         public HFMException(string errorMsg)
         {
             _formattedMessage = errorMsg;
-            LogException();
         }
 
 
@@ -83,15 +80,6 @@ namespace HFM
         {
         }
 
-
-        /// Logs the exception details for debug purposes.
-        protected void LogException()
-        {
-            if (_log.IsDebugEnabled) {
-                _log.Error("An exception occurred while interacting with HFM:");
-                _log.Error(_formattedMessage, this);
-            }
-        }
     }
 
 }

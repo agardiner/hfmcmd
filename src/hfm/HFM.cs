@@ -51,7 +51,11 @@ namespace HFM
         /// </summary>
         public static void Try(string format, object arg, Action op)
         {
-            Try(string.Format(format, arg), op);
+            string action = null;
+            if(_log.IsTraceEnabled()) {
+                action = string.Format(format, arg);
+            }
+            Try(action, op);
         }
 
 
@@ -60,7 +64,11 @@ namespace HFM
         /// </summary>
         public static void Try(string format, object arg0, object arg1, Action op)
         {
-            Try(string.Format(format, arg0, arg1), op);
+            string action = null;
+            if(_log.IsTraceEnabled()) {
+                action = string.Format(format, arg0, arg1);
+            }
+            Try(action, op);
         }
 
 
@@ -69,7 +77,11 @@ namespace HFM
         /// </summary>
         public static void Try(string format, object arg0, object arg1, object arg2, Action op)
         {
-            Try(string.Format(format, arg0, arg1, arg2), op);
+            string action = null;
+            if(_log.IsTraceEnabled()) {
+                action = string.Format(format, arg0, arg1, arg2);
+            }
+            Try(action, op);
         }
 
 
@@ -78,7 +90,11 @@ namespace HFM
         /// </summary>
         public static void Try(string format, object arg0, object arg1, object arg2, object arg3, Action op)
         {
-            Try(string.Format(format, arg0, arg1, arg2, arg3), op);
+            string action = null;
+            if(_log.IsTraceEnabled()) {
+                action = string.Format(format, arg0, arg1, arg2, arg3);
+            }
+            Try(action, op);
         }
 
 
@@ -113,7 +129,7 @@ namespace HFM
         /// </param>
         public static void Try(string action, Action op, Action<HFMException> handler)
         {
-            if (action != null) {
+            if(action != null) {
                 _log.Trace(action);
             }
             try {
