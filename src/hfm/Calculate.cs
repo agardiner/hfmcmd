@@ -200,9 +200,8 @@ namespace HFM
             var POVs = slice.POVs;
             output.InitProgress("Equity Pick-Up", POVs.Length);
             foreach(var pov in POVs) {
-                _log.InfoFormat("Equity Pick-Up for {0}", pov);
-                HFM.Try("Equity Pick-Up",
-                        () => _hsvCalculate.CalcEPU(pov.Scenario.Id, pov.Year.Id, pov.Period.Id, force));
+                _log.FineFormat("Equity Pick-Up for {0}", pov);
+                HFM.Try(() => _hsvCalculate.CalcEPU(pov.Scenario.Id, pov.Year.Id, pov.Period.Id, force));
                 if(output.IterationComplete()) {
                     break;
                 }
@@ -229,7 +228,7 @@ namespace HFM
             output.InitProgress(op, POVs.Length);
             foreach(var pov in POVs) {
                 _log.FineFormat("{0} {1}", op, pov);
-                HFM.Try(op, () => calcOp(pov));
+                HFM.Try(() => calcOp(pov));
                 if(output.IterationComplete()) {
                     break;
                 }
@@ -238,16 +237,28 @@ namespace HFM
         }
 
 
+        /// Calculates a Scenario/Year/Period/Entity combination specified in
+        /// the POV
+        internal void CalculatePOV(POV pov, bool force)
+        {
+            _log.FineFormat("Calculating {0}", pov.ToString(EDimension.Scenario, EDimension.Year,
+                            EDimension.Period, EDimension.Entity, EDimension.Value));
+            HFM.Try(() => _hsvCalculate.ChartLogic(pov.Scenario.Id, pov.Year.Id, pov.Period.Id,
+                                                   pov.Entity.Id, pov.Entity.ParentId, pov.Value.Id,
+                                                   force));
+        }
 
+
+        /// Consolidates a Scenario/Year/Period/Entity combination specified in
+        /// the POV
         internal void ConsolidatePOV(POV pov, EConsolidationType consolidationType, IOutput output)
         {
             var si = _session.SystemInfo;
 
-            _log.InfoFormat("Consolidating {0}", pov.ToString(EDimension.Scenario, EDimension.Year,
-                        EDimension.Period, EDimension.Entity));
+            _log.FineFormat("Consolidating {0}", pov.ToString(EDimension.Scenario, EDimension.Year,
+                            EDimension.Period, EDimension.Entity));
             si.MonitorBlockingTask(output);
-            HFM.Try("Consolidating",
-                    () => _hsvCalculate.Consolidate(pov.Scenario.Id, pov.Year.Id, pov.Period.Id,
+            HFM.Try(() => _hsvCalculate.Consolidate(pov.Scenario.Id, pov.Year.Id, pov.Period.Id,
                                                     pov.Entity.Id, pov.Entity.ParentId,
                                                     (short)consolidationType));
             si.BlockingTaskComplete();

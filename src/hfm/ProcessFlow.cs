@@ -327,7 +327,7 @@ namespace HFM
                 bool consolidateIfNeeded, IOutput output)
         {
             string[] paths = null, files = null;
-            int processed = 0, skipped = 0;
+            int processed = 0, skipped = 0, errored = 0, invalid = 0;
             EProcessState state;
 
             _security.CheckPermissionFor(ETask.ProcessManagement);
@@ -352,6 +352,7 @@ namespace HFM
             foreach(var pu in PUs) {
                 var access = _security.GetProcessUnitAccessRights(pu, out state);
                 if(state == targetState) {
+                    _log.FineFormat("{1} {2} is already at {2}", ProcessUnitType, pu, targetState);
                     skipped++;
                 }
                 else if(IsValidStateTransition(action, pu, state, targetState) &&
@@ -364,18 +365,21 @@ namespace HFM
                     catch(HFMException ex) {
                         _log.Error(string.Format("Unable to {0} {1} {2}",
                                    action, ProcessUnitType, pu), ex);
+                        errored++;
                     }
+                }
+                else {
+                    invalid++;
                 }
                 if(output.IterationComplete()) {
                     break;
                 }
             }
             output.EndProgress();
-            if(processed > 0) {
-                _log.InfoFormat("{0} action successful for {1} {2}s", action, processed, ProcessUnitType);
-            }
-            else if(skipped == 0) {
-                throw new Exception(string.Format("Failed to {0} any {1}s", action, ProcessUnitType));
+            _log.InfoFormat("Results for {0} of {1} {2}s: {3} successful, {4} skipped, {5} errored, {6} invalid",
+                    action, PUs.Length, ProcessUnitType, processed, skipped, errored, invalid);
+            if(errored > 0) {
+                throw new Exception(string.Format("Failed to {0} {1} {2}s", action, errored, ProcessUnitType));
             }
         }
 
@@ -410,7 +414,7 @@ namespace HFM
                     ok = start == EProcessState.NotStarted;
                     break;
                 case EProcessAction.Promote:
-                    ok = start >= EProcessState.FirstPass && end < EProcessState.ReviewLevel10 &&
+                    ok = start >= EProcessState.FirstPass && start < EProcessState.ReviewLevel10 &&
                          end >= EProcessState.ReviewLevel1 && end <= EProcessState.ReviewLevel10 &&
                          end > start;
                     break;
@@ -504,6 +508,10 @@ namespace HFM
         {
             bool ok = false;
             var calcStatus = _session.Data.GetCalcStatus(pu);
+            if(_log.IsDebugEnabled) {
+                var cs = StringUtilities.Join(ECalcStatusExtensions.GetCellStatuses(calcStatus), ", ");
+                _log.DebugFormat("Process unit calculation status for {0}: ({1})", pu, cs);
+            }
             if(ECalcStatus.OK.IsSet(calcStatus) ||
                ECalcStatus.OKButSystemChanged.IsSet(calcStatus) ||
                ECalcStatus.NoData.IsSet(calcStatus)) {
@@ -517,7 +525,12 @@ namespace HFM
                 }
             }
             else if(consolidateIfNeeded) {
-                _session.Calculate.ConsolidatePOV(pu, EConsolidationType.Impacted, output);
+                if(ECalcStatus.NeedsCalculate.IsSet(calcStatus)) {
+                    _session.Calculate.CalculatePOV(pu, false);
+                }
+                else {
+                    _session.Calculate.ConsolidatePOV(pu, EConsolidationType.Impacted, output);
+                }
                 ok = true;
             }
             else {
@@ -600,7 +613,7 @@ namespace HFM
 
             output.SetHeader("Process Unit", 58, "Process State", 15);
             foreach(var pu in GetProcessUnits(slice)) {
-                HFM.Try("Retrieving process state",
+                HFM.Try("Retrieving process state for {0}", pu,
                         () => _hsvProcessFlow.GetState(pu.Scenario.Id, pu.Year.Id, pu.Period.Id,
                                        pu.Entity.Id, pu.Entity.ParentId, pu.Value.Id,
                                        out state));
@@ -615,7 +628,7 @@ namespace HFM
             object oDates = null, oUsers = null, oActions = null, oStates = null,
                    oAnnotations = null, oPaths = null, oFiles = null;
 
-            HFM.Try("Retrieving process history",
+            HFM.Try("Retrieving process history for {0}", pu,
                     () => _hsvProcessFlow.GetHistory2(pu.Scenario.Id, pu.Year.Id, pu.Period.Id,
                                     pu.Entity.Id, pu.Entity.ParentId, pu.Value.Id,
                                     out oDates, out oUsers, out oActions, out oStates,
@@ -630,7 +643,7 @@ namespace HFM
         {
             short newState = 0;
 
-            HFM.Try("Setting process unit state",
+            HFM.Try("Setting process unit state for {0}", pu,
                     () => _hsvProcessFlow.ProcessManagementChangeStateForMultipleEntities2(
                                 pu.Scenario.Id, pu.Year.Id, pu.Period.Id,
                                 new int[] { pu.Entity.Id }, new int[] { pu.Entity.ParentId },
@@ -674,11 +687,11 @@ namespace HFM
             output.SetHeader("POV", 58, "Process State", 15);
             foreach(var pov in GetProcessUnits(slice)) {
                 if(HFM.HasVariableCustoms) {
-                    HFM.Try("Retrieving phased submission process state",
+                    HFM.Try("Retrieving phased submission process state for {0}", pov,
                             () => _hsvProcessFlow.GetPhasedSubmissionStateExtDim(pov.HfmPovCOM, out state));
                 }
                 else {
-                    HFM.Try("Retrieving phased submission process state",
+                    HFM.Try("Retrieving phased submission process state for {0}", pov,
                             () => _hsvProcessFlow.GetPhasedSubmissionState(pov.Scenario.Id, pov.Year.Id,
                                         pov.Period.Id, pov.Entity.Id, pov.Entity.ParentId,
                                         pov.Value.Id, pov.Account.Id, pov.ICP.Id, pov.Custom1.Id,
@@ -696,13 +709,13 @@ namespace HFM
                    oAnnotations = null, oPaths = null, oFiles = null;
 
             if(HFM.HasVariableCustoms) {
-                HFM.Try("Retrieving process history",
+                HFM.Try("Retrieving process history for {0}", pov,
                         () => _hsvProcessFlow.PhasedSubmissionGetHistory2ExtDim(pov.HfmPovCOM,
                                         out oDates, out oUsers, out oActions, out oStates,
                                         out oAnnotations, out oPaths, out oFiles));
             }
             else {
-                HFM.Try("Retrieving process history",
+                HFM.Try("Retrieving process history {0}", pov,
                         () => _hsvProcessFlow.PhasedSubmissionGetHistory2(pov.Scenario.Id, pov.Year.Id, pov.Period.Id,
                                         pov.Entity.Id, pov.Entity.ParentId, pov.Value.Id, pov.Account.Id, pov.ICP.Id,
                                         pov.Custom1.Id, pov.Custom2.Id, pov.Custom3.Id, pov.Custom4.Id,
@@ -720,13 +733,13 @@ namespace HFM
             short newState = 0;
 
             if(HFM.HasVariableCustoms) {
-                HFM.Try("Setting phased submission state",
+                HFM.Try("Setting phased submission state for {0}", pov,
                         () => _hsvProcessFlow.PhasedSubmissionProcessManagementChangeStateForMultipleEntities2ExtDim(
                                     pov.HfmSliceCOM, annotation, (int)action, false, false,
                                     (short)targetState, paths, files, out newState));
             }
             else {
-                HFM.Try("Setting phased submission state",
+                HFM.Try("Setting phased submission state for {0}", pov,
                         () => _hsvProcessFlow.PhasedSubmissionProcessManagementChangeStateForMultipleEntities2(
                                     pov.Scenario.Id, pov.Year.Id, pov.Period.Id, new int[] { pov.Entity.Id },
                                     new int[] { pov.Entity.ParentId }, pov.Value.Id, new int[] { pov.Account.Id },

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 using log4net;
@@ -56,6 +57,14 @@ namespace HFM
             else {
                 return (cellStatus & (int)status) == (int)status;
             }
+        }
+
+
+        public static IEnumerable<ECalcStatus> GetCellStatuses(int cellStatus)
+        {
+            var allStatuses = (ECalcStatus[])Enum.GetValues(typeof(ECalcStatus));
+            return allStatuses.Where(cs => (cellStatus == 0 && cs == ECalcStatus.OK) ||
+                                           (cellStatus != 0 && (cellStatus & (int)cs) == (int)cs));
         }
     }
 
