@@ -1040,9 +1040,11 @@ namespace HFM
         /// Count of the number of specs in _memberSpecs
         int _specCount;
         /// Member ids
-        int[] _members;
+        int[] _ids;
         /// Parent ids
-        int[] _parents;
+        int[] _parentIds;
+        /// Member objects
+        Member[] _members;
 
 
         /// Returns the n-th Member in the list
@@ -1052,20 +1054,26 @@ namespace HFM
                     throw new IndexOutOfRangeException(string.Format("Invalid index {0} for MemberList; " +
                                 "value must be between 0 and {1}", i, Count - 1));
                 }
-                return _dimension.GetMember(_members[i], _parents != null ?
-                        _parents[i] : Member.NOT_USED);
+                if(_members == null) {
+                    _members = new Member[Count];
+                }
+                if(_members[i] == null) {
+                    _members[i] = _dimension.GetMember(_ids[i], _parentIds != null ?
+                            _parentIds[i] : Member.NOT_USED);
+                }
+                return _members[i];
             }
         }
         /// Returns the number of members in the list
-        public int Count { get { return _members.Length; } }
+        public int Count { get { return _ids.Length; } }
         /// Returns the dimension to which this member list relates
         public Dimension Dimension { get { return _dimension; } }
         /// Returns the member ids of the members corresponding to the member
         /// specification.
-        public int[] MemberIds { get { return _members; } }
+        public int[] MemberIds { get { return _ids; } }
         /// Returns the parent ids of the members corresponding to the member
         /// specification.
-        public int[] ParentIds { get { return _parents; } }
+        public int[] ParentIds { get { return _parentIds; } }
 
 
         /// <summary>
@@ -1104,7 +1112,7 @@ namespace HFM
                                 "The member specification '{0}' is not valid", spec));
                 }
             }
-            if(_members == null || _members.Length == 0) {
+            if(_ids == null || _ids.Length == 0) {
                 throw new ArgumentException("No members were added to the member list");
             }
         }
@@ -1112,7 +1120,7 @@ namespace HFM
 
         public IEnumerator<Member> GetEnumerator()
         {
-            return IterateMembers(_members, _parents).GetEnumerator();
+            return IterateMembers(_ids, _parentIds).GetEnumerator();
         }
 
 
@@ -1233,19 +1241,19 @@ namespace HFM
         /// set. If no current member ids exist, this creates them.
         protected void AddIds(int[] members, int[] parents)
         {
-            if(_members == null) {
-                _members = members;
-                _parents = parents;
+            if(_ids == null) {
+                _ids = members;
+                _parentIds = parents;
             }
-            else if(_parents == null) {
-                _members = _members.Union(members).ToArray();
+            else if(_parentIds == null) {
+                _ids = _ids.Union(members).ToArray();
             }
             else {
                 // Need to keep unique combos of member + parent
-                var combined = IterateMembers(_members, _parents).
+                var combined = IterateMembers(_ids, _parentIds).
                                     Union(IterateMembers(members, parents));
-                _members = combined.Select(m => m.Id).ToArray();
-                _parents = combined.Select(m => m.ParentId).ToArray();
+                _ids = combined.Select(m => m.Id).ToArray();
+                _parentIds = combined.Select(m => m.ParentId).ToArray();
             }
         }
 
