@@ -148,7 +148,6 @@ namespace HFM
         protected ProgressMonitor _progressMonitor;
 
 
-        [Factory]
         public SystemInfo(Session session)
         {
             _hsvSystemInfo = (HsvSystemInfo)session.HsvSession.SystemInfo;

@@ -113,6 +113,22 @@ namespace HFM
                 return names;
             }
         }
+        internal int[] DimensionIds
+        {
+            get {
+                int[] ids = new int[NumberOfDims];
+                ids[0] = (int)EDimension.Scenario;
+                ids[1] = (int)EDimension.Year;
+                ids[2] = (int)EDimension.Period;
+                ids[3] = (int)EDimension.View;
+                ids[4] = (int)EDimension.Entity;
+                ids[5] = (int)EDimension.Value;
+                ids[6] = (int)EDimension.Account;
+                ids[7] = (int)EDimension.ICP;
+                Array.Copy(CustomDimIds, 0, ids, 8, NumberOfCustomDims);
+                return ids;
+            }
+        }
         /// Returns a count of the total number of dimensions in the current app
         public int NumberOfDims { get { return FixedDimNames.Length + NumberOfCustomDims; } }
         /// Returns a count of the number of custom dimensions in the current app
@@ -1397,8 +1413,20 @@ namespace HFM
 
 
         public override string ToString() {
+            return ToString(_metadata.DimensionIds);
+        }
+
+
+        public string ToString(params EDimension[] dimensions)
+        {
+            return ToString(Array.ConvertAll(dimensions, (d) => (int)d));
+        }
+
+
+        public string ToString(params int[] dimensions)
+        {
             var sb = new StringBuilder();
-            for(int id = 0; id < _metadata.NumberOfDims; ++id) {
+            foreach(int id in dimensions) {
                 if(this[id] == null || this[id].Id == Member.NOT_USED) { continue; }
                 if(_metadata.DimensionNames[id] == "View") {
                     sb.Append('W');
@@ -1542,29 +1570,65 @@ namespace HFM
             }
         }
         /// Returns the member list for the Scenario dimension
-        public MemberList Scenarios { get { return MemberList(EDimension.Scenario); } }
+        public MemberList Scenarios {
+            get { return MemberList(EDimension.Scenario); }
+            set { this[EDimension.Scenario] = value; }
+        }
         /// Returns the member list for the Year dimension
-        public MemberList Years { get { return MemberList(EDimension.Year); } }
+        public MemberList Years {
+            get { return MemberList(EDimension.Year); }
+            set { this[EDimension.Year] = value; }
+        }
         /// Returns the member list for the Period dimension
-        public MemberList Periods { get { return MemberList(EDimension.Period); } }
+        public MemberList Periods {
+            get { return MemberList(EDimension.Period); }
+            set { this[EDimension.Period] = value; }
+        }
         /// Returns the member list for the View dimension
-        public MemberList Views { get { return MemberList(EDimension.View); } }
+        public MemberList Views {
+            get { return MemberList(EDimension.View); }
+            set { this[EDimension.View] = value; }
+        }
         /// Returns the member list for the Entity dimension
-        public MemberList Entities { get { return MemberList(EDimension.Entity); } }
+        public MemberList Entities {
+            get { return MemberList(EDimension.Entity); }
+            set { this[EDimension.Entity] = value; }
+        }
         /// Returns the member list for the Value dimension
-        public MemberList Values { get { return MemberList(EDimension.Value); } }
+        public MemberList Values {
+            get { return MemberList(EDimension.Value); }
+            set { this[EDimension.Value] = value; }
+        }
         /// Returns the member list for the Account dimension
-        public MemberList Accounts { get { return MemberList(EDimension.Account); } }
+        public MemberList Accounts {
+            get { return MemberList(EDimension.Account); }
+            set { this[EDimension.Account] = value; }
+        }
         /// Returns the member list for the ICP dimension
-        public MemberList ICPs { get { return MemberList(EDimension.ICP); } }
+        public MemberList ICPs {
+            get { return MemberList(EDimension.ICP); }
+            set { this[EDimension.ICP] = value; }
+        }
         /// Returns the member list for the Custom1 dimension
-        public MemberList Custom1 { get { return MemberList(EDimension.Custom1); } }
+        public MemberList Custom1 {
+            get { return MemberList(EDimension.Custom1); }
+            set { this[EDimension.Custom1] = value; }
+        }
         /// Returns the member list for the Custom2 dimension
-        public MemberList Custom2 { get { return MemberList(EDimension.Custom2); } }
+        public MemberList Custom2 {
+            get { return MemberList(EDimension.Custom2); }
+            set { this[EDimension.Custom2] = value; }
+        }
         /// Returns the member list for the Custom3 dimension
-        public MemberList Custom3 { get { return MemberList(EDimension.Custom3); } }
+        public MemberList Custom3 {
+            get { return MemberList(EDimension.Custom3); }
+            set { this[EDimension.Custom3] = value; }
+        }
         /// Returns the member list for the Custom4 dimension
-        public MemberList Custom4 { get { return MemberList(EDimension.Custom4); } }
+        public MemberList Custom4 {
+            get { return MemberList(EDimension.Custom4); }
+            set { this[EDimension.Custom4] = value; }
+        }
         /// Returns a count of the number of dimensions that have been specified
         public int DimensionsSpecified
         {

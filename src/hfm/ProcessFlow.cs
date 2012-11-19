@@ -356,7 +356,7 @@ namespace HFM
                 }
                 else if(IsValidStateTransition(action, pu, state, targetState) &&
                         HasSufficientAccess(action, pu, access, state) &&
-                        CanAction(action, pu, consolidateIfNeeded)) {
+                        CanAction(action, pu, consolidateIfNeeded, output)) {
                     try {
                         SetProcessState(pu, action, targetState, annotation, paths, files);
                         processed++;
@@ -487,20 +487,20 @@ namespace HFM
 
         // To be able to change the status of a process unit, it needs to be:
         // unlocked, calculated, and valid
-        protected bool CanAction(EProcessAction action, POV pu, bool consolidateIfNeeded)
+        protected bool CanAction(EProcessAction action, POV pu, bool consolidateIfNeeded, IOutput output)
         {
             bool ok = true;
             if(action == EProcessAction.Promote || action == EProcessAction.SignOff ||
                action == EProcessAction.Submit || action == EProcessAction.Approve ||
                action == EProcessAction.Publish) {
-                ok = CheckCalcStatus(action, pu, consolidateIfNeeded);
+                ok = CheckCalcStatus(action, pu, consolidateIfNeeded, output);
                 ok = ok && CheckValidationStatus(action, pu);
             }
             return ok;
         }
 
 
-        protected bool CheckCalcStatus(EProcessAction action, POV pu, bool consolidateIfNeeded)
+        protected bool CheckCalcStatus(EProcessAction action, POV pu, bool consolidateIfNeeded, IOutput output)
         {
             bool ok = false;
             var calcStatus = _session.Data.GetCalcStatus(pu);
@@ -517,10 +517,7 @@ namespace HFM
                 }
             }
             else if(consolidateIfNeeded) {
-                HFM.Try("Consolidating {0}", pu,
-                        () => _session.Calculate.HsvCalculate.Consolidate(pu.Scenario.Id, pu.Year.Id,
-                                       pu.Period.Id, pu.Entity.Id, pu.Entity.ParentId,
-                                       (short)EConsolidationType.Impacted));
+                _session.Calculate.ConsolidatePOV(pu, EConsolidationType.Impacted, output);
                 ok = true;
             }
             else {

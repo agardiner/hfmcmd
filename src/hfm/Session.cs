@@ -45,7 +45,8 @@ namespace HFM
         private Data _data;
         // Reference to a Calculate object
         private Calculate _calculate;
-
+        // Reference to a SystemInfo object
+        private SystemInfo _systemInfo;
 
 
         public Session(Connection conn, string cluster, string application)
@@ -152,6 +153,16 @@ namespace HFM
         }
 
 
+        [Factory]
+        public SystemInfo SystemInfo
+        {
+            get {
+                if(_systemInfo == null) {
+                    _systemInfo = new SystemInfo(this);
+                }
+                return _systemInfo;
+            }
+        }
 
     }
 

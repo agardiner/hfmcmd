@@ -36,58 +36,19 @@ namespace HFM
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
 
+        // Reference to the Session object
+        protected readonly Session _session;
         // Reference to a Metadata object
         protected readonly Metadata _metadata;
         // Reference to HFM HsvCalculate COM object
         protected readonly HsvCalculate _hsvCalculate;
 
-        internal HsvCalculate HsvCalculate { get { return _hsvCalculate; } }
-
-        protected delegate void CalcOp(Member scenario, Member year, Member period,
-                                       Member entity, Member value);
-
 
         public Calculate(Session session)
         {
+            _session = session;
             _metadata = session.Metadata;
             _hsvCalculate = (HsvCalculate)session.HsvSession.Calculate;
-        }
-
-
-        /// Generic method for performing a calculation operation over a series
-        /// of scenario, year, period, entity, and value members.
-        protected void DoCalcOp(string op, string[] scenarios, string[] years,
-                string[] periods, string[] entities, string[] values,
-                IOutput output, CalcOp calcOp)
-        {
-            var scenMembers = _metadata["Scenario"].GetMembers(scenarios);
-            var yearMembers = _metadata["Year"].GetMembers(years);
-            var periodMembers = _metadata["Period"].GetMembers(periods);
-            var entityMembers = _metadata["Entity"].GetMembers(entities);
-            var valueMembers = _metadata["Value"].GetMembers(values);
-
-            // Cross-join the selections for scenario, year, entity, and value
-            var loop =
-              from s in scenMembers
-              from y in yearMembers
-              from e in entityMembers
-              from v in valueMembers
-              from p in periodMembers
-              select new { Scenario = s, Year = y, Period = p, Entity = e, Value = v };
-
-            // Calculate number of iterations, and measure progress
-            var members = loop.ToArray();
-
-            output.InitProgress(op, members.Length);
-            foreach(var i in members) {
-                _log.FineFormat("{0} Scenario: {1}, Year: {2}, Period: {3}, Entity: {4}, Value: {5}",
-                                op, i.Scenario.Name, i.Year.Name, i.Period.Name, i.Entity.Name, i.Value.Name);
-                calcOp(i.Scenario, i.Year, i.Period, i.Entity, i.Value);
-                if(output.IterationComplete()) {
-                    break;
-                }
-            }
-            output.EndProgress();
         }
 
 
@@ -111,13 +72,8 @@ namespace HFM
                 IOutput output)
         {
             DoCalcOp("Allocating", scenarios, years, periods, entities, values, output,
-                     (scenario, year, period, entity, value) =>
-                {
-                    HFM.Try("Allocating",
-                            () => HsvCalculate.Allocate(scenario.Id, year.Id, period.Id,
-                                                        entity.Id, entity.ParentId, value.Id));
-                }
-            );
+                     (pov) => _hsvCalculate.Allocate(pov.Scenario.Id, pov.Year.Id, pov.Period.Id,
+                                                     pov.Entity.Id, pov.Entity.ParentId, pov.Value.Id));
         }
 
 
@@ -144,14 +100,9 @@ namespace HFM
                 IOutput output)
         {
             DoCalcOp("Caclulating", scenarios, years, periods, entities, values, output,
-                     (scenario, year, period, entity, value) =>
-                {
-                    HFM.Try("Calculating",
-                            () => HsvCalculate.ChartLogic(scenario.Id, year.Id, period.Id,
-                                                          entity.Id, entity.ParentId, value.Id,
-                                                          force));
-                }
-            );
+                     (pov) => _hsvCalculate.ChartLogic(pov.Scenario.Id, pov.Year.Id, pov.Period.Id,
+                                                       pov.Entity.Id, pov.Entity.ParentId, pov.Value.Id,
+                                                       force));
         }
 
 
@@ -178,14 +129,9 @@ namespace HFM
                 IOutput output)
         {
             DoCalcOp("Translating", scenarios, years, periods, entities, values, output,
-                     (scenario, year, period, entity, value) =>
-                {
-                    HFM.Try("Translating",
-                            () => HsvCalculate.Translate(scenario.Id, year.Id, period.Id,
-                                                         entity.Id, entity.ParentId, value.Id,
-                                                         force, true));
-                }
-            );
+                    (pov) => _hsvCalculate.Translate(pov.Scenario.Id, pov.Year.Id, pov.Period.Id,
+                                                     pov.Entity.Id, pov.Entity.ParentId, pov.Value.Id,
+                                                     force, true));
         }
 
 
@@ -206,39 +152,22 @@ namespace HFM
                 [Parameter("The type of consolidation to perform",
                            DefaultValue = EConsolidationType.Impacted)]
                 EConsolidationType consolidationType,
-                SystemInfo si,
                 IOutput output)
         {
-            var scenMembers = _metadata["Scenario"].GetMembers(scenarios);
-            var yearMembers = _metadata["Year"].GetMembers(years);
-            var periodMembers = _metadata["Period"].GetMembers(periods);
-            var entityMembers = _metadata["Entity"].GetMembers(entities);
-
-            // Cross-join the selections for scenario, year, and entity
-            var loop =
-              from s in scenMembers
-              from y in yearMembers
-              from e in entityMembers
-              from p in periodMembers
-              select new { Scenario = s, Year = y, Period = p, Entity = e };
+            var slice = new Slice(_metadata);
+            slice[EDimension.Scenario] = scenarios;
+            slice[EDimension.Year] = years;
+            slice[EDimension.Period] = periods;
+            slice[EDimension.Entity] = entities;
 
             // Calculate number of iterations, and measure progress
-            var members = loop.ToArray();
-
-            output.InitProgress("Consolidating", members.Length);
-            foreach(var m in members) {
+            var POVs = slice.POVs;
+            output.InitProgress("Consolidating", POVs.Length);
+            foreach(var pov in POVs) {
                 if(CommandLine.UI.Interrupted) {
                     break;
                 }
-                _log.InfoFormat("Consolidating Scenario: {0}, Year: {1}, Period: {2}, Entity: {3}",
-                        m.Scenario.Name, m.Year.Name, m.Period.Name, m.Entity.Name);
-                si.MonitorBlockingTask(output);
-                HFM.Try("Consolidating {0}:{1}:{2}:{3}", m.Scenario.Name, m.Year.Name, m.Period.Name,
-                        m.Entity.Name,
-                        () => HsvCalculate.Consolidate(m.Scenario.Id, m.Year.Id, m.Period.Id,
-                                                       m.Entity.Id, m.Entity.ParentId,
-                                                       (short)consolidationType));
-                si.BlockingTaskComplete();
+                ConsolidatePOV(pov, consolidationType, output);
             }
             output.EndProgress();
         }
@@ -262,25 +191,18 @@ namespace HFM
                 bool force,
                 IOutput output)
         {
-            var scenMembers = _metadata["Scenario"].GetMembers(scenarios);
-            var yearMembers = _metadata["Year"].GetMembers(years);
-            var periodMembers = _metadata["Period"].GetMembers(periods);
-
-            var loop =
-              from s in scenMembers
-              from y in yearMembers
-              from p in periodMembers
-              select new { Scenario = s, Year = y, Period = p };
+            var slice = new Slice(_metadata);
+            slice[EDimension.Scenario] = scenarios;
+            slice[EDimension.Year] = years;
+            slice[EDimension.Period] = periods;
 
             // Calculate number of iterations, and measure progress
-            var members = loop.ToArray();
-
-            output.InitProgress("Equity Pick-Up", members.Length);
-            foreach(var m in members) {
-                _log.InfoFormat("Equity Pick-Up for Scenario: {0}, Year: {1}, Period: {2}",
-                        m.Scenario, m.Year, m.Period);
-                HFM.Try("Equity Pick-Up for {0}:{1}:{2}", m.Scenario.Name, m.Year.Name, m.Period.Name,
-                        () => HsvCalculate.CalcEPU(m.Scenario.Id, m.Year.Id, m.Period.Id, force));
+            var POVs = slice.POVs;
+            output.InitProgress("Equity Pick-Up", POVs.Length);
+            foreach(var pov in POVs) {
+                _log.InfoFormat("Equity Pick-Up for {0}", pov);
+                HFM.Try("Equity Pick-Up",
+                        () => _hsvCalculate.CalcEPU(pov.Scenario.Id, pov.Year.Id, pov.Period.Id, force));
                 if(output.IterationComplete()) {
                     break;
                 }
@@ -288,5 +210,47 @@ namespace HFM
             output.EndProgress();
         }
 
+
+        /// Generic method for performing a calculation operation over a series
+        /// of scenario, year, period, entity, and value members.
+        protected void DoCalcOp(string op, string[] scenarios, string[] years,
+                string[] periods, string[] entities, string[] values,
+                IOutput output, Action<POV> calcOp)
+        {
+            var slice = new Slice(_metadata);
+            slice[EDimension.Scenario] = scenarios;
+            slice[EDimension.Year] = years;
+            slice[EDimension.Period] = periods;
+            slice[EDimension.Entity] = entities;
+            slice[EDimension.Value] = values;
+
+            // Calculate number of iterations, and measure progress
+            var POVs = slice.POVs;
+            output.InitProgress(op, POVs.Length);
+            foreach(var pov in POVs) {
+                _log.FineFormat("{0} {1}", op, pov);
+                HFM.Try(op, () => calcOp(pov));
+                if(output.IterationComplete()) {
+                    break;
+                }
+            }
+            output.EndProgress();
+        }
+
+
+
+        internal void ConsolidatePOV(POV pov, EConsolidationType consolidationType, IOutput output)
+        {
+            var si = _session.SystemInfo;
+
+            _log.InfoFormat("Consolidating {0}", pov.ToString(EDimension.Scenario, EDimension.Year,
+                        EDimension.Period, EDimension.Entity));
+            si.MonitorBlockingTask(output);
+            HFM.Try("Consolidating",
+                    () => _hsvCalculate.Consolidate(pov.Scenario.Id, pov.Year.Id, pov.Period.Id,
+                                                    pov.Entity.Id, pov.Entity.ParentId,
+                                                    (short)consolidationType));
+            si.BlockingTaskComplete();
+        }
     }
 }
