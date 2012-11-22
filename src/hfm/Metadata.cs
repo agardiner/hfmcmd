@@ -1477,26 +1477,30 @@ namespace HFM
     /// HFM application. The slice can then be used to obtain member ids for
     /// each cell that intersects the slice definition.
     /// </summary>
-    [Setting("POV", "A Point-of-View expression, such as 'S#Actual.Y#2010.P#May.W#YTD.E#E1.V#<Entity Currency>...'",
-             ParameterType = typeof(string)),
+    [Setting("POV", "A Point-of-View expression, such as 'S#Actual.Y#2010.P#May.W#YTD.E#E1.V#<Entity Currency>'. " +
+             "Use a POV expression to select members from multiple dimensions in one go. Note that if a dimension " +
+             "member is specified in the POV expression and via a setting for the dimension, the dimension setting " +
+             "takes precedence.",
+             ParameterType = typeof(string), Order = 0),
      Setting("Scenario", "Scenario member(s) to include in the slice definition",
-             Alias = "Scenarios", ParameterType = typeof(string)),
+             Alias = "Scenarios", ParameterType = typeof(string), Order = 2),
      Setting("Year", "Year member(s) to include in the slice definition",
-             Alias = "Years", ParameterType = typeof(string)),
+             Alias = "Years", ParameterType = typeof(string), Order = 3),
      Setting("Period", "Period member(s) to include in the slice definition",
-             Alias = "Periods", ParameterType = typeof(string)),
+             Alias = "Periods", ParameterType = typeof(string), Order = 4),
      Setting("View", "View member(s) to include in the slice definition",
-             Alias = "Views", ParameterType = typeof(string)),
+             Alias = "Views", ParameterType = typeof(string), Order = 5,
+             DefaultValue = "<Scenario View>"),
      Setting("Entity", "Entity member(s) to include in the slice definition",
-             Alias = "Entities", ParameterType = typeof(string)),
+             Alias = "Entities", ParameterType = typeof(string), Order = 6),
      Setting("Value", "Value member(s) to include in the slice definition",
-             Alias = "Values", ParameterType = typeof(string)),
+             Alias = "Values", ParameterType = typeof(string), Order = 7),
      Setting("Account", "Account member(s) to include in the slice definition",
-             Alias = "Accounts", ParameterType = typeof(string)),
+             Alias = "Accounts", ParameterType = typeof(string), Order = 8),
      Setting("ICP", "ICP member(s) to include in the slice definition",
-             Alias = "ICPs", ParameterType = typeof(string)),
+             Alias = "ICPs", ParameterType = typeof(string), Order = 9),
      DynamicSetting("CustomDimName", "<CustomDimName> member(s) to include in the slice definition",
-             ParameterType = typeof(string))]
+             ParameterType = typeof(string), Order = 10)]
     public class Slice : IDynamicSettingsCollection
     {
         // Reference to class logger

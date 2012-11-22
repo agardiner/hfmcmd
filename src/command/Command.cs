@@ -57,7 +57,7 @@ namespace Command
         public int NumUserSuppliedParameters
         {
             get {
-                return Parameters.Count(p => p.HasParameterAttribute);
+                return Parameters.Count(p => p.HasParameterAttribute || p.IsSettingsCollection);
             }
         }
 

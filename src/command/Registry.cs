@@ -106,6 +106,8 @@ namespace Command
                     }
                     settings.Add((SettingAttribute)attr);
                 }
+                // Attributes are returned in random order, so sort by preferred order
+                settings.Sort((a, b) => (a.SortKey).CompareTo(b.SortKey));
                 _settings[t] = settings;
 
                 // Process members of class

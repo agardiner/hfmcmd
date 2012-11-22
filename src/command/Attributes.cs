@@ -196,6 +196,10 @@ namespace Command
         public Type ParameterType { get; set; }
         /// Internal name of the setting
         public string InternalName { get; set; }
+        /// Order setting should appear in (since attributes are returned in no particular order)
+        public int Order { get; set; }
+        /// SortKey, which is the Order prepended to the name
+        public string SortKey { get { return string.Format("{0:D2}{1}", Order, Name); } }
 
 
         /// Constructor; name and description are mandatory, type defaults to
