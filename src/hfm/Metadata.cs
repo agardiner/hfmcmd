@@ -1034,17 +1034,17 @@ namespace HFM
                 @")\.)?(" + Member.NAME_RE_CLASS + ")$");
 
         /// Dimension this member set is for
-        Dimension _dimension;
+        private Dimension _dimension;
         /// The member selection criteria
-        IEnumerable<string> _memberSpecs;
+        private IEnumerable<string> _memberSpecs;
         /// Count of the number of specs in _memberSpecs
-        int _specCount;
+        private int _specCount;
         /// Member ids
-        int[] _ids;
+        private int[] _ids;
         /// Parent ids
-        int[] _parentIds;
+        private int[] _parentIds;
         /// Member objects
-        Member[] _members;
+        private Member[] _members;
 
 
         /// Returns the n-th Member in the list
