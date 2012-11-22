@@ -1477,31 +1477,7 @@ namespace HFM
     /// HFM application. The slice can then be used to obtain member ids for
     /// each cell that intersects the slice definition.
     /// </summary>
-    [Setting("POV", "A Point-of-View expression, such as 'S#Actual.Y#2010.P#May.W#YTD.E#E1.V#<Entity Currency>'. " +
-             "Use a POV expression to select members from multiple dimensions in one go. Note that if a dimension " +
-             "member is specified in the POV expression and via a setting for the dimension, the dimension setting " +
-             "takes precedence.",
-             ParameterType = typeof(string), Order = 0),
-     Setting("Scenario", "Scenario member(s) to include in the slice definition",
-             Alias = "Scenarios", ParameterType = typeof(string), Order = 2),
-     Setting("Year", "Year member(s) to include in the slice definition",
-             Alias = "Years", ParameterType = typeof(string), Order = 3),
-     Setting("Period", "Period member(s) to include in the slice definition",
-             Alias = "Periods", ParameterType = typeof(string), Order = 4),
-     Setting("View", "View member(s) to include in the slice definition",
-             Alias = "Views", ParameterType = typeof(string), Order = 5,
-             DefaultValue = "<Scenario View>"),
-     Setting("Entity", "Entity member(s) to include in the slice definition",
-             Alias = "Entities", ParameterType = typeof(string), Order = 6),
-     Setting("Value", "Value member(s) to include in the slice definition",
-             Alias = "Values", ParameterType = typeof(string), Order = 7),
-     Setting("Account", "Account member(s) to include in the slice definition",
-             Alias = "Accounts", ParameterType = typeof(string), Order = 8),
-     Setting("ICP", "ICP member(s) to include in the slice definition",
-             Alias = "ICPs", ParameterType = typeof(string), Order = 9),
-     DynamicSetting("CustomDimName", "<CustomDimName> member(s) to include in the slice definition",
-             ParameterType = typeof(string), Order = 10)]
-    public class Slice : IDynamicSettingsCollection
+    public class Slice
     {
         // Reference to class logger
         protected static readonly ILog _log = LogManager.GetLogger(
@@ -1570,7 +1546,8 @@ namespace HFM
                 }
             }
         }
-        /// Returns the names of the dynamic settings
+        /// Returns the names of the custom dimensions; useful for sub-classes
+        /// use a Slice sub-class as a parameter to a command
         public string[] DynamicSettingNames
         {
             get {
@@ -1663,8 +1640,6 @@ namespace HFM
         }
         /// Returns an array of all cells in the slice
         public POV[] POVs { get { return GeneratePOVs(); } }
-        /// Returns an array of all process units in the slice
-        public POV[] ProcessUnits { get { return GenerateProcessUnits(); } }
         /// Converts this Slice to an HfmSliceCOM object
         public HfmSliceCOM HfmSliceCOM
         {
@@ -1735,7 +1710,6 @@ namespace HFM
 
 
         /// Constructor
-        [Factory(SingleUse = true)]
         public Slice(Metadata metadata)
         {
             _metadata = metadata;
@@ -1752,7 +1726,7 @@ namespace HFM
 
 
         /// Merges a POV specification into the current Slice definition.
-        private void MergePOV(string pov)
+        protected void MergePOV(string pov)
         {
             _pov = pov;
             var mbrs = pov.Split(new char[] { '.', ';' });
@@ -1764,14 +1738,15 @@ namespace HFM
                     _memberLists[dimension.Id] = new MemberList(dimension, f[1]);
                 }
                 else {
-                    _log.DebugFormat("Skipping POV dimension {0}; a member list has already been defined", dimension.Name);
+                    _log.DebugFormat("Skipping POV dimension {0}; a member list has already been defined",
+                            dimension.Name);
                 }
             }
         }
 
 
         // Returns an array of POV objects representing each cell in the Slice.
-        private POV[] GeneratePOVs()
+        protected POV[] GeneratePOVs()
         {
             _log.Trace("Generating POV array");
             int numDims = _metadata.NumberOfDims;
@@ -1790,18 +1765,8 @@ namespace HFM
         }
 
 
-        // Returns an array of POV objects for each combination of process units in this slice
-        private POV[] GenerateProcessUnits()
-        {
-            MemberList[] lists = new MemberList[] {
-                Scenarios, Years, Periods, Entities, Values
-            };
-            return GenerateCombos(lists);
-        }
-
-
         // Returns an array of POV objects for each combination of the dimensions in lists
-        private POV[] GenerateCombos(MemberList[] lists)
+        protected POV[] GenerateCombos(MemberList[] lists)
         {
             int numDims = lists.Length;
             int[] dimIds = new int[numDims];

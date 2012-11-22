@@ -56,6 +56,49 @@ namespace HFM
     }
 
 
+    [Setting("POV", "A Point-of-View expression, such as 'S#Actual.Y#2010.P#May." +
+             "E#E1.V#<Entity Currency>'. Use a POV expression to select members " +
+             "from multiple dimensions in one go. Note that if a dimension member is " +
+             "specified in the POV expression and via a setting for the dimension, the " +
+             "dimension setting takes precedence.",
+             ParameterType = typeof(string), Order = 0),
+     Setting("Scenario", "Scenario member(s) to include in the definition",
+             Alias = "Scenarios", ParameterType = typeof(string), Order = 2),
+     Setting("Year", "Year member(s) to include in the definition",
+             Alias = "Years", ParameterType = typeof(string), Order = 3),
+     Setting("Period", "Period member(s) to include in the definition",
+             Alias = "Periods", ParameterType = typeof(string), Order = 4),
+     Setting("Entity", "Entity member(s) to include in the definition",
+             Alias = "Entities", ParameterType = typeof(string), Order = 6),
+     Setting("Value", "Value member(s) to include in the definition",
+             Alias = "Values", ParameterType = typeof(string), Order = 7),
+     Setting("Account", "Account member(s) to include in the definition",
+             Alias = "Accounts", ParameterType = typeof(string), Order = 8),
+     Setting("ICP", "ICP member(s) to include in the definition",
+             Alias = "ICPs", ParameterType = typeof(string), Order = 9),
+     DynamicSetting("CustomDimName", "<CustomDimName> member(s) to include in the definition",
+             ParameterType = typeof(string), Order = 10)]
+    public class ProcessUnits : Slice, IDynamicSettingsCollection
+    {
+        [Factory(SingleUse = true)]
+        public ProcessUnits(Metadata metadata) : base(metadata) {}
+
+        /// Returns an array of all process units in the slice
+        public POV[] ProcessUnitPOVs { get { return GenerateProcessUnitPOVs(); } }
+
+        // Returns an array of POV objects for each combination of process units in this slice
+        protected POV[] GenerateProcessUnitPOVs()
+        {
+            MemberList[] lists = new MemberList[] {
+                Scenarios, Years, Periods, Entities, Values
+            };
+            return GenerateCombos(lists);
+        }
+
+    }
+
+
+
     /// <summary>
     /// Performs process management on an HFM application.
     /// </summary>
@@ -87,14 +130,14 @@ namespace HFM
 
 
         [Command("Returns the current process state")]
-        public void EnumProcessState(Slice slice, IOutput output)
+        public void EnumProcessState(ProcessUnits slice, IOutput output)
         {
             GetProcessState(slice, output);
         }
 
 
         [Command("Returns the submission group and submission phase for each cell in the slice")]
-        public void EnumGroupPhases(Slice slice, IOutput output)
+        public void EnumGroupPhases(ProcessUnits slice, IOutput output)
         {
             int group, phase;
             DefaultMembers(slice, false);
@@ -128,7 +171,7 @@ namespace HFM
 
 
         [Command("Returns the history of process management actions performed on process units")]
-        public void GetProcessHistory(Slice slice, IOutput output)
+        public void GetProcessHistory(ProcessUnits slice, IOutput output)
         {
             POV[] PUs = GetProcessUnits(slice);
             foreach(var pu in PUs) {
@@ -138,7 +181,7 @@ namespace HFM
 
 
         /// Method to be implemented in sub-classes for retrieving the state of
-        /// process unit(s) represented by the Slice.
+        /// process unit(s) represented by the ProcessUnits.
         protected abstract void GetHistory(POV processUnit, IOutput output);
 
 
@@ -164,7 +207,7 @@ namespace HFM
 
         [Command("Starts a process unit or phased submission, moving it from Not Started to First Pass")]
         public void Start(
-                Slice slice,
+                ProcessUnits slice,
                 [Parameter("Annotations to be applied to each process unit or phased submission",
                            DefaultValue = null)]
                 string annotation,
@@ -180,7 +223,7 @@ namespace HFM
 
         [Command("Promotes a process unit or phased submission to the specified Review level")]
         public void Promote(
-                Slice slice,
+                ProcessUnits slice,
                 [Parameter("Review level to promote to (a value between 1 and 10)")]
                 string reviewLevel,
                 [Parameter("Annotations to be applied to each process unit or phased submission",
@@ -213,7 +256,7 @@ namespace HFM
 
         [Command("Returns a process unit or phased submission to its prior state")]
         public void Reject(
-                Slice slice,
+                ProcessUnits slice,
                 [Parameter("Annotations to be applied to each process unit or phased submission",
                            DefaultValue = null)]
                 string annotation,
@@ -231,7 +274,7 @@ namespace HFM
                  "at the current point in the process (which must be a review level), but does not " +
                  "otherwise change the process level of the process unit or phased submission.")]
         public void SignOff(
-                Slice slice,
+                ProcessUnits slice,
                 [Parameter("Annotations to be applied to each process unit or phased submission",
                            DefaultValue = null)]
                 string annotation,
@@ -250,7 +293,7 @@ namespace HFM
 
         [Command("Submit a process unit or phased submission for approval.")]
         public void Submit(
-                Slice slice,
+                ProcessUnits slice,
                 [Parameter("Annotations to be applied to each process unit or phased submission",
                            DefaultValue = null)]
                 string annotation,
@@ -269,7 +312,7 @@ namespace HFM
 
         [Command("Approve a process unit or phased submission.")]
         public void Approve(
-                Slice slice,
+                ProcessUnits slice,
                 [Parameter("Annotations to be applied to each process unit or phased submission",
                            DefaultValue = null)]
                 string annotation,
@@ -288,7 +331,7 @@ namespace HFM
 
         [Command("Publish a process unit or phased submission group.")]
         public void Publish(
-                Slice slice,
+                ProcessUnits slice,
                 [Parameter("Annotations to be applied to each process unit or phased submission",
                            DefaultValue = null)]
                 string annotation,
@@ -311,18 +354,18 @@ namespace HFM
 
         /// Method to be implemented in sub-classes to return an array of POV
         /// instances for each process unit represented by the slice.
-        protected abstract POV[] GetProcessUnits(Slice slice);
+        protected abstract POV[] GetProcessUnits(ProcessUnits slice);
 
 
         /// Method to be implemented in sub-classes for retrieving the state of
-        /// process unit(s) represented by the Slice.
-        protected abstract void GetProcessState(Slice slice, IOutput output);
+        /// process unit(s) represented by the ProcessUnits.
+        protected abstract void GetProcessState(ProcessUnits slice, IOutput output);
 
 
 
         /// Method to be implemented in sub-classes for setting the state of
-        /// process unit(s) represented by the Slice.
-        protected void SetProcessState(Slice slice, EProcessAction action, ERole role,
+        /// process unit(s) represented by the ProcessUnits.
+        protected void SetProcessState(ProcessUnits slice, EProcessAction action, ERole role,
                 EProcessState targetState, string annotation, string[] documents,
                 bool consolidateIfNeeded, IOutput output)
         {
@@ -383,7 +426,7 @@ namespace HFM
         }
 
 
-        protected void DefaultMembers(Slice slice, bool overrideExisting)
+        protected void DefaultMembers(ProcessUnits slice, bool overrideExisting)
         {
             // Default each dimension for which phased submission is not enabled
             if(!_metadata.IsPhasedSubmissionEnabledForDimension((int)EDimension.Account) &&
@@ -599,14 +642,14 @@ namespace HFM
         { }
 
 
-        protected override POV[] GetProcessUnits(Slice slice)
+        protected override POV[] GetProcessUnits(ProcessUnits slice)
         {
             DefaultMembers(slice, true);
-            return slice.ProcessUnits;
+            return slice.ProcessUnitPOVs;
         }
 
 
-        protected override void GetProcessState(Slice slice, IOutput output)
+        protected override void GetProcessState(ProcessUnits slice, IOutput output)
         {
             short state = 0;
 
@@ -672,14 +715,14 @@ namespace HFM
         { }
 
 
-        protected override POV[] GetProcessUnits(Slice slice)
+        protected override POV[] GetProcessUnits(ProcessUnits slice)
         {
             DefaultMembers(slice, true);
             return slice.POVs;
         }
 
 
-        protected override void GetProcessState(Slice slice, IOutput output)
+        protected override void GetProcessState(ProcessUnits slice, IOutput output)
         {
             short state = 0;
 
