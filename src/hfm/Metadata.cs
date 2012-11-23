@@ -1132,7 +1132,7 @@ namespace HFM
 
         public override string ToString()
         {
-            return string.Join(", ", _memberSpecs.ToArray());
+            return string.Join(",", _memberSpecs.ToArray());
         }
 
 
@@ -1726,16 +1726,36 @@ namespace HFM
 
 
         /// Merges a POV specification into the current Slice definition.
+        /// A POV specification consists of one or more dimension components,
+        /// separated by either periods or semi-colons. Each dimension component
+        /// may be one of:
+        /// - a dimension name or letter, followed by # and then a member name,
+        ///   such as Period#May, Value#<Entity Currency>, S#Actual, Y#2010, etc
+        /// - a dimension name or letter, followed by one or more comma-separated
+        ///   member lists or member ranges, such as P{[Fourth Generation]},
+        ///   ICP{[Base]} etc
         protected void MergePOV(string pov)
         {
+            int pos;
+            string dimName, mbrSpec;
+
             _pov = pov;
             var mbrs = pov.Split(new char[] { '.', ';' });
             foreach(var mbr in mbrs) {
-                var f = mbr.Split('#');
-                var dimension = _metadata[f[0]];
+                if((pos = mbr.IndexOf('#')) > 0) {
+                    dimName = mbr.Substring(0, pos);
+                    mbrSpec = mbr.Substring(pos + 1);
+                }
+                else if((pos = mbr.IndexOf('{')) > 0) {
+                    dimName = mbr.Substring(0, pos);
+                    mbrSpec = mbr.Substring(pos);
+                }
+                else {
+                    throw new ArgumentException(string.Format("Unable to parse dimension specification '{0}'", mbr));
+                }
+                var dimension = _metadata[dimName];
                 if(_memberLists[dimension.Id] == null) {
-                    _log.DebugFormat("Creating {0} member list for {1}", dimension.Name, f[1]);
-                    _memberLists[dimension.Id] = new MemberList(dimension, f[1]);
+                    _memberLists[dimension.Id] = new MemberList(dimension, mbrSpec);
                 }
                 else {
                     _log.DebugFormat("Skipping POV dimension {0}; a member list has already been defined",
@@ -1805,6 +1825,41 @@ namespace HFM
             return povs;
         }
 
+
+        public override string ToString() {
+            return ToString(_metadata.DimensionIds);
+        }
+
+
+        public string ToString(params EDimension[] dimensions)
+        {
+            return ToString(Array.ConvertAll(dimensions, (d) => (int)d));
+        }
+
+
+        public string ToString(params int[] dimensions)
+        {
+            var sb = new StringBuilder();
+            foreach(int id in dimensions) {
+                if(MemberList(id) == null) { continue; }
+                if(_metadata.DimensionNames[id] == "View") {
+                    sb.Append('W');
+                }
+                else if(id < (int)EDimension.CustomBase) {
+                    sb.Append(_metadata.DimensionNames[id][0]);
+                }
+                else {
+                    sb.Append(_metadata.DimensionNames[id]);
+                }
+                if(MemberList(id).Count == 1) {
+                    sb.Append('#');
+                }
+                sb.Append(MemberList(id).ToString());
+                sb.Append('.');
+            }
+            sb.Length--;
+            return sb.ToString();
+        }
     }
 
 }
