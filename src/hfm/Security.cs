@@ -14,6 +14,7 @@ namespace HFM
     /// </summary>
     public enum ETask
     {
+        ExtendedAnalytics = tagHFM_TASK_ENUM.HFM_TASK_EXTENDED_ANALYTICS,
         ProcessManagement = tagHFM_TASK_ENUM.HFM_TASK_DATA_EXPLORER_MANAGE_PROCESS
     }
 

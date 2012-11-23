@@ -85,15 +85,49 @@ namespace HFM
         protected static readonly ILog _log = LogManager.GetLogger(
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
+        // Reference to the current session
+        protected readonly Session Session;
         // Reference to HFM HsvStarSchemaACM object
-        internal readonly HsvStarSchemaACM HsvStarSchemaACM;
+        protected readonly HsvStarSchemaACM HsvStarSchemaACM;
 
 
         [Factory]
         public StarSchema(Session session)
         {
+            Session = session;
             HsvStarSchemaACM = new HsvStarSchemaACM();
             HsvStarSchemaACM.SetSession(session.HsvSession);
+        }
+
+
+        [Command("Lists the names of registered DSNs containing database connection details to " +
+                 "use for Extended Analytics star schema extracts")]
+        public void EnumRegisteredDSNs(IOutput output)
+        {
+            object oDSNs = null;
+            HFM.Try("Retrieving DSN names",
+                    () => oDSNs = HsvStarSchemaACM.EnumRegisteredDSNs());
+
+            if(oDSNs != null) {
+                var dsns = oDSNs as Array;
+                output.WriteEnumerable(dsns, "DSN");
+            }
+        }
+
+
+        [Command("Deletes the tables associated with a star schema extract")]
+        public void DeleteStarSchema(
+                [Parameter("The name of the DSN that contains the connection details for the " +
+                           "database where the star schema extract is to be created. This DSN " +
+                           "must exist on the HFM server, and have been registered via the " +
+                           "HFM Configuration utility.")]
+                string DSN,
+                [Parameter("The prefix that should appear at the start of each table name created " +
+                           "by the extract process.")]
+                string tablePrefix)
+        {
+            HFM.Try("Deleting star schema",
+                    () => HsvStarSchemaACM.DeleteStarSchema(DSN, tablePrefix));
         }
 
 
@@ -115,11 +149,18 @@ namespace HFM
                 [Parameter("Whether to include dynamic accounts",
                            DefaultValue = false)]
                 bool includeDynamicAccts,
+                [Parameter("Whether to include calculated data",
+                           DefaultValue = true, Since = "11.1.1")]
+                bool includeCalculatedData,
+                [Parameter("Whether to include derived data",
+                           DefaultValue = true, Since = "11.1.1")]
+                bool includeDerivedData,
                 ExtractSpecification slice)
         {
 
-            DoEAExtract("", "", (SS_PUSH_OPTIONS)(deleteExisting ? EPushType.Create : EPushType.Update),
-                        (EA_EXTRACT_TYPE_FLAGS)extractType, includeDynamicAccts,
+            DoEAExtract(DSN, tablePrefix, (SS_PUSH_OPTIONS)(deleteExisting ? EPushType.Create : EPushType.Update),
+                        (EA_EXTRACT_TYPE_FLAGS)extractType, includeDynamicAccts, includeCalculatedData,
+                        includeDerivedData, false, false,
                         (EA_LINEITEM_OPTIONS)ELineItems.Summary, "", slice);
         }
 
@@ -127,12 +168,20 @@ namespace HFM
         [Command("Extracts HFM data to a flat file",
                  Since = "11.1.1")]
         public void ExtractDataToFlatFile(
+                [Parameter("The file name prefix")]
+                string filePrefix,
                 [Parameter("Include file header containing extract details",
                            DefaultValue = false)]
                 bool includeHeader,
                 [Parameter("Whether to include dynamic accounts",
                            DefaultValue = false)]
                 bool includeDynamicAccts,
+                [Parameter("Whether to include calculated data",
+                           DefaultValue = true)]
+                bool includeCalculatedData,
+                [Parameter("Whether to include derived data",
+                           DefaultValue = true)]
+                bool includeDerivedData,
                 [Parameter("Level of detail to be extracted for line item detail accounts",
                            DefaultValue = ELineItems.Summary)]
                 ELineItems lineItems,
@@ -141,30 +190,35 @@ namespace HFM
                 string delimiter,
                 ExtractSpecification slice)
         {
-            DoEAExtract("", "", (SS_PUSH_OPTIONS)EPushType.Create,
+            DoEAExtract("", filePrefix, (SS_PUSH_OPTIONS)EPushType.Create,
                         (EA_EXTRACT_TYPE_FLAGS)(includeHeader ? EFileExtractType.FlatFile :
                                                                 EFileExtractType.FlatFileNoHeader),
-                        includeDynamicAccts, (EA_LINEITEM_OPTIONS)lineItems, delimiter, slice);
+                        includeDynamicAccts, includeCalculatedData, includeDerivedData,
+                        false, false, (EA_LINEITEM_OPTIONS)lineItems, delimiter, slice);
 
             // TODO: Download the extract file
         }
 
 
-        private void DoEAExtract(string dsn, string tablePrefix, SS_PUSH_OPTIONS pushType,
-                EA_EXTRACT_TYPE_FLAGS extractType, bool includeDynamicAccts, EA_LINEITEM_OPTIONS lineItems,
-                string delimiter, ExtractSpecification slice)
+        private void DoEAExtract(string dsn, string prefix, SS_PUSH_OPTIONS pushType,
+                EA_EXTRACT_TYPE_FLAGS extractType, bool includeDynamicAccts, bool includeCalculatedData,
+                bool includeDerivedData, bool includeCellText, bool includePhasedSubmissionGroupData,
+                EA_LINEITEM_OPTIONS lineItems, string delimiter, ExtractSpecification slice)
         {
             int taskId = 0;
 
-            // TODO: Check user is administrator
-
+            // Check user is permitted to run EA extracts
+            Session.Security.CheckPermissionFor(ETask.ExtendedAnalytics);
+            _log.InfoFormat("Extracting data to {0}", slice);
             if(HFM.HasVariableCustoms) {
-                HFM.Try(() => HsvStarSchemaACM.CreateStarSchemaExtDim(dsn, tablePrefix, pushType,
-                                extractType, includeDynamicAccts, true, true, lineItems,
-                                false, false, delimiter, slice.HfmSliceCOM, out taskId));
+                HFM.Try(() => HsvStarSchemaACM.CreateStarSchemaExtDim(dsn, prefix, pushType,
+                                extractType, includeDynamicAccts, includeCalculatedData, includeDerivedData,
+                                lineItems, includeCellText, includePhasedSubmissionGroupData, delimiter,
+                                slice.HfmSliceCOM, out taskId));
+                _log.DebugFormat("Task id: {0}", taskId);
             }
             else {
-                HFM.Try(() => HsvStarSchemaACM.CreateStarSchema(dsn, tablePrefix, pushType,
+                HFM.Try(() => HsvStarSchemaACM.CreateStarSchema(dsn, prefix, pushType,
                                 extractType, !includeDynamicAccts, slice.Scenarios.MemberIds,
                                 slice.Years.MemberIds, slice.Periods.MemberIds, slice.Views.MemberIds,
                                 slice.Entities.MemberIds, slice.Entities.ParentIds, slice.Values.MemberIds,
