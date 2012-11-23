@@ -12,6 +12,9 @@ using HFMCmd;
 namespace HFM
 {
 
+    /// <summary>
+    /// Defines the star schema push options
+    /// </summary>
     public enum EPushType
     {
         Create = SS_PUSH_OPTIONS.ssCREATE,
@@ -19,6 +22,9 @@ namespace HFM
     }
 
 
+    /// <summary>
+    /// Defines the star schema extract type (i.e. layout) options
+    /// </summary>
     public enum EStarSchemaExtractType
     {
         Standard = EA_EXTRACT_TYPE_FLAGS.EA_EXTRACT_TYPE_STANDARD,
@@ -29,17 +35,40 @@ namespace HFM
         Warehouse = EA_EXTRACT_TYPE_FLAGS.EA_EXTRACT_TYPE_WAREHOUSE
     }
 
+    /// <summary>
+    /// Defines the flat file extract types
+    /// </summary>
     public enum EFileExtractType
     {
         FlatFile = EA_EXTRACT_TYPE_FLAGS.EA_EXTRACT_TYPE_FLATFILE,
         FlatFileNoHeader = EA_EXTRACT_TYPE_FLAGS.EA_EXTRACT_TYPE_FLATFILE_NOHEADER
     }
 
+    /// <summary>
+    /// Enumeration defininig the extract options for line-item detail cells.
+    /// </summary>
     public enum ELineItems
     {
         Exclude = EA_LINEITEM_OPTIONS.EA_LINEITEM_EXCLUDE,
         Summary = EA_LINEITEM_OPTIONS.EA_LINEITEM_SUMMARY,
         Detail = EA_LINEITEM_OPTIONS.EA_LINEITEM_DETAIL
+    }
+
+    /// <summary>
+    /// Enumeration defininig the EA extract process statuses
+    /// </summary>
+    public enum EEATaskStatus
+    {
+        Blocked = EA_TASK_STATUS_FLAGS.EA_TASK_STATUS_BLOCKED,
+        Cancelled = EA_TASK_STATUS_FLAGS.EA_TASK_STATUS_CANCELLED,
+        Complete = EA_TASK_STATUS_FLAGS.EA_TASK_STATUS_COMPLETE,
+        CompleteWithErrors = EA_TASK_STATUS_FLAGS.EA_TASK_STATUS_COMPLETE_W_ERRORS,
+        ExtractingData = EA_TASK_STATUS_FLAGS.EA_TASK_STATUS_DATA,
+        EssbaseAggregation = EA_TASK_STATUS_FLAGS.EA_TASK_STATUS_ESSBASE_AGG,
+        Initializing = EA_TASK_STATUS_FLAGS.EA_TASK_STATUS_INITIALIZING,
+        Metadata = EA_TASK_STATUS_FLAGS.EA_TASK_STATUS_METADATA,
+        Queued = EA_TASK_STATUS_FLAGS.EA_TASK_STATUS_QUEUED,
+        SQLAggregation = EA_TASK_STATUS_FLAGS.EA_TASK_STATUS_SQL_AGG
     }
 
 
@@ -155,13 +184,16 @@ namespace HFM
                 [Parameter("Whether to include derived data",
                            DefaultValue = true, Since = "11.1.1")]
                 bool includeDerivedData,
-                ExtractSpecification slice)
+                [Parameter("The path to where the EA extract log file should be generated; " +
+                           "if omitted, no log file is created.", DefaultValue = null)]
+                string logFile,
+                ExtractSpecification slice,
+                IOutput output)
         {
-
             DoEAExtract(DSN, tablePrefix, (SS_PUSH_OPTIONS)(deleteExisting ? EPushType.Create : EPushType.Update),
                         (EA_EXTRACT_TYPE_FLAGS)extractType, includeDynamicAccts, includeCalculatedData,
-                        includeDerivedData, false, false,
-                        (EA_LINEITEM_OPTIONS)ELineItems.Summary, "", slice);
+                        includeDerivedData, false, false, (EA_LINEITEM_OPTIONS)ELineItems.Summary, "",
+                        logFile, slice, output);
         }
 
 
@@ -188,13 +220,18 @@ namespace HFM
                 [Parameter("The field delimiter to use",
                            DefaultValue = ";")]
                 string delimiter,
-                ExtractSpecification slice)
+                [Parameter("The path to where the EA extract log file should be generated; " +
+                           "if omitted, no log file is created.", DefaultValue = null)]
+                string logFile,
+                ExtractSpecification slice,
+                IOutput output)
         {
             DoEAExtract("", filePrefix, (SS_PUSH_OPTIONS)EPushType.Create,
                         (EA_EXTRACT_TYPE_FLAGS)(includeHeader ? EFileExtractType.FlatFile :
                                                                 EFileExtractType.FlatFileNoHeader),
                         includeDynamicAccts, includeCalculatedData, includeDerivedData,
-                        false, false, (EA_LINEITEM_OPTIONS)lineItems, delimiter, slice);
+                        false, false, (EA_LINEITEM_OPTIONS)lineItems, delimiter, logFile, slice,
+                        output);
 
             // TODO: Download the extract file
         }
@@ -203,12 +240,15 @@ namespace HFM
         private void DoEAExtract(string dsn, string prefix, SS_PUSH_OPTIONS pushType,
                 EA_EXTRACT_TYPE_FLAGS extractType, bool includeDynamicAccts, bool includeCalculatedData,
                 bool includeDerivedData, bool includeCellText, bool includePhasedSubmissionGroupData,
-                EA_LINEITEM_OPTIONS lineItems, string delimiter, ExtractSpecification slice)
+                EA_LINEITEM_OPTIONS lineItems, string delimiter, string logFile,
+                ExtractSpecification slice, IOutput output)
         {
             int taskId = 0;
 
             // Check user is permitted to run EA extracts
             Session.Security.CheckPermissionFor(ETask.ExtendedAnalytics);
+
+            // Perform the EA extract
             _log.InfoFormat("Extracting data to {0}", slice);
             if(HFM.HasVariableCustoms) {
                 HFM.Try(() => HsvStarSchemaACM.CreateStarSchemaExtDim(dsn, prefix, pushType,
@@ -226,9 +266,82 @@ namespace HFM
                                 slice.Custom2.MemberIds, slice.Custom3.MemberIds, slice.Custom4.MemberIds));
             }
 
-            // TODO: Monitor progress
+            // Monitor progress
+            MonitorEAExtract(output);
 
-            // TODO: Retrieve log file
+            // Retrieve log file
+            if(logFile != null) {
+                RetrieveLog(logFile);
+            }
+        }
+
+
+        /// Monitors the progress of an EA extract
+        private void MonitorEAExtract(IOutput output)
+        {
+            int errorCode = 0;
+            bool isRunning = false;
+            double numComplete = 0;
+            double numRecords = 0;
+            var status = EA_TASK_STATUS_FLAGS.EA_TASK_STATUS_INITIALIZING;
+            var taskStatus = EEATaskStatus.Initializing;
+            var lastTaskStatus = EEATaskStatus.Initializing;
+
+            var pm = new ProgressMonitor(output);
+            pm.MonitorProgress((bool cancel, out bool running) => {
+                HFM.Try("Retrieving task status",
+                        () => HsvStarSchemaACM.GetAsynchronousTaskStatus(out status, out numRecords,
+                                    out numComplete, out isRunning, out errorCode));
+                taskStatus = (EEATaskStatus)status;
+                running = isRunning;
+
+                if(cancel && running) {
+                    HFM.Try("Cancelling task", () => HsvStarSchemaACM.QuitAsynchronousTask());
+                }
+                else if(taskStatus != lastTaskStatus) {
+                    switch(taskStatus) {
+                        case EEATaskStatus.Complete:
+                        case EEATaskStatus.CompleteWithErrors:
+                        case EEATaskStatus.Cancelled:
+                            break;
+                        default:
+                            _log.InfoFormat("Extract Status: {0}", taskStatus);
+                            output.Operation = taskStatus.ToString();
+                            break;
+                    }
+                    lastTaskStatus = taskStatus;
+                }
+                return (int)(numComplete / numRecords * 100);
+            });
+
+            switch(taskStatus) {
+                case EEATaskStatus.Complete:
+                    _log.Info("Star schema extract completed successfully");
+                    break;
+                case EEATaskStatus.CompleteWithErrors:
+                    _log.Error("Star schema extract completed with errors");
+                    throw new HFMException(errorCode);
+                case EEATaskStatus.Cancelled:
+                    _log.Warn("Star schema extract was cancelled");
+                    break;
+            }
+        }
+
+
+        /// Retrieves the log file for the last extended analytics extract.
+        private void RetrieveLog(string logFile)
+        {
+            string log = null;
+            bool hasLog = false;
+
+            Utilities.EnsureFileWriteable(logFile);
+            HFM.Try("Retrieving EA extract log file",
+                    () => HsvStarSchemaACM.GetExtractLogData(out log, out hasLog));
+            if(hasLog) {
+                using(var eaLog = new StreamWriter(logFile)) {
+                    eaLog.Write(log);
+                }
+            }
         }
 
     }
