@@ -90,7 +90,7 @@ namespace HFM
         protected POV[] GenerateProcessUnitPOVs()
         {
             MemberList[] lists = new MemberList[] {
-                Scenarios, Years, Periods, Entities, Values
+                Scenario, Year, Period, Entity, Value
             };
             return GenerateCombos(lists);
         }

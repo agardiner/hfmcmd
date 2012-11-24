@@ -250,28 +250,31 @@ namespace HFM
 
             // Perform the EA extract
             _log.InfoFormat("Extracting data to {0}", slice);
-            if(HFM.HasVariableCustoms) {
-                HFM.Try(() => HsvStarSchemaACM.CreateStarSchemaExtDim(dsn, prefix, pushType,
-                                extractType, includeDynamicAccts, includeCalculatedData, includeDerivedData,
-                                lineItems, includeCellText, includePhasedSubmissionGroupData, delimiter,
-                                slice.HfmSliceCOM, out taskId));
-                _log.DebugFormat("Task id: {0}", taskId);
-            }
-            else {
-                HFM.Try(() => HsvStarSchemaACM.CreateStarSchema(dsn, prefix, pushType,
-                                extractType, !includeDynamicAccts, slice.Scenarios.MemberIds,
-                                slice.Years.MemberIds, slice.Periods.MemberIds, slice.Views.MemberIds,
-                                slice.Entities.MemberIds, slice.Entities.ParentIds, slice.Values.MemberIds,
-                                slice.Accounts.MemberIds, slice.ICPs.MemberIds, slice.Custom1.MemberIds,
-                                slice.Custom2.MemberIds, slice.Custom3.MemberIds, slice.Custom4.MemberIds));
-            }
+            try {
+                if(HFM.HasVariableCustoms) {
+                    HFM.Try(() => HsvStarSchemaACM.CreateStarSchemaExtDim(dsn, prefix, pushType,
+                                    extractType, includeDynamicAccts, includeCalculatedData, includeDerivedData,
+                                    lineItems, includeCellText, includePhasedSubmissionGroupData, delimiter,
+                                    slice.HfmSliceCOM, out taskId));
+                    _log.DebugFormat("Task id: {0}", taskId);
+                }
+                else {
+                    HFM.Try(() => HsvStarSchemaACM.CreateStarSchema(dsn, prefix, pushType,
+                                    extractType, !includeDynamicAccts, slice.Scenario.MemberIds,
+                                    slice.Year.MemberIds, slice.Period.MemberIds, slice.View.MemberIds,
+                                    slice.Entity.MemberIds, slice.Entity.ParentIds, slice.Value.MemberIds,
+                                    slice.Account.MemberIds, slice.ICP.MemberIds, slice.Custom1.MemberIds,
+                                    slice.Custom2.MemberIds, slice.Custom3.MemberIds, slice.Custom4.MemberIds));
+                }
 
-            // Monitor progress
-            MonitorEAExtract(output);
-
-            // Retrieve log file
-            if(logFile != null) {
-                RetrieveLog(logFile);
+                // Monitor progress
+                MonitorEAExtract(output);
+            }
+            finally {
+                // Retrieve log file
+                if(logFile != null) {
+                    RetrieveLog(logFile);
+                }
             }
         }
 

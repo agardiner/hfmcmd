@@ -631,7 +631,7 @@ namespace HFM
         {
             int id = -1;
 
-            HFM.Try("Retrieving id for {0} member list {0}", Name, listName,
+            HFM.Try("Retrieving id for {0} member list {1}", Name, listName,
                     () => HsvTreeInfo.GetMemberListID(listName, out id));
 
             if (id >= 0) {
@@ -1559,42 +1559,42 @@ namespace HFM
             }
         }
         /// Returns the member list for the Scenario dimension
-        public MemberList Scenarios {
+        public MemberList Scenario {
             get { return MemberList(EDimension.Scenario); }
             set { this[EDimension.Scenario] = value; }
         }
         /// Returns the member list for the Year dimension
-        public MemberList Years {
+        public MemberList Year {
             get { return MemberList(EDimension.Year); }
             set { this[EDimension.Year] = value; }
         }
         /// Returns the member list for the Period dimension
-        public MemberList Periods {
+        public MemberList Period {
             get { return MemberList(EDimension.Period); }
             set { this[EDimension.Period] = value; }
         }
         /// Returns the member list for the View dimension
-        public MemberList Views {
+        public MemberList View {
             get { return MemberList(EDimension.View); }
             set { this[EDimension.View] = value; }
         }
         /// Returns the member list for the Entity dimension
-        public MemberList Entities {
+        public MemberList Entity {
             get { return MemberList(EDimension.Entity); }
             set { this[EDimension.Entity] = value; }
         }
         /// Returns the member list for the Value dimension
-        public MemberList Values {
+        public MemberList Value {
             get { return MemberList(EDimension.Value); }
             set { this[EDimension.Value] = value; }
         }
         /// Returns the member list for the Account dimension
-        public MemberList Accounts {
+        public MemberList Account {
             get { return MemberList(EDimension.Account); }
             set { this[EDimension.Account] = value; }
         }
         /// Returns the member list for the ICP dimension
-        public MemberList ICPs {
+        public MemberList ICP {
             get { return MemberList(EDimension.ICP); }
             set { this[EDimension.ICP] = value; }
         }
