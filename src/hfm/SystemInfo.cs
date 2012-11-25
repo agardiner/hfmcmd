@@ -362,7 +362,7 @@ namespace HFM
 
             if(task != null) {
                 var pm = new ProgressMonitor(output);
-                pm.MonitorProgress(delegate(bool cancel, out bool isRunning) {
+                pm.MonitorProgress((bool cancel, out bool isRunning) => {
                     int progress;
 
                     progress = GetTaskProgress(task);

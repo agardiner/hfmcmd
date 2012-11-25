@@ -63,7 +63,7 @@ namespace HFM
         Cancelled = EA_TASK_STATUS_FLAGS.EA_TASK_STATUS_CANCELLED,
         Complete = EA_TASK_STATUS_FLAGS.EA_TASK_STATUS_COMPLETE,
         CompleteWithErrors = EA_TASK_STATUS_FLAGS.EA_TASK_STATUS_COMPLETE_W_ERRORS,
-        ExtractingData = EA_TASK_STATUS_FLAGS.EA_TASK_STATUS_DATA,
+        Data = EA_TASK_STATUS_FLAGS.EA_TASK_STATUS_DATA,
         EssbaseAggregation = EA_TASK_STATUS_FLAGS.EA_TASK_STATUS_ESSBASE_AGG,
         Initializing = EA_TASK_STATUS_FLAGS.EA_TASK_STATUS_INITIALIZING,
         Metadata = EA_TASK_STATUS_FLAGS.EA_TASK_STATUS_METADATA,
@@ -124,7 +124,7 @@ namespace HFM
         public StarSchema(Session session)
         {
             Session = session;
-            HsvStarSchemaACM = new HsvStarSchemaACM();
+            HsvStarSchemaACM = (HsvStarSchemaACM)session.HsvSession.CreateObject("Hyperion.HsvStarSchemaACM");
             HsvStarSchemaACM.SetSession(session.HsvSession);
         }
 
@@ -290,6 +290,7 @@ namespace HFM
             var taskStatus = EEATaskStatus.Initializing;
             var lastTaskStatus = EEATaskStatus.Initializing;
 
+            output.InitProgress(taskStatus.ToString());
             var pm = new ProgressMonitor(output);
             pm.MonitorProgress((bool cancel, out bool running) => {
                 HFM.Try("Retrieving task status",
@@ -308,7 +309,7 @@ namespace HFM
                         case EEATaskStatus.Cancelled:
                             break;
                         default:
-                            _log.InfoFormat("Extract Status: {0}", taskStatus);
+                            _log.InfoFormat("Extract Status: {0} complete", taskStatus);
                             output.Operation = taskStatus.ToString();
                             break;
                     }
@@ -316,6 +317,7 @@ namespace HFM
                 }
                 return (int)(numComplete / numRecords * 100);
             });
+            output.EndProgress();
 
             switch(taskStatus) {
                 case EEATaskStatus.Complete:
