@@ -6,6 +6,11 @@
    Metadata loads / extracts.
 
 
-[0.2.0] Process Management                                          16-Nov-2012
+[0.2.0] Process Management Support                                  16-Nov-2012
 - Implementation of all process management commands for both process units and
   phased submission groups.
+
+
+[0.3.0] Extended Analytics Support                                  ??-???-2012
+- Implementation of relational and flat file data extracts using Extended
+  Analytics.
