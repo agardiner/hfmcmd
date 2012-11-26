@@ -119,6 +119,12 @@ namespace HFM
         // Reference to HFM HsvStarSchemaACM object
         protected readonly HsvStarSchemaACM HsvStarSchemaACM;
 
+        // Reference to IHsvStarSchemaTemplates object
+        protected IHsvStarSchemaTemplates HsvStarSchemaTemplates
+        {
+            get { return (IHsvStarSchemaTemplates)HsvStarSchemaACM; }
+        }
+
 
         [Factory]
         public StarSchema(Session session)
@@ -237,6 +243,81 @@ namespace HFM
         }
 
 
+        [Command("Returns a list of Extended Analytics extract template names for the current user")]
+        public void EnumDataExtractTemplates(IOutput output)
+        {
+            string[] names = null;
+            HFM.Try("Retrieving EA templates",
+                    () => names = (string[])HsvStarSchemaTemplates.EnumTemplates());
+            output.WriteEnumerable(names, "Template Name");
+        }
+
+
+        [Command("Deletes a data extract template")]
+        public void DeleteDataExtractTemplate(
+                [Parameter("The name of the template to delete")]
+                string templateName)
+        {
+            HFM.Try("Deleting data extract template {0}", templateName,
+                    () => HsvStarSchemaTemplates.DeleteTemplate(templateName));
+            _log.InfoFormat("Data extract template {0} deleted", templateName);
+        }
+
+
+        [Command("Downloads a data extract template file")]
+        public string SaveDataExtractTemplate(
+                [Parameter("The name of the template to download")]
+                string templateName,
+                [Parameter("The path to the file to create for the data extract template",
+                           DefaultValue = null)]
+                string templateFile)
+        {
+            string template = null;
+
+            HFM.Try("Retrieving star schema template {0}", templateName,
+                    () => template = HsvStarSchemaTemplates.GetTemplate(templateName));
+            _log.InfoFormat("Retrieved template {0}", templateName);
+
+            if(templateFile != null) {
+                using(StreamWriter sw = new StreamWriter(templateFile)) {
+                    sw.WriteLine(template);
+                    sw.Close();
+                }
+                _log.InfoFormat("Saved template to {0}", templateFile);
+            }
+            return template;
+        }
+
+
+        [Command("Uploads a data extract template file")]
+        public void LoadDataExtractTemplate(
+                [Parameter("The path to the data extract template")]
+                string templateFile,
+                [Parameter("The name to give the template; if omitted, defaults to the name of the file",
+                           DefaultValue = null)]
+                string templateName,
+                [Parameter("Flag indicating whether any existing template should be overwritten",
+                           DefaultValue = true)]
+                bool overwrite)
+        {
+            string template = null;
+
+            Utilities.EnsureFileExists(templateFile);
+            using(var sr = new StreamReader(templateFile)) {
+                template = sr.ReadToEnd();
+            }
+            if(templateName == null) {
+                templateName = Path.GetFileNameWithoutExtension(templateFile);
+            }
+
+            HFM.Try("Loading extended analytics template from {0}", templateFile,
+                    () => HsvStarSchemaTemplates.SetTemplate(templateName, template, overwrite));
+
+            _log.InfoFormat("Uploaded data extract template {0}", templateName);
+        }
+
+
+        // Performs an EA extract to a relational or flat file target
         private void DoEAExtract(string dsn, string prefix, SS_PUSH_OPTIONS pushType,
                 EA_EXTRACT_TYPE_FLAGS extractType, bool includeDynamicAccts, bool includeCalculatedData,
                 bool includeDerivedData, bool includeCellText, bool includePhasedSubmissionGroupData,
