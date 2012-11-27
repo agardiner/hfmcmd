@@ -143,9 +143,11 @@ namespace HFM
         protected static readonly ILog _log = LogManager.GetLogger(
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-        protected readonly HsvSystemInfo _hsvSystemInfo;
+        private readonly HsvSystemInfo _hsvSystemInfo;
 
-        protected ProgressMonitor _progressMonitor;
+        private ProgressMonitor _progressMonitor;
+
+        internal HsvSystemInfo HsvSystemInfo { get { return _hsvSystemInfo; } }
 
 
         /// Constructor

@@ -232,12 +232,21 @@ namespace HFM
                 ExtractSpecification slice,
                 IOutput output)
         {
-            DoEAExtract("", filePrefix, (SS_PUSH_OPTIONS)EPushType.Create,
-                        (EA_EXTRACT_TYPE_FLAGS)(includeHeader ? EFileExtractType.FlatFile :
-                                                                EFileExtractType.FlatFileNoHeader),
-                        includeDynamicAccts, includeCalculatedData, includeDerivedData,
-                        false, false, (EA_LINEITEM_OPTIONS)lineItems, delimiter, logFile, slice,
-                        output);
+            int taskId = DoEAExtract("", filePrefix, (SS_PUSH_OPTIONS)EPushType.Create,
+                            (EA_EXTRACT_TYPE_FLAGS)(includeHeader ? EFileExtractType.FlatFile :
+                                                                    EFileExtractType.FlatFileNoHeader),
+                            includeDynamicAccts, includeCalculatedData, includeDerivedData,
+                            false, false, (EA_LINEITEM_OPTIONS)lineItems, delimiter, logFile, slice,
+                            output);
+
+            // Get the path to the extract file
+            string path = null;
+            HFM.Try("Retrieving extract file path",
+                    () => Session.SystemInfo.HsvSystemInfo.GetRunningTaskLogFilePathName(taskId, out path));
+            _log.DebugFormat("Path: {0}", path);
+
+            // Returns a string such as the following:
+            // C:\Oracle\Middleware\;EPMSystem11R1\logs\hfm\IFRST_20121126_235543_7024.log;user_projects\epmsystem1\products\FinancialManagement\Server Working Folder\EPM-11-1-2-2_WorkingData_IFRS\IFRST_20121126_235543_7024.dat.gz
 
             // TODO: Download the extract file
         }
@@ -246,9 +255,10 @@ namespace HFM
         [Command("Returns a list of Extended Analytics extract template names for the current user")]
         public void EnumDataExtractTemplates(IOutput output)
         {
-            string[] names = null;
+            object oNames = null;
             HFM.Try("Retrieving EA templates",
-                    () => names = (string[])HsvStarSchemaTemplates.EnumTemplates());
+                    () => oNames = (string[])HsvStarSchemaTemplates.EnumTemplates());
+            var names = HFM.Object2Array<string>(oNames);
             output.WriteEnumerable(names, "Template Name");
         }
 
@@ -318,7 +328,7 @@ namespace HFM
 
 
         // Performs an EA extract to a relational or flat file target
-        private void DoEAExtract(string dsn, string prefix, SS_PUSH_OPTIONS pushType,
+        private int DoEAExtract(string dsn, string prefix, SS_PUSH_OPTIONS pushType,
                 EA_EXTRACT_TYPE_FLAGS extractType, bool includeDynamicAccts, bool includeCalculatedData,
                 bool includeDerivedData, bool includeCellText, bool includePhasedSubmissionGroupData,
                 EA_LINEITEM_OPTIONS lineItems, string delimiter, string logFile,
@@ -357,6 +367,7 @@ namespace HFM
                     RetrieveLog(logFile);
                 }
             }
+            return taskId;
         }
 
 
