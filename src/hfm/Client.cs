@@ -78,6 +78,20 @@ namespace HFM
         }
 
 
+        [Command("Connects to a server in the specified cluster, without opening an application"),
+         Factory]
+        public Server ConnectToCluster(
+                [Parameter("The name of the cluster or server to return")]
+                string clusterName)
+        {
+            object server = null;
+            HFM.Try("Retrieving HsxServer instance",
+                    () => server = _hsxClient.GetServerOnCluster(clusterName));
+            var hsxServer = (HsxServer)server;
+            return new Server(hsxServer);
+        }
+
+
         /// Sets the user credentials via userid and password.
         [Command("Sets the connection details needed to communicate with an HFM server. " +
                  "User authentication is performed via Shared Services, so the login " +

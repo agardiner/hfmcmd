@@ -3,6 +3,7 @@ using System;
 using log4net;
 using HSVSESSIONLib;
 using HFMWSESSIONLib;
+using HSXSERVERLib;
 
 using Command;
 
@@ -35,6 +36,8 @@ namespace HFM
         private HsvSession _hsvSession;
         // Reference to a WebSession
         private HFMwSession _hfmwSession;
+        // Reference to a Server object
+        private Server _server;
         // Reference to a Metadata object
         private Metadata _metadata;
         // Reference to a ProcessFlow object
@@ -61,12 +64,7 @@ namespace HFM
         {
             get {
                 if(_hsvSession == null) {
-                    object hsxServer = null, hsvSession = null;
-                    HFM.Try(string.Format("Opening application {0} on {1}", _application, _cluster),
-                            () => _connection.HsxClient.OpenApplication(_cluster,
-                                    "Financial Management", _application,
-                                    out hsxServer, out hsvSession));
-                    _hsvSession = (HsvSession)hsvSession;
+                    InitSession();
                 }
                 return _hsvSession;
             }
@@ -84,6 +82,17 @@ namespace HFM
                     _hfmwSession = (HFMwSession)hfmwSession;
                 }
                 return _hfmwSession;
+            }
+        }
+
+
+        public Server Server
+        {
+            get {
+                if(_server == null) {
+                    InitSession();
+                }
+                return _server;
             }
         }
 
@@ -164,6 +173,17 @@ namespace HFM
             }
         }
 
+
+        private void InitSession()
+        {
+            object hsxServer = null, hsvSession = null;
+            HFM.Try(string.Format("Opening application {0} on {1}", _application, _cluster),
+                    () => _connection.HsxClient.OpenApplication(_cluster,
+                            "Financial Management", _application,
+                            out hsxServer, out hsvSession));
+            _hsvSession = (HsvSession)hsvSession;
+            _server = new Server((HsxServer)hsxServer);
+        }
     }
 
 }

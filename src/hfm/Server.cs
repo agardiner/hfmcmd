@@ -1,8 +1,8 @@
 using System;
 
 using log4net;
-using HSXCLIENTLib;
 using HSXSERVERLib;
+using HSXSERVERFILETRANSFERLib;
 
 using Command;
 using HFMCmd;
@@ -15,7 +15,6 @@ namespace HFM
     // TODO: Define commands for:
     // - GetClustersAndServers
     // - GetSystemDataLinkFile
-    // - GetSystemFolder
     // - GetXMLErrorFromDatabase
     // - GetXMLErrorsListFromDatabase
 
@@ -28,44 +27,36 @@ namespace HFM
         protected static readonly ILog _log = LogManager.GetLogger(
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-        // Reference to HsxClient object
-        protected HsxClient _hsxClient;
-
-        // Name of the last cluster accessed
-        protected string _cluster;
-        // Reference to current HsxServer object; these are cached
-        protected HsxServer _hsxServer;
+        // Reference to the HsxServer object
+        internal readonly HsxServer _hsxServer;
+        // Reference to a FileTransfer object
+        protected FileTransfer _fileTransfer;
 
 
-        [Factory]
-        public Server(Client client)
+        public Server(HsxServer hsxServer)
         {
-            _hsxClient = client.HsxClient;
+            _hsxServer = hsxServer;
         }
 
 
-        private void SetCluster(string cluster)
+        internal FileTransfer FileTransfer
         {
-            if(_cluster != cluster) {
-                object server = null;
-                HFM.Try("Retrieving HsxServer instance",
-                        () => server = _hsxClient.GetServerOnCluster(cluster));
-                _hsxServer = (HsxServer)server;
-                _cluster = cluster;
+            get {
+                if(_fileTransfer == null) {
+                    _fileTransfer = new FileTransfer((IHsxServerFileTransfer)_hsxServer.GetFileTransfer());
+                }
+                return _fileTransfer;
             }
         }
 
 
         [Command("Returns the names of the applications that are known to the server")]
         public string[] EnumApplications(
-                [Parameter("The name of the cluster or server whose applications are to be returned")]
-                string clusterName,
                 IOutput output)
         {
             object products, apps = null, descs = null, dsns;
             string[] sApps, sDescs;
 
-            SetCluster(clusterName);
             HFM.Try("Retrieving names of applications",
                     () => _hsxServer.EnumDataSources(out products, out apps, out descs, out dsns));
             sApps = apps as string[];
@@ -81,13 +72,10 @@ namespace HFM
 
         [Command("Returns the names of the Extended Analytics DSNs that are registered on the server")]
         public string[] EnumDSNs(
-                [Parameter("The name of the cluster or server whose applications are to be returned")]
-                string clusterName,
                 IOutput output)
         {
             string[] dsns = null;
 
-            SetCluster(clusterName);
             HFM.Try("Retrieving names of DSNs",
                     () => dsns = _hsxServer.EnumRegisteredDSNs() as string[]);
 
@@ -103,13 +91,10 @@ namespace HFM
 
         [Command("Returns the path to the HFM system folder on the server")]
         public string GetSystemFolder(
-                [Parameter("The name of the cluster or server whose applications are to be returned")]
-                string clusterName,
                 IOutput output)
         {
             string folder = null;
 
-            SetCluster(clusterName);
             HFM.Try("Retrieving system folder",
                     () => folder = _hsxServer.GetSystemFolder());
             output.WriteSingleValue(folder, "System Folder");
@@ -119,18 +104,16 @@ namespace HFM
 
         [Command("Determines whether the specified application is a classic or EPMA application")]
         public bool IsClassicHFMApplication(
-                [Parameter("The name of the cluster on which the application exists")]
-                string clusterName,
                 [Parameter("The name of the application")]
                 string appName,
                 IOutput output)
         {
             bool isClassic = true;
-            SetCluster(clusterName);
+
             HFM.Try("Checking application",
                     () => isClassic = ((IHsxServerInternal)_hsxServer).IsClassicHFMApplication(appName));
-            output.SetHeader("Cluster", "Application", "Type", 10);
-            output.WriteSingleRecord(clusterName, appName, isClassic ? "Classic" : "EPMA");
+            output.SetHeader("Application", "Type", 10);
+            output.WriteSingleRecord(appName, isClassic ? "Classic" : "EPMA");
             return isClassic;
         }
 
