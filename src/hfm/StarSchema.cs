@@ -184,7 +184,7 @@ namespace HFM
                 EStarSchemaExtractType extractType,
                 [Parameter("Whether to include dynamic accounts",
                            DefaultValue = false)]
-                bool includeDynamicAccts,
+                bool includeDynamicAccounts,
                 [Parameter("Whether to include calculated data",
                            DefaultValue = true, Since = "11.1.1")]
                 bool includeCalculatedData,
@@ -198,7 +198,7 @@ namespace HFM
                 IOutput output)
         {
             DoEAExtract(DSN, tablePrefix, (SS_PUSH_OPTIONS)(deleteExisting ? EPushType.Create : EPushType.Update),
-                        (EA_EXTRACT_TYPE_FLAGS)extractType, includeDynamicAccts, includeCalculatedData,
+                        (EA_EXTRACT_TYPE_FLAGS)extractType, includeDynamicAccounts, includeCalculatedData,
                         includeDerivedData, false, false, (EA_LINEITEM_OPTIONS)ELineItems.Summary, "",
                         logFile, slice, output);
         }
@@ -219,7 +219,7 @@ namespace HFM
                 bool decompress,
                 [Parameter("Whether to include dynamic accounts",
                            DefaultValue = false)]
-                bool includeDynamicAccts,
+                bool includeDynamicAccounts,
                 [Parameter("Whether to include calculated data",
                            DefaultValue = true)]
                 bool includeCalculatedData,
@@ -242,7 +242,7 @@ namespace HFM
             int taskId = DoEAExtract("", "EA_FILE", (SS_PUSH_OPTIONS)EPushType.Create,
                             (EA_EXTRACT_TYPE_FLAGS)(includeHeader ? EFileExtractType.FlatFile :
                                                                     EFileExtractType.FlatFileNoHeader),
-                            includeDynamicAccts, includeCalculatedData, includeDerivedData,
+                            includeDynamicAccounts, includeCalculatedData, includeDerivedData,
                             false, false, (EA_LINEITEM_OPTIONS)lineItems, delimiter, logFile, slice,
                             output);
 
@@ -270,9 +270,103 @@ namespace HFM
         {
             object oNames = null;
             HFM.Try("Retrieving EA templates",
-                    () => oNames = (string[])HsvStarSchemaTemplates.EnumTemplates());
+                    () => oNames = HsvStarSchemaTemplates.EnumTemplates());
             var names = HFM.Object2Array<string>(oNames);
             output.WriteEnumerable(names, "Template Name");
+        }
+
+
+        [Command("Creates an Extended Analytics extract template for a relational database target" +
+                 "on the HFM server for the logged in user")]
+        public void CreateStarSchemaDataExtractTemplate(
+                [Parameter("The name to give to the template")]
+                string templateName,
+                [Parameter("The name of the DSN that contains the connection details for the " +
+                           "database where the star schema extract is to be created. This DSN " +
+                           "must exist on the HFM server, and have been registered via the " +
+                           "HFM Configuration utility.")]
+                string DSN,
+                [Parameter("The prefix that should appear at the start of each table name created " +
+                           "by the extract process.")]
+                string tablePrefix,
+                [Parameter("Whether to delete any existing data before performing the extract",
+                           DefaultValue = true)]
+                bool deleteExisting,
+                [Parameter("The type of star schema to produce.")]
+                EStarSchemaExtractType extractType,
+                [Parameter("Whether to include dynamic accounts",
+                           DefaultValue = false)]
+                bool includeDynamicAccounts,
+                [Parameter("Whether to include calculated data",
+                           DefaultValue = true)]
+                bool includeCalculatedData,
+                [Parameter("Whether to include derived data",
+                           DefaultValue = true)]
+                bool includeDerivedData,
+                [Parameter("Level of detail to be extracted for line item detail accounts",
+                           DefaultValue = ELineItems.Summary)]
+                ELineItems lineItems,
+                [Parameter("The field delimiter to use",
+                           DefaultValue = ";")]
+                string delimiter,
+                ExtractSpecification slice)
+        {
+            // TODO: Complete this
+            StringBuilder sb = new StringBuilder();
+            sb.Append("<povTemplate><povEA>");
+            sb.Append(slice);
+            sb.Append("</povEA><options><tablePrefix>");
+            //sb.Append(spec.TablePrefix);
+            sb.Append("</tablePrefix><exportOption>");
+            //sb.Append((int)spec.ExtractType);
+            sb.Append("</exportOption><selectedDSN>");
+            //sb.Append(spec.DataSource);
+            sb.Append("</selectedDSN><excludeDynAccts>");
+            sb.Append(includeDynamicAccounts ? 0 : -1);
+            sb.Append("</excludeDynAccts></options></povTemplate>");
+
+            HFM.Try("Creating star schema template {0}", templateName,
+                    () => HsvStarSchemaTemplates.SetTemplate(templateName, sb.ToString(), true));
+        }
+
+
+        [Command("Creates an Extended Analytics extract template on the HFM server for the logged in user")]
+        public void CreateFlatFileDataExtractTemplate(
+                [Parameter("The name to give to the template")]
+                string templateName,
+                [Parameter("Whether to include dynamic accounts",
+                           DefaultValue = false)]
+                bool includeDynamicAccounts,
+                [Parameter("Whether to include calculated data",
+                           DefaultValue = true)]
+                bool includeCalculatedData,
+                [Parameter("Whether to include derived data",
+                           DefaultValue = true)]
+                bool includeDerivedData,
+                [Parameter("Level of detail to be extracted for line item detail accounts",
+                           DefaultValue = ELineItems.Summary)]
+                ELineItems lineItems,
+                [Parameter("The field delimiter to use",
+                           DefaultValue = ";")]
+                string delimiter,
+                ExtractSpecification slice)
+        {
+            // TODO: Complete this
+            StringBuilder sb = new StringBuilder();
+            sb.Append("<povTemplate><povEA>");
+            sb.Append(slice);
+            sb.Append("</povEA><options><tablePrefix>");
+            //sb.Append(spec.TablePrefix);
+            sb.Append("</tablePrefix><exportOption>");
+            //sb.Append((int)spec.ExtractType);
+            sb.Append("</exportOption><selectedDSN>");
+            //sb.Append(spec.DataSource);
+            sb.Append("</selectedDSN><excludeDynAccts>");
+            sb.Append(includeDynamicAccounts ? 0 : -1);
+            sb.Append("</excludeDynAccts></options></povTemplate>");
+
+            HFM.Try("Creating star schema template {0}", templateName,
+                    () => HsvStarSchemaTemplates.SetTemplate(templateName, sb.ToString(), true));
         }
 
 

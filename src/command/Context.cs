@@ -464,7 +464,7 @@ namespace Command
                 sb.AppendLine();
                 sb.Append("          ");
                 sb.Append(char.ToUpper(name[0]));
-                sb.AppendFormat("{0,-18}", name.Substring(1));
+                sb.AppendFormat("{0,-24}", name.Substring(1));
                 sb.Append(": ");
                 if(val.GetType().IsArray) {
                     sb.Append(string.Join(", ", ((object[])val).Select(o => o.ToString()).ToArray()));
