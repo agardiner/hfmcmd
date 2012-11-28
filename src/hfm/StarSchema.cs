@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text;
 
 using log4net;
 using HSVSESSIONLib;
@@ -206,11 +207,16 @@ namespace HFM
         [Command("Extracts HFM data to a flat file",
                  Since = "11.1.1")]
         public void ExtractDataToFlatFile(
-                [Parameter("The file name prefix")]
-                string filePrefix,
+                [Parameter("The path to the extract file to be created")]
+                string extractFile,
                 [Parameter("Include file header containing extract details",
                            DefaultValue = false)]
                 bool includeHeader,
+                [Parameter("Flag specifying whether extract file should be decompressed; " +
+                           "extracts are generated in GZip (.gz) format, so compressed files " +
+                           "are faster to create and smaller in size",
+                           DefaultValue = true)]
+                bool decompress,
                 [Parameter("Whether to include dynamic accounts",
                            DefaultValue = false)]
                 bool includeDynamicAccts,
@@ -230,9 +236,10 @@ namespace HFM
                            "if omitted, no log file is created.", DefaultValue = null)]
                 string logFile,
                 ExtractSpecification slice,
-                IOutput output)
+                IOutput output,
+                Client client)
         {
-            int taskId = DoEAExtract("", filePrefix, (SS_PUSH_OPTIONS)EPushType.Create,
+            int taskId = DoEAExtract("", "EA_FILE", (SS_PUSH_OPTIONS)EPushType.Create,
                             (EA_EXTRACT_TYPE_FLAGS)(includeHeader ? EFileExtractType.FlatFile :
                                                                     EFileExtractType.FlatFileNoHeader),
                             includeDynamicAccts, includeCalculatedData, includeDerivedData,
@@ -245,10 +252,16 @@ namespace HFM
                     () => Session.SystemInfo.HsvSystemInfo.GetRunningTaskLogFilePathName(taskId, out path));
             _log.DebugFormat("Path: {0}", path);
 
-            // Returns a string such as the following:
-            // C:\Oracle\Middleware\;EPMSystem11R1\logs\hfm\IFRST_20121126_235543_7024.log;user_projects\epmsystem1\products\FinancialManagement\Server Working Folder\EPM-11-1-2-2_WorkingData_IFRS\IFRST_20121126_235543_7024.dat.gz
+            // Returns a string containing 3 parts, separated by semi-colons:
+            // - the root directory where Oracle middleware is installed
+            // - the path relative to that root where the log file is located
+            // - the path relative to that root where the data file is located
+            var parts = path.Split(';');
+            var serverFile = Path.Combine(parts[0], parts[2]);
 
-            // TODO: Download the extract file
+            // Download the extract file
+            var ft = Session.Server.FileTransfer;
+            ft.RetrieveFile(serverFile, extractFile, decompress, output);
         }
 
 
@@ -340,7 +353,7 @@ namespace HFM
             Session.Security.CheckPermissionFor(ETask.ExtendedAnalytics);
 
             // Perform the EA extract
-            _log.InfoFormat("Extracting data to {0}", slice);
+            _log.InfoFormat("Extracting data for {0}", slice);
             try {
                 if(HFM.HasVariableCustoms) {
                     HFM.Try(() => HsvStarSchemaACM.CreateStarSchemaExtDim(dsn, prefix, pushType,
@@ -401,7 +414,7 @@ namespace HFM
                         case EEATaskStatus.Cancelled:
                             break;
                         default:
-                            _log.InfoFormat("Extract Status: {0} complete", taskStatus);
+                            _log.InfoFormat("Extract Status: {0} complete", lastTaskStatus);
                             output.Operation = taskStatus.ToString();
                             break;
                     }
