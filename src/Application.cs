@@ -98,6 +98,7 @@ namespace HFMCmd
             _context = new Context(_commands, PromptForMissingArg);
             _context.Set(this);
             _context.Set(_console);
+            _context.Verify();
 
             SetupCommandLine();
             rc = ProcessCommandLine();

@@ -123,6 +123,28 @@ namespace Command
 
 
         /// <summary>
+        /// Verifies that all commands can be invoked successfully.
+        /// </summary>
+        public void Verify()
+        {
+            foreach(var cmd in _registry.EachCommand()) {
+                _log.TraceFormat("Validating command {0}", cmd.Name);
+                foreach(var parm in cmd.Parameters) {
+                    _log.TraceFormat("Validating command {0}", cmd.Name);
+                    if(!parm.HasParameterAttribute) {
+                        // Check that a factory exists for the param type
+                        if(!HasObject(parm.ParameterType) && !parm.IsSettingsCollection &&
+                           !_registry.Contains(parm.ParameterType)) {
+                            _log.ErrorFormat("No factory is registered for type {0} (used in the {1} command parameter {2})",
+                                    parm.ParameterType, cmd.Name, parm.Name);
+                        }
+                    }
+                }
+            }
+        }
+
+
+        /// <summary>
         /// Sets an object in the context. Only a single object of a given type
         /// is permitted, so any existing object of this type is replaced.
         /// </summary>
