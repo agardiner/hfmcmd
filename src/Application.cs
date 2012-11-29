@@ -14,6 +14,7 @@ using log4net.Repository.Hierarchy;
 
 using Command;
 using CommandLine;
+using Encryption;
 
 
 namespace HFMCmd
@@ -269,6 +270,7 @@ namespace HFMCmd
             try {
                 var args = _cmdLine.Parse(Environment.GetCommandLineArgs());
                 if(args != null) {
+                    DecryptValues(args);
                     string cmdOrFile = args["CommandOrFile"] as string;
                     bool ok;
                     if(_commands.Contains(cmdOrFile)) {
@@ -288,6 +290,34 @@ namespace HFMCmd
                 rc = 99;
             }
             return rc;
+        }
+
+
+        private void DecryptValues(Dictionary<string, object> args)
+        {
+            var keys = args.Keys.ToArray();
+            foreach(var key in keys) {
+                var val = args[key] as string;
+                if(val != null && val.StartsWith("!")) {
+                    args[key] = DecryptValue(val);
+                }
+            }
+        }
+
+
+        public string DecryptValue(string cipherText)
+        {
+            string plainText;
+            if(cipherText.StartsWith("!AES")) {
+                plainText = AES.Decrypt(cipherText.Substring(4).Replace('!', '='));
+            }
+            else if(cipherText.StartsWith("!WPD")) {
+                plainText = WindowsProtectedData.Decrypt(cipherText.Substring(4).Replace('!', '='));
+            }
+            else {
+                plainText = cipherText;
+            }
+            return plainText;
         }
 
 
@@ -317,6 +347,7 @@ namespace HFMCmd
             foreach(var cmdNode in root) {
                 if(_commands.Contains(cmdNode.Key)) {
                     var cmdArgs = cmdNode.ToDictionary();
+                    DecryptValues(cmdArgs);
                     ok = ok && InvokeCommand(cmdNode.Key, cmdArgs);
                 }
                 else {
@@ -443,6 +474,58 @@ namespace HFMCmd
                 //_context.Set(new LogOutput());
             }
         }
+
+
+        [Command("Encrypts the supplied value using either 256-bit AES encryption or " +
+                 "Windows Protected Data. " +
+                 "AES is a highly secure symmetric cipher approved by the NSA, but it " +
+                 "requires the use of an encryption key (in addition to the plain or " +
+                 "encrypted text) for both encryption and decryption. A random encryption " +
+                 "key will therefore be generated and saved to a file the first time this " +
+                 "command is used to generate an AES encrypted value. This encryption key " +
+                 "can be copied to other machines if the same encrypted password needs to " +
+                 "be used on multiple machines." +
+                 "Windows Protected Data is also highly secure, but uses a secret encryption " +
+                 "key specific to a single machine. This means the encrypted password is not " +
+                 "portable; it can only be decrypted on the same machine where it was encrypted. " +
+                 "For maximum security, use non-portable Windows Protected Data, or use AES but " +
+                 "do NOT store the encrypted password on the same machine as the encryption key.")]
+        public void EncryptPassword(
+                [Parameter("The value to be encrypted",
+                           IsSensitive = true, Uda = "PositionalArg")]
+                string plainText,
+                [Parameter("Flag indicating whether encrypted password should be decryptable " +
+                           "on other machines. Set to true if you want to be able to use the same " +
+                           "encrypted password on multiple machines, or false if the encrypted " +
+                           "value will only be used on this machine.",
+                           DefaultValue = false)]
+                bool portable)
+        {
+            string cipherText;
+            if(portable) {
+                cipherText = "!AES" + AES.Encrypt(plainText).Replace('=', '!');
+                _log.InfoFormat("If you intend to use the same encrypted password on other machines, " +
+                          "you must also copy the encryption key file {0} to the {1} directory on " +
+                          "each machine.", AES.EncryptionKeyFile, ApplicationInfo.ExeName);
+            }
+            else {
+                cipherText = "!WPD" + WindowsProtectedData.Encrypt(plainText).Replace('=', '!');
+            }
+            _log.InfoFormat("Encrypted value: {0}", cipherText);
+        }
+
+
+#if DebugEncryption
+        [Command("Decrypts the supplied value")]
+        public void DecryptPassword(
+                [Parameter("The value to be decrypted",
+                           Uda = "PositionalArg")]
+                string cipherText)
+        {
+            string plainText = DecryptValue(cipherText);
+            _log.InfoFormat("Decrypted value: {0}", plainText);
+        }
+#endif
 
     }
 
