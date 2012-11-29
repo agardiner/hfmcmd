@@ -47,11 +47,10 @@ namespace Encryption
 
 
     /// <summary>
-    /// Utility class that handles encryption using the AES cipher (aka
-    /// Rijndael). This provide maximum security of the encrypted data,
-    /// provided the password is not stored no the same machine as this code
-    /// (since a knowledgable and determined hacker could break the "hidden"
-    /// password used to encrypt with by reverse-engineering the code.
+    /// Encrypts data using teh 256-bit AES cipher (aka Rijndael).
+    /// This cipher algorithm provides both portability and strong security of
+    /// the encrypted data, provided the password is not stored on the same
+    /// machine as the encryption key.
     /// </summary>
     public static class AES
     {
@@ -98,6 +97,9 @@ namespace Encryption
                         // retrieve it later when decrypting. (The IV is used to
                         // randomize the encryption process, so that the same password
                         // encrypted twice generates a different cipher text each time).
+                        // As it is only used for randomisation on encryption, it does
+                        // not matter that it can be extracted easily from the cipher
+                        // text; without the encryption key, the IV is useless.
                         ms.Write(ivBytes, 0, aes.IV.Length);
                         cs.Write(plainTextBytes, 0, plainTextBytes.Length);
                         cs.FlushFinalBlock();
@@ -165,8 +167,9 @@ namespace Encryption
         }
 
 
-        // Generates a byte array containing the encryption key to use for
-        // encryption and decryption.
+        // Generates a new random byte array to use as the encryption key for
+        // encryption and decryption. This is a much more secure approach than
+        // embedding a "secret" password in the source code.
         private static byte[] GenerateEncryptionKey()
         {
             var aes = new RijndaelManaged();

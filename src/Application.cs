@@ -503,6 +503,10 @@ namespace HFMCmd
         {
             string cipherText;
             if(portable) {
+                // We replace the = from the base-64 encoded value with !, since
+                // the appearance of = can cause a problem on command lines (where
+                // it looks like a variable assignment). As ! is not part of the
+                // base-64 encoding, it won't appear anywhere else.
                 cipherText = "!AES" + AES.Encrypt(plainText).Replace('=', '!');
                 _log.InfoFormat("If you intend to use the same encrypted password on other machines, " +
                           "you must also copy the encryption key file {0} to the {1} directory on " +
