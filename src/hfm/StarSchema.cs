@@ -261,7 +261,7 @@ namespace HFM
 
             // Download the extract file
             var ft = Session.Server.FileTransfer;
-            ft.RetrieveFile(serverFile, extractFile, decompress, output);
+            ft.RetrieveFile(Session, serverFile, extractFile, decompress, output);
         }
 
 

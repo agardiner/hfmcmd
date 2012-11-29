@@ -1,5 +1,5 @@
 # Define constants for file locations etc
-HFM_LIB = 'lib/hfm-11.1.2.2'
+HFM_LIB         = 'lib/hfm-11.1.2.2'
 LOG4NET35_LIB   = 'lib\log4net-1.2.11\bin\net\3.5\release'
 LOG4NET40_LIB   = 'lib\log4net-1.2.11\bin\net\4.0\release'
 FRAMEWORK35_DIR = 'C:\WINDOWS\Microsoft.NET\Framework\v3.5'
@@ -73,6 +73,7 @@ def compile(version)
   s = settings_for_version(version)
   options = "/nologo /target:exe /main:HFMCmd.Launcher /out:#{s[:exe]} /debug /optimize+"
   log4net_ref = "/lib:#{s[:log4net]} /reference:log4net.dll"
+  fso_ref = "/lib:lib /reference:Interop.SCRIPTINGLib.dll"
   hfm = ["/lib:#{HFM_LIB}"]
   FileList["#{HFM_LIB}/*.dll"].each do |dll|
     hfm << "#{s[:hfm_ref]}:#{File.basename(dll)}"
@@ -80,7 +81,7 @@ def compile(version)
   resources = FileList['gen/*.resources'].map{ |f| "/resource:#{f.gsub('/', '\\')}" }
   source = "src\\*.cs src\\command\\*.cs src\\commandline\\*.cs src\\yaml\\*.cs src\\hfm\\*.cs gen\\*.cs"
 
-  "#{s[:dotnet]}\\csc.exe #{options} #{log4net_ref} #{hfm.join(' ')} #{resources.join(' ')} #{source}"
+  "#{s[:dotnet]}\\csc.exe #{options} #{log4net_ref} #{fso_ref} #{hfm.join(' ')} #{resources.join(' ')} #{source}"
 end
 
 
@@ -90,7 +91,7 @@ def bundle(version)
   s = settings_for_version(version)
   tgt = version == "3.5" ? '' : "/targetplatform:#{s[:ilmerge]},#{s[:dotnet]}"
 
-  "tools\\ILMerge\\ILMerge.exe #{tgt} /wildcards /lib:#{s[:dotnet]} /out:#{s[:bundle]} #{s[:exe]} #{s[:hfm_ref] == '/link' ? '' : "#{HFM_LIB}\\*.dll"} #{s[:log4net]}\\log4net.dll"
+  "tools\\ILMerge\\ILMerge.exe #{tgt} /wildcards /lib:#{s[:dotnet]} /out:#{s[:bundle]} #{s[:exe]} #{s[:hfm_ref] == '/link' ? '' : "#{HFM_LIB}\\*.dll"} #{s[:log4net]}\\log4net.dll lib\\Interop.SCRIPTINGLib.dll"
 end
 
 
