@@ -66,23 +66,24 @@ where it is to run.
 ## Running HFMCmd
 
 HFMCmd supports two modes of operation:
-1. A single command can be entered on the command-line, along with
-   all of the options it requires as keyword arguments, e.g.
 
-   ''''
+1.  A single command can be entered on the command-line, along with
+    all of the options it requires as keyword arguments, e.g.
+
+    ```
       HFMCmd.exe Consolidate UserName:admin Password:password ClusterName:PROD
           AppName:IFRS Scenario:Actual Year:2008 Periods:May-July Entity:GROUP
-   ''''
+    ```
 
-2. Commands can be read from a command-file, e.g.
+2.  Commands can be read from a command-file, e.g.
 
-   ''''
+    ```
       HFMCmd.exe consolidate.hfm
-   ''''
+    ```
 
-   Contents of consolidate.hfm:
+    Contents of consolidate.hfm:
 
-   ''''yaml
+    ```yaml
       SetLogonInfo:
         UserName: admin
         Password: password
@@ -96,7 +97,7 @@ HFMCmd supports two modes of operation:
         Year: 2008
         Periods: May-July
         Entity: GROUP
-   ''''
+    ```
 
 
 ## Supported Versions of HFM
