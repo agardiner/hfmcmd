@@ -11,6 +11,7 @@
   phased submission groups.
 
 
-[0.3.0] Extended Analytics Support                                  ??-???-2012
+[0.3.0] Extended Analytics Support                                  30-Nov-2012
 - Implementation of relational and flat file data extracts using Extended
   Analytics.
+- Support for encrypted passwords.
