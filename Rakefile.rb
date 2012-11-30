@@ -7,6 +7,7 @@ FRAMEWORK40_DIR = 'C:\WINDOWS\Microsoft.NET\Framework\v4.0.30319'
 
 BUILD_DIR       = 'gen'
 RELEASE_DIR     = 'bin'
+PACKAGE_DIR     = 'package'
 
 BUILD35_DIR     = "#{BUILD_DIR}/3.5"
 RELEASE35_DIR   = "#{RELEASE_DIR}/3.5"
@@ -21,6 +22,8 @@ HFMCMD40_BUNDLE = "#{RELEASE40_DIR}/HFMCmd.exe"
 RESOURCES       = FileList['resources/*.resx']
 PROPERTIES      = FileList['properties/*']
 SOURCE_FILES    = FileList['src/**/*.cs']
+
+PACKAGE_FILES  = ['README.md', 'LICENSE', 'HISTORY']
 
 
 def settings_for_version(version)
@@ -63,6 +66,20 @@ def increment_build
 end
 
 
+def get_version
+  f = File.new('properties\AssemblyInfo.cs.erb', 'r')
+  begin
+    f.each_line do |line|
+      if line =~ /AssemblyVersion\("(\d+\.\d+\.\d+)/
+        return $1
+      end
+    end
+  ensure
+    f.close
+  end
+end
+
+
 def compile_resource(source)
   name = File.basename(source, '.resx')
   "tools\\ResGen.exe #{source} gen\\HFMCmd.Resource.#{name}.resources /str:cs,HFMCmd.Resource,#{name},gen\\#{name}Resource.cs"
@@ -94,6 +111,13 @@ def bundle(version)
   "tools\\ILMerge\\ILMerge.exe #{tgt} /wildcards /lib:#{s[:dotnet]} /out:#{s[:bundle]} #{s[:exe]} #{s[:hfm_ref] == '/link' ? '' : "#{HFM_LIB}\\*.dll"} #{s[:log4net]}\\log4net.dll lib\\Interop.SCRIPTINGLib.dll"
 end
 
+
+# Creates a zip file archive containing HFMCmd.exe and the README, LICENSE, and
+# HISTORY documents
+def package(package_name, *files)
+  file_list = files.flatten.map { |f| %Q{"#{Dir.pwd}/#{f}"} }.join(' ')
+  "tools\\7za.exe a #{PACKAGE_DIR}/#{package_name}.zip #{file_list}"
+end
 
 # ---------
 
@@ -152,6 +176,11 @@ namespace :dotnet35 do
   desc "Compile and package HFMCmd using the .NET 3.5 framework"
   task :build => HFMCMD35_BUNDLE
 
+  desc "Create a download package for the .NET 3.5 framework"
+  task :package => :build do
+    ver = get_version
+    sh package "HFMCmd_#{ver}_for_.NET_3.5", HFMCMD35_BUNDLE, PACKAGE_FILES
+  end
 end
 
 
@@ -178,6 +207,11 @@ namespace :dotnet40 do
   desc "Compile and package HFMCmd using the .NET 4.0 framework"
   task :build => HFMCMD40_BUNDLE
 
+  desc "Create a download package for the .NET 4.0 framework"
+  task :package => :build do
+    ver = get_version
+    sh package "HFMCmd_#{ver}_for_.NET_4.0", HFMCMD40_BUNDLE, PACKAGE_FILES
+  end
 end
 
 
@@ -206,3 +240,4 @@ end
 
 task :default => 'dotnet35:build'
 task :build => [:set_build, 'dotnet35:build', 'dotnet40:build']
+task :package => [:build, 'dotnet35:package', 'dotnet40:package']
