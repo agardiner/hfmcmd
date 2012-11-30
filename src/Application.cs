@@ -344,7 +344,6 @@ namespace HFMCmd
             _log.InfoFormat("Processing command file {0}", fileName);
             YAML.Parser parser = new YAML.Parser();
             YAML.Node root = parser.ParseFile(fileName, args);
-            Console.WriteLine(root);
             foreach(var cmdNode in root) {
                 if(_commands.Contains(cmdNode.Key)) {
                     var cmdArgs = cmdNode.ToDictionary();

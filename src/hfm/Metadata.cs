@@ -1295,6 +1295,11 @@ namespace HFM
         {
             get {
                 _metadata.CheckDimId(dimId);
+                if(_members[dimId] == null) {
+                    throw new IncompleteSliceDefinition(string.Format(
+                                "No member has been specified for the {0} dimension",
+                                _metadata[dimId].Name));
+                }
                 return _members[dimId];
             }
             set {
@@ -1499,11 +1504,7 @@ namespace HFM
                     return _pov;
                 }
                 int id = _metadata.GetDimensionId(ref dimension);
-                if(_memberLists[id] == null) {
-                    throw new IncompleteSliceDefinition(string.Format(
-                                "No members have been specified for the {0} dimension", dimension));
-                }
-                return _memberLists[id];
+                return this[id];
             }
             set {
                 if(dimension == "POV") {
@@ -1522,6 +1523,11 @@ namespace HFM
         {
             get {
                 _metadata.CheckDimId(dimId);
+                if(_memberLists[dimId] == null) {
+                    throw new IncompleteSliceDefinition(string.Format(
+                                "No members have been specified for the {0} dimension",
+                                _metadata[dimId].Name));
+                }
                 return _memberLists[dimId];
             }
             set {
@@ -1539,6 +1545,9 @@ namespace HFM
                 }
                 else if(value is string) {
                     _memberLists[dimId] = new MemberList(_metadata[dimId], value as string);
+                }
+                else if(value is string[]) {
+                    _memberLists[dimId] = new MemberList(_metadata[dimId], value as string[]);
                 }
                 else {
                     throw new ArgumentException(string.Format("Invalid type for Slice dimension {0}",
@@ -1640,6 +1649,8 @@ namespace HFM
         }
         /// Returns an array of all cells in the slice
         public POV[] POVs { get { return GeneratePOVs(); } }
+        /// Returns an array of all combinations of cells for specified dimensions in the slice
+        public POV[] Combos { get { return GenerateAvailableCombos(); } }
         /// Converts this Slice to an HfmSliceCOM object
         public HfmSliceCOM HfmSliceCOM
         {
@@ -1782,6 +1793,16 @@ namespace HFM
                 this["View"] = "<Scenario View>";
             }
             return GenerateCombos(_memberLists);
+        }
+
+
+        // Returns an array of POV objects representing each cell combination for
+        // the dimensions currently specified
+        protected POV[] GenerateAvailableCombos()
+        {
+            _log.Trace("Generating POV array for specified dimensions");
+            var mbrLists = _memberLists.Where(ml => ml != null).ToArray();
+            return GenerateCombos(mbrLists);
         }
 
 

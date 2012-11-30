@@ -161,7 +161,7 @@ namespace HFM
             slice[EDimension.Entity] = entities;
 
             // Calculate number of iterations, and measure progress
-            var POVs = slice.POVs;
+            var POVs = slice.Combos;
             output.InitProgress("Consolidating", POVs.Length);
             foreach(var pov in POVs) {
                 if(CommandLine.UI.Interrupted) {
@@ -197,7 +197,7 @@ namespace HFM
             slice[EDimension.Period] = periods;
 
             // Calculate number of iterations, and measure progress
-            var POVs = slice.POVs;
+            var POVs = slice.Combos;
             output.InitProgress("Equity Pick-Up", POVs.Length);
             foreach(var pov in POVs) {
                 _log.FineFormat("Equity Pick-Up for {0}", pov);
@@ -224,7 +224,7 @@ namespace HFM
             slice[EDimension.Value] = values;
 
             // Calculate number of iterations, and measure progress
-            var POVs = slice.POVs;
+            var POVs = slice.Combos;
             output.InitProgress(op, POVs.Length);
             foreach(var pov in POVs) {
                 _log.FineFormat("{0} {1}", op, pov);
@@ -241,8 +241,7 @@ namespace HFM
         /// the POV
         internal void CalculatePOV(POV pov, bool force)
         {
-            _log.FineFormat("Calculating {0}", pov.ToString(EDimension.Scenario, EDimension.Year,
-                            EDimension.Period, EDimension.Entity, EDimension.Value));
+            _log.FineFormat("Calculating {0}", pov);
             HFM.Try(() => _hsvCalculate.ChartLogic(pov.Scenario.Id, pov.Year.Id, pov.Period.Id,
                                                    pov.Entity.Id, pov.Entity.ParentId, pov.Value.Id,
                                                    force));
@@ -255,8 +254,7 @@ namespace HFM
         {
             var si = _session.SystemInfo;
 
-            _log.FineFormat("Consolidating {0}", pov.ToString(EDimension.Scenario, EDimension.Year,
-                            EDimension.Period, EDimension.Entity));
+            _log.FineFormat("Consolidating {0}", pov);
             si.MonitorBlockingTask(output);
             HFM.Try(() => _hsvCalculate.Consolidate(pov.Scenario.Id, pov.Year.Id, pov.Period.Id,
                                                     pov.Entity.Id, pov.Entity.ParentId,
