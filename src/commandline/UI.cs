@@ -61,6 +61,24 @@ namespace CommandLine
         /// </summary>
         public static bool Interrupted = false;
 
+        /// <summary>
+        /// Returns true if escape has been pressed.
+        /// </summary>
+        public static bool EscPressed
+        {
+            get {
+                bool esc = false;
+
+                if(System.Console.KeyAvailable) {
+                    var keyInfo = System.Console.ReadKey();
+                    if(keyInfo.Key == System.ConsoleKey.Escape) {
+                        esc = true;
+                    }
+                }
+                return esc;
+            }
+        }
+
 
         /// <summary>
         /// This method registers this class as a handler for Ctrl-C etc events
@@ -336,23 +354,6 @@ namespace CommandLine
                 System.Console.Write(buf);
                 System.Console.CursorLeft = 0;
             }
-        }
-
-
-        /// <summary>
-        /// Returns true if escape has been pressed.
-        /// </summary>
-        public bool EscPressed()
-        {
-            bool esc = false;
-
-            if(System.Console.KeyAvailable) {
-                var keyInfo = System.Console.ReadKey();
-                if(keyInfo.Key == System.ConsoleKey.Escape) {
-                    esc = true;
-                }
-            }
-            return esc;
         }
 
 

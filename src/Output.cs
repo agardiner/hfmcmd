@@ -247,7 +247,7 @@ namespace HFMCmd
         /// </summary>
         public static bool ShouldCancel()
         {
-            return CommandLine.UI.Interrupted;
+            return CommandLine.UI.Interrupted || CommandLine.UI.EscPressed;
         }
     }
 
@@ -450,6 +450,9 @@ namespace HFMCmd
 
         public virtual void EndProgress()
         {
+            if(_cancelled) {
+                WriteLine("{0} cancelled", Operation);
+            }
             Operation = null;
         }
 
