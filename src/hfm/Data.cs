@@ -180,9 +180,11 @@ namespace HFM
         internal int GetCalcStatus(POV pov)
         {
             int status = 0;
+            int valueId = pov.IsSpecified(EDimension.Value) ? pov.Value.Id :
+                                                              pov.Entity.DefaultCurrencyId;
             HFM.Try("Retrieving calc status",
                     () => _hsvData.GetCalcStatus(pov.Scenario.Id, pov.Year.Id, pov.Period.Id,
-                                                 pov.Entity.Id, pov.Entity.ParentId, pov.Value.Id,
+                                                 pov.Entity.Id, pov.Entity.ParentId, valueId,
                                                  out status));
             return status;
         }

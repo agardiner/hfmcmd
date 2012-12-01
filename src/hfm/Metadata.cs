@@ -1328,8 +1328,8 @@ namespace HFM
             set { this[EDimension.View] = value; }
         }
         /// Returns the member of the Entity dimension
-        public Member Entity {
-            get { return this[EDimension.Entity]; }
+        public Entity Entity {
+            get { return (Entity)this[EDimension.Entity]; }
             set { this[EDimension.Entity] = value; }
         }
         /// Returns the member of the Value dimension
@@ -1418,6 +1418,19 @@ namespace HFM
         }
 
 
+        // Returns true if a member has been set for the specified dimension
+        public bool IsSpecified(EDimension dim) {
+            return IsSpecified((int)dim);
+        }
+
+
+        // Returns true if a member has been set for the specified dimension
+        public bool IsSpecified(int dimId) {
+            _metadata.CheckDimId(dimId);
+            return _members[dimId] != null && _members[dimId].Id != Member.NOT_USED;
+        }
+
+
         public POV Copy() {
             var pov = new POV(_metadata);
             Array.Copy(_members, pov._members, _members.Length);
@@ -1440,7 +1453,7 @@ namespace HFM
         {
             var sb = new StringBuilder();
             foreach(int id in dimensions) {
-                if(this[id] == null || this[id].Id == Member.NOT_USED) { continue; }
+                if(!IsSpecified(id)) { continue; }
                 if(_metadata.DimensionNames[id] == "View") {
                     sb.Append('W');
                 }
@@ -1862,7 +1875,7 @@ namespace HFM
         {
             var sb = new StringBuilder();
             foreach(int id in dimensions) {
-                if(MemberList(id) == null) { continue; }
+                if(!IsSpecified(id)) { continue; }
                 if(_metadata.DimensionNames[id] == "View") {
                     sb.Append('W');
                 }
