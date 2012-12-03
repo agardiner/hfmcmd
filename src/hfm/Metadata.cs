@@ -73,6 +73,8 @@ namespace HFM
         protected readonly HsvMetadata _hsvMetadata;
         // True if the app supports phased submission groups
         protected bool? _usesPhasedSubmissions;
+        // True if the current version of HFM accesses dimensions via properties
+        protected bool? _usesDimensionProperties;
         // Cache of custom dimension ids
         protected int[] _customDimIds;
         // Cache of custom dimension names
@@ -171,6 +173,16 @@ namespace HFM
                 return _customDimAliases;
             }
         }
+        // Returns true if dimension objects should be retrieved via property
+        protected bool UsesDimensionProperties
+        {
+            get {
+                if(_usesDimensionProperties == null) {
+                    _usesDimensionProperties = HFM.Version < new Version("11.1.2");
+                }
+                return (bool)_usesDimensionProperties;
+            }
+        }
         /// Returns a Dimension object for the specified dimension
         public Dimension this[string dimName]
         {
@@ -194,8 +206,14 @@ namespace HFM
                 if(_dimensions[dimId] == null) {
                     string dimName = DimensionNames[dimId];
                     IHsvTreeInfo dim = null;
-                    HFM.Try("Retrieving dimension {0}", dimName,
-                            () => dim = (IHsvTreeInfo)_hsvMetadata.GetDimension(dimId));
+                    if(UsesDimensionProperties) {
+                        HFM.Try("Retrieving dimension {0}", dimName,
+                                () => dim = (IHsvTreeInfo)_hsvMetadata.get_Dimension((short)dimId));
+                    }
+                    else {
+                        HFM.Try("Retrieving dimension {0}", dimName,
+                                () => dim = (IHsvTreeInfo)_hsvMetadata.GetDimension(dimId));
+                    }
                     _dimensions[dimId] = new Dimension(dimName, dimId, this, dim);
                 }
                 return _dimensions[dimId];
