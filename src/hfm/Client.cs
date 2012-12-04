@@ -277,7 +277,8 @@ namespace HFM
         /// Opens the named application, and returns a Session object for
         /// interacting with it.
         [Factory,
-         Command("Open an HFM application and establish a session.")]
+         Command("Open an HFM application and establish a session.",
+                 Alias = "Connect")]
         public Session OpenApplication(
                 [Parameter("The name of the cluster on which to open the application",
                            Alias = "ClusterName")]

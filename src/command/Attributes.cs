@@ -19,6 +19,12 @@ namespace Command
         /// string.
         protected string _uda;
 
+        /// An alternate name (or alias) by which the item may also be
+        /// referenced. Typically used for settings that may be singular or
+        /// plural.
+        public string Alias { get; set; }
+        /// True if the setting has an alternate name
+        public bool HasAlias { get { return Alias != null; } }
         /// Description of command or setting
         public string Description { get { return _description; } }
         /// Version in which the command was introduced
@@ -131,12 +137,6 @@ namespace Command
         /// checking for null is not sufficient (the default value may be null).
         protected bool _hasDefaultValue = false;
 
-        /// An alternate name (or alias) by which the setting may also be
-        /// referenced. Typically used for settings that may be singular or
-        /// plural.
-        public string Alias { get; set; }
-        /// True if the setting has an alternate name
-        public bool HasAlias { get { return Alias != null; } }
         /// Whether the parameter has a DefaultValue (since the default may be null)
         public bool HasDefaultValue { get { return _hasDefaultValue; } }
         /// Default value for parameter

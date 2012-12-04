@@ -32,9 +32,11 @@ namespace Command
         /// Link to the associated Factory definition if this Command is also a
         /// Factory.
         protected internal Factory _factory;
+        /// The Command alias (if any)
+        public string Alias { get { return CommandAttribute.Alias; } }
         /// The Command description
         public string Description { get { return CommandAttribute.Description; } }
-        /// The Command description
+        /// Whether the command is versioned
         public bool IsVersioned { get { return CommandAttribute.IsVersioned; } }
 
         // Properties

@@ -143,6 +143,15 @@ namespace Command
                             "registered with the name {0} (in class {1})", cmd.Name, cmd.Type));
             }
             _commands.Add(cmd.Name, cmd);
+            if(cmd.Alias != null) {
+                if(!_commands.ContainsKey(cmd.Alias)) {
+                    _commands.Add(cmd.Alias, cmd);
+                }
+                else {
+                    _log.WarnFormat("Attempt to register command {0} under alias {1} failed; " +
+                            "alias is already registered", cmd.Name, cmd.Alias);
+                }
+            }
         }
 
 
