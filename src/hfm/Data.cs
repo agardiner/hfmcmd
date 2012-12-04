@@ -182,7 +182,7 @@ namespace HFM
             int status = 0;
             int valueId = pov.IsSpecified(EDimension.Value) ? pov.Value.Id :
                                                               pov.Entity.DefaultCurrencyId;
-            HFM.Try("Retrieving calc status",
+            HFM.Try("Retrieving calc status for {0}", pov,
                     () => _hsvData.GetCalcStatus(pov.Scenario.Id, pov.Year.Id, pov.Period.Id,
                                                  pov.Entity.Id, pov.Entity.ParentId, valueId,
                                                  out status));

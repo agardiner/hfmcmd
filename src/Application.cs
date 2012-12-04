@@ -189,6 +189,9 @@ namespace HFMCmd
             else {
                 ok = File.Exists(argVal);
                 if(ok) {
+                    var logArg = _cmdLine.AddPositionalArgument("LogFile", "Path to log file",
+                                    (_, logFile) => Log(null, logFile));
+                    logArg.IsRequired = false;
                     // Instruct parser to include unrecognised args, since these
                     // will be treated as variable assignments
                     _cmdLine.Definition.IncludeUnrecognisedKeywordArgs = true;
