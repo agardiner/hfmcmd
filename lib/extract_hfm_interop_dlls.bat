@@ -2,7 +2,7 @@ SET HFM_HOME=%EPM_ORACLE_HOME%..\products\FinancialManagement
 SET OUTPUT_PATH=%~dp0\hfm-11.1.2.2
 SET TLBIMP=%~dp0\..\tools\tlbimp
 
-MKDIR %TARGET%
+MKDIR %OUTPUT_PATH%
 
 
 %TLBIMP% %HFM_HOME%\Client\HFMConstants.dll /out: %OUTPUT_PATH%\Interop.HFMCONSTANTSLib.dll /namespace:HFMCONSTANTSLib

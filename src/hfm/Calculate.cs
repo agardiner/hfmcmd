@@ -46,6 +46,7 @@ namespace HFM
 
         public Calculate(Session session)
         {
+            _log.Trace("Constructing Calculate object");
             _session = session;
             _metadata = session.Metadata;
             _hsvCalculate = (HsvCalculate)session.HsvSession.Calculate;

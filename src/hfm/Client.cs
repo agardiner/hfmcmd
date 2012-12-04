@@ -62,7 +62,7 @@ namespace HFM
         [Factory]
         public Client()
         {
-            _log.Trace("Creating HsxClient instance");
+            _log.Trace("Constructing Client object");
             try {
                 _hsxClient = new HsxClient();
             }

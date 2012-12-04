@@ -70,6 +70,7 @@ namespace HFM
         [Factory]
         public SecurityLoad(Session session)
         {
+            _log.Trace("Constructing SecurityLoad object");
             HsvSecurityLoad = new HsvSecurityLoadACV();
             HsvSecurityLoad.SetSession(session.HsvSession);
         }

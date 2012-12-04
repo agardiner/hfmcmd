@@ -119,6 +119,7 @@ namespace HFM
 
         public Data(Session session)
         {
+            _log.Trace("Constructing Data object");
             _hsvData = (HsvData)session.HsvSession.Data;
         }
 
@@ -179,7 +180,7 @@ namespace HFM
         /// Returns a bit-field representing the calculation status for a subcube
         internal int GetCalcStatus(POV pov)
         {
-            int status = 0;
+            int status = -1;
             int valueId = pov.IsSpecified(EDimension.Value) ? pov.Value.Id :
                                                               pov.Entity.DefaultCurrencyId;
             HFM.Try("Retrieving calc status for {0}", pov,
@@ -190,6 +191,8 @@ namespace HFM
         }
 
 
+        /// Returns the data value in the specified cell, or null if the cell
+        /// contains no data
         internal double? GetCellValue(POV pov)
         {
             double amount = 0;

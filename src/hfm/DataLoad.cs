@@ -108,6 +108,7 @@ namespace HFM
         [Factory]
         public DataLoad(Session session)
         {
+            _log.Trace("Constructing DataLoad object");
             HsvcDataLoad = new HsvcDataLoad();
             HsvcDataLoad.SetSession(session.HsvSession);
         }

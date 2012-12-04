@@ -122,6 +122,7 @@ namespace HFM
         /// Constructor
         internal ProcessFlow(Session session)
         {
+            _log.Trace("Constructing ProcessFlow object");
             _session = session;
             _hsvProcessFlow = (HsvProcessFlow)session.HsvSession.ProcessFlow;
             _metadata = session.Metadata;

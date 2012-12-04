@@ -35,6 +35,7 @@ namespace HFM
 
         public Server(HsxServer hsxServer)
         {
+            _log.Trace("Constructing Server object");
             _hsxServer = hsxServer;
         }
 

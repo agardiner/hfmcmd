@@ -259,6 +259,7 @@ namespace HFM
         [Factory]
         public Documents(Session session)
         {
+            _log.Trace("Constructing Documents object");
             _documents = new HFMwManageDocuments();
             _documents.SetWebSession(session.HFMwSession);
             _documentCache = new Dictionary<string, List<DocumentInfo>>(StringComparer.OrdinalIgnoreCase);

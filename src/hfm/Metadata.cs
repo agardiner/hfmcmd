@@ -829,6 +829,7 @@ namespace HFM
                         HFM.Try("Retrieving default parent id for {0} {1}", _dimension.Name,
                                 _name != null ? _name : _id.ToString(),
                                 () => _dimension.HsvTreeInfo.GetDefaultParent(Id, out _parentId));
+                        _log.DebugFormat("Default parent id is {0}", _parentId);
                     }
                     else {
                         _parentId = NOT_USED;
@@ -967,6 +968,7 @@ namespace HFM
                 int currId = -1;
                 HFM.Try("Retrieving default currency for entity {0}", Name,
                         () => ((HsvEntities)_dimension.HsvTreeInfo).GetDefaultValueID(Id, out currId));
+                _log.DebugFormat("Default currency id is {0}", currId);
                 return currId;
             }
         }
@@ -974,7 +976,7 @@ namespace HFM
 
         public override string ToString()
         {
-            return ParentId == -1 ? Name : ParentName + "." + Name;
+            return ParentId == NOT_USED ? Name : ParentName + "." + Name;
         }
 
     }
@@ -1482,7 +1484,7 @@ namespace HFM
                     sb.Append(_metadata.DimensionNames[id]);
                 }
                 sb.Append('#');
-                if(id == (int)EDimension.Entity) {
+                if(id == (int)EDimension.Entity && this[id].ParentId != Member.NOT_USED) {
                     sb.Append(this[id].ParentName);
                     sb.Append('.');
                 }

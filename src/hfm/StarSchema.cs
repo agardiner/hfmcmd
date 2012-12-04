@@ -130,6 +130,7 @@ namespace HFM
         [Factory]
         public StarSchema(Session session)
         {
+            _log.Trace("Constructing StarSchema object");
             Session = session;
             HsvStarSchemaACM = (HsvStarSchemaACM)session.HsvSession.CreateObject("Hyperion.HsvStarSchemaACM");
             HsvStarSchemaACM.SetSession(session.HsvSession);

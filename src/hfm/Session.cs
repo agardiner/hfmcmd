@@ -54,6 +54,7 @@ namespace HFM
 
         public Session(Connection conn, string cluster, string application)
         {
+            _log.Trace("Constructing Session object");
             _connection = conn;
             _cluster = cluster;
             _application = application;

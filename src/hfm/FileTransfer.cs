@@ -29,6 +29,7 @@ namespace HFM
 
         public FileTransfer(IHsxServerFileTransfer hsxFileTransfer)
         {
+            _log.Trace("Constructing FileTransfer object");
             _hsxFileTransfer = hsxFileTransfer;
         }
 

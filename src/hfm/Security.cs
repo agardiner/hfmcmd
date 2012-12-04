@@ -85,6 +85,7 @@ namespace HFM
 
         public Security(Session session)
         {
+            _log.Trace("Constructing Security object");
             _hsvSecurity = (HsvSecurityAccess)session.HsvSession.Security;
             _metadata = session.Metadata;
         }

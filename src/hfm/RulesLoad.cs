@@ -37,6 +37,7 @@ namespace HFM
         [Factory]
         public RulesLoad(Session session)
         {
+            _log.Trace("Constructing RulesLoad object");
             HsvRulesLoad = new HsvRulesLoadACV();
             HsvRulesLoad.SetSession(session.HsvSession, (int)tagHFM_LANGUAGES.HFM_LANGUAGE_INSTALLED);
         }

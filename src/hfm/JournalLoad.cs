@@ -63,6 +63,7 @@ namespace HFM
         [Factory]
         public JournalLoad(Session session)
         {
+            _log.Trace("Constructing JournalLoad object");
             HsvJournalLoadACV = new HsvJournalLoadACV();
             HsvJournalLoadACV.SetSession(session.HsvSession);
         }

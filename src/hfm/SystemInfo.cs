@@ -153,6 +153,7 @@ namespace HFM
         /// Constructor
         public SystemInfo(Session session)
         {
+            _log.Trace("Constructing SystemInfo object");
             _hsvSystemInfo = (HsvSystemInfo)session.HsvSession.SystemInfo;
         }
 

@@ -126,6 +126,7 @@ namespace HFM
         [Factory]
         public MetadataLoad(Session session)
         {
+            _log.Trace("Constructing MetadataLoad object");
             HsvMetadataLoad = new HsvMetadataLoadACV();
             HsvMetadataLoad.SetSession(session.HsvSession);
         }
