@@ -134,7 +134,12 @@ namespace HFMCmd
             _logHierarchy.RendererMap.Put(typeof(Exception), new ExceptionMessageRenderer());
 
             // Set default log level
-            _logHierarchy.Root.Level = _logRepository.LevelMap["INFO"];
+            if(Environment.GetCommandLineArgs().Contains("--debugStartup")) {
+                _logHierarchy.Root.Level = _logRepository.LevelMap["DEBUG"];
+            }
+            else {
+                _logHierarchy.Root.Level = _logRepository.LevelMap["INFO"];
+            }
         }
 
 

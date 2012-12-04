@@ -130,7 +130,7 @@ namespace Command
             foreach(var cmd in _registry.EachCommand()) {
                 _log.TraceFormat("Validating command {0}", cmd.Name);
                 foreach(var parm in cmd.Parameters) {
-                    _log.TraceFormat("Validating command {0}", cmd.Name);
+                    _log.TraceFormat("Validating command parameter {0}", parm.Name);
                     if(!parm.HasParameterAttribute) {
                         // Check that a factory exists for the param type
                         if(!HasObject(parm.ParameterType) && !parm.IsSettingsCollection &&
@@ -154,8 +154,10 @@ namespace Command
             for(var i = 0; i < _context.Count; ++i) {
                 var type = _context[i].GetType();
                 if(type.IsAssignableFrom(valType)) {
-                    _log.TraceFormat("Replacing object of type {0} in context", type);
-                    _context[i] = value;
+                    if(_context[i] != value) {
+                        _log.TraceFormat("Replacing object of type {0} in context", type);
+                        _context[i] = value;
+                    }
                     value = null;
                     break;
                 }
@@ -553,7 +555,7 @@ namespace Command
         private void PurgeSingleUseObjects()
         {
             foreach(var purgeObj in _purgeList) {
-                _log.DebugFormat("Removing {0} object from context", purgeObj.GetType().Name);
+                _log.DebugFormat("Removing {0} single-use object from context", purgeObj.GetType().Name);
                 _context.Remove(purgeObj);
             }
             _purgeList.Clear();

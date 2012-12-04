@@ -81,12 +81,13 @@ namespace HFM
         [Command("Connects to a server in the specified cluster, without opening an application"),
          Factory]
         public Server ConnectToCluster(
-                [Parameter("The name of the cluster or server to return")]
-                string clusterName)
+                [Parameter("The name of the cluster or server to return",
+                           Alias = "ClusterName")]
+                string cluster)
         {
             object server = null;
             HFM.Try("Retrieving HsxServer instance",
-                    () => server = _hsxClient.GetServerOnCluster(clusterName));
+                    () => server = _hsxClient.GetServerOnCluster(cluster));
             var hsxServer = (HsxServer)server;
             return new Server(hsxServer);
         }
@@ -101,9 +102,11 @@ namespace HFM
         public Connection SetLogonInfo(
                 [Parameter("The Windows domain to which the user belongs", DefaultValue = null)]
                 string domain,
-                [Parameter("The user name to login with")]
+                [Parameter("The user name to login with",
+                           Alias = "UserId")]
                 string userName,
-                [Parameter("The password to login with", IsSensitive = true)]
+                [Parameter("The password to login with",
+                           IsSensitive = true)]
                 string password)
         {
             return new Connection(_hsxClient, domain, userName, password);
@@ -147,18 +150,19 @@ namespace HFM
         // TODO: This method should probably return something
         [Command("Outputs cluster info")]
         public void GetClusterInfo(
-                [Parameter("The name of the server")]
-                string serverName,
+                [Parameter("The name of the server",
+                           Alias = "ServerName")]
+                string server,
                 [Parameter("True to return the cluster name for the server, false to return the server name")]
                 bool loadBalanced,
                 IOutput output)
         {
-            string clusterName = null;
+            string cluster = null;
             // TODO: This seems to always throw an exception!?
             HFM.Try("Obtaining cluster information for server",
-                    () => _hsxClient.GetClusterInfo(serverName, loadBalanced, out clusterName));
-            if(clusterName != null) {
-                output.WriteSingleValue(clusterName, "Cluster Name");
+                    () => _hsxClient.GetClusterInfo(server, loadBalanced, out cluster));
+            if(cluster != null) {
+                output.WriteSingleValue(cluster, "Cluster Name");
             }
         }
 
@@ -180,7 +184,7 @@ namespace HFM
         [Command("Deletes system error messages")]
         public void DeleteSystemErrors(
                 [Parameter("Name of the cluster on which to delete system errors")]
-                string clusterName,
+                string cluster,
                 [Parameter("List of error numbers to delete", DefaultValue = null)]
                 string[] errorReferences)
         {
@@ -275,25 +279,28 @@ namespace HFM
         [Factory,
          Command("Open an HFM application and establish a session.")]
         public Session OpenApplication(
-                [Parameter("The name of the cluster on which to open the application")]
-                string clusterName,
-                [Parameter("The name of the application to open")]
-                string appName)
+                [Parameter("The name of the cluster on which to open the application",
+                           Alias = "ClusterName")]
+                string cluster,
+                [Parameter("The name of the application to open",
+                           Alias = "AppName")]
+                string application)
         {
             _appOpened = true;
-            return new Session(this, clusterName, appName);
+            return new Session(this, cluster, application);
         }
 
 
         [Command("Returns the names of the available provisioning projects in Shared Services.")]
         public string[] EnumProvisioningProjects(
-                [Parameter("The name of the cluster from which to obtain the Shared Services information")]
-                string clusterName,
+                [Parameter("The name of the cluster from which to obtain the Shared Services information",
+                           Alias = "ClusterName")]
+                string cluster,
                 IOutput output)
         {
             string[] projects = null;
             HFM.Try("Retrieving names of provisioning projects",
-                    () => projects = _hsxClient.EnumProvisioningProjects(clusterName) as string[]);
+                    () => projects = _hsxClient.EnumProvisioningProjects(cluster) as string[]);
             if(output != null && projects != null) {
                 output.WriteEnumerable(projects, "Project", 40);
             }
@@ -303,12 +310,15 @@ namespace HFM
 
         [Command("Creates a new HFM classic application.")]
         public void CreateApplication(
-                [Parameter("The name of the cluster on which to create the application")]
-                string clusterName,
-                [Parameter("The name to be given to the new application")]
-                string appName,
-                [Parameter("The description for the new application (cannot be blank)")]
-                string appDesc,
+                [Parameter("The name of the cluster on which to create the application",
+                           Alias = "ClusterName")]
+                string cluster,
+                [Parameter("The name to be given to the new application",
+                           Alias = "AppName")]
+                string application,
+                [Parameter("The description for the new application (cannot be blank)",
+                           Alias = "AppDesc")]
+                string description,
                 [Parameter("Path to the application profile (.per) file used to define the " +
                            "time and custom dimensions")]
                 string profilePath,
@@ -322,9 +332,9 @@ namespace HFM
         {
             byte[] profile = File.ReadAllBytes(profilePath);
 
-            HFM.Try(string.Format("Creating application {0} on {1}", appName, clusterName),
-                    () => _hsxClient.CreateApplicationCAS(clusterName, "Financial Management",
-                            appName, appDesc, "", profile, null, null, null, null,
+            HFM.Try(string.Format("Creating application {0} on {1}", application, cluster),
+                    () => _hsxClient.CreateApplicationCAS(cluster, "Financial Management",
+                            application, description, "", profile, null, null, null, null,
                             sharedServicesProject, appWebServerUrl));
         }
 
@@ -332,28 +342,31 @@ namespace HFM
         [Command("Deletes the specified HFM (classic) application. Note: HFM applications " +
                  "created via or migrated to EPMA cannot be deleted via this command.")]
         public void DeleteApplication(
-                [Parameter("The name of the cluster from which to delete the application")]
-                string clusterName,
-                [Parameter("The name of the application to be deleted")]
-                string appName)
+                [Parameter("The name of the cluster from which to delete the application",
+                           Alias = "ClusterName")]
+                string cluster,
+                [Parameter("The name of the application to be deleted",
+                           Alias = "AppName")]
+                string application)
         {
-            HFM.Try(string.Format("Deleting application {0} on {1}", appName, clusterName),
-                    () => _hsxClient.DeleteApplication(clusterName, "Financial Management", appName));
+            HFM.Try(string.Format("Deleting application {0} on {1}", application, cluster),
+                    () => _hsxClient.DeleteApplication(cluster, "Financial Management", application));
         }
 
 
         [Command("Returns true if the connected user has CreateApplication rights on the HFM cluster")]
         public bool UserHasCreateApplicationRights(
-                [Parameter("The name of the cluster on which to check the user rights")]
-                string clusterName,
+                [Parameter("The name of the cluster on which to check the user rights",
+                           Alias = "ClusterName")]
+                string cluster,
                 IOutput output)
         {
             bool hasAccess = false;
             HFM.Try("Checking if user has CreateApplication rights",
-                    () => _hsxClient.DoesUserHaveCreateApplicationRights(clusterName, out hasAccess));
+                    () => _hsxClient.DoesUserHaveCreateApplicationRights(cluster, out hasAccess));
             if(output != null) {
                 output.SetHeader("Cluster", "Create Application Rights", 28);
-                output.WriteSingleRecord(clusterName, hasAccess ? "Yes" : "No");
+                output.WriteSingleRecord(cluster, hasAccess ? "Yes" : "No");
             }
             return hasAccess;
         }
@@ -361,16 +374,17 @@ namespace HFM
 
         [Command("Returns true if the connected user has SystemAdmin rights on the HFM cluster")]
         public bool UserHasSystemAdminRights(
-                [Parameter("The name of the cluster on which to check the user rights")]
-                string clusterName,
+                [Parameter("The name of the cluster on which to check the user rights",
+                           Alias = "ClusterName")]
+                string cluster,
                 IOutput output)
         {
             bool hasAdmin = false;
             HFM.Try("Checking if user has SystemAdmin rights",
-                    () => _hsxClient.DoesUserHaveSystemAdminRights(clusterName, out hasAdmin));
+                    () => _hsxClient.DoesUserHaveSystemAdminRights(cluster, out hasAdmin));
             if(output != null) {
                 output.SetHeader("Cluster", "System Admin Rights", 20);
-                output.WriteSingleRecord(clusterName, hasAdmin ? "Yes" : "No");
+                output.WriteSingleRecord(cluster, hasAdmin ? "Yes" : "No");
             }
             return hasAdmin;
         }

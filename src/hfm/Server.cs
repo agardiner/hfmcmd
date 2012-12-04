@@ -105,16 +105,17 @@ namespace HFM
 
         [Command("Determines whether the specified application is a classic or EPMA application")]
         public bool IsClassicHFMApplication(
-                [Parameter("The name of the application")]
-                string appName,
+                [Parameter("The name of the application",
+                           Alias = "AppName")]
+                string application,
                 IOutput output)
         {
             bool isClassic = true;
 
             HFM.Try("Checking application",
-                    () => isClassic = ((IHsxServerInternal)_hsxServer).IsClassicHFMApplication(appName));
+                    () => isClassic = ((IHsxServerInternal)_hsxServer).IsClassicHFMApplication(application));
             output.SetHeader("Application", "Type", 10);
-            output.WriteSingleRecord(appName, isClassic ? "Classic" : "EPMA");
+            output.WriteSingleRecord(application, isClassic ? "Classic" : "EPMA");
             return isClassic;
         }
 
