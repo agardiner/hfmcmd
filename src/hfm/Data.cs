@@ -113,6 +113,10 @@ namespace HFM
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
 
+        // Reference to the Session object
+        private Session _session;
+        // Reference to the Metadata object
+        private Metadata _metadata;
         // Reference to the HsvData module
         private HsvData _hsvData;
 
@@ -120,7 +124,64 @@ namespace HFM
         public Data(Session session)
         {
             _log.Trace("Constructing Data object");
+            _session = session;
+            _metadata = session.Metadata;
             _hsvData = (HsvData)session.HsvSession.Data;
+        }
+
+
+        [Command("Locks the cells in the specified sub-cube(s); once a sub-cube is locked, " +
+                 "data cannot be changed again until the sub-cube(s) are unlocked.")]
+        public void Lock(
+                [Parameter("The scenario(s) to lock",
+                           Alias = "Scenario")]
+                string[] scenarios,
+                [Parameter("The year(s) to lock",
+                           Alias = "Year")]
+                string[] years,
+                [Parameter("The period(s) to lock",
+                           Alias = "Period")]
+                string[] periods,
+                [Parameter("The entity member(s) to lock",
+                           Alias = "Entity")]
+                string[] entities,
+                [Parameter("The value member(s) to lock",
+                           Alias = "Value")]
+                string[] values,
+                IOutput output)
+        {
+            var ops = _metadata.DoSubcubeOp("Locking", scenarios, years, periods, entities, values, output,
+                                            (pov) => _hsvData.SetCalcStatusLocked(pov.Scenario.Id, pov.Year.Id,
+                                                        pov.Period.Id, pov.Entity.Id, pov.Entity.ParentId,
+                                                        pov.Value.Id));
+            _log.InfoFormat("Lock complete: {0} performed", ops);
+        }
+
+
+        [Command("Unlocks the cells in the specified sub-cube(s)")]
+        public void Unlock(
+                [Parameter("The scenario(s) to unlock",
+                           Alias = "Scenario")]
+                string[] scenarios,
+                [Parameter("The year(s) to unlock",
+                           Alias = "Year")]
+                string[] years,
+                [Parameter("The period(s) to unlock",
+                           Alias = "Period")]
+                string[] periods,
+                [Parameter("The entity member(s) to unlock",
+                           Alias = "Entity")]
+                string[] entities,
+                [Parameter("The value member(s) to unlock",
+                           Alias = "Value")]
+                string[] values,
+                IOutput output)
+        {
+            var ops = _metadata.DoSubcubeOp("Unlocking", scenarios, years, periods, entities, values, output,
+                                            (pov) => _hsvData.SetCalcStatusUnlocked(pov.Scenario.Id, pov.Year.Id,
+                                                        pov.Period.Id, pov.Entity.Id, pov.Entity.ParentId,
+                                                        pov.Value.Id));
+            _log.InfoFormat("Unlock complete: {0} performed", ops);
         }
 
 

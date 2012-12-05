@@ -555,6 +555,36 @@ namespace HFM
             return new Slice(this, pov);
         }
 
+
+        /// Generic method for performing an operation over a series
+        /// of scenario, year, period, entity, and value members.
+        internal int DoSubcubeOp(string op, string[] scenarios, string[] years,
+                string[] periods, string[] entities, string[] values,
+                IOutput output, Action<POV> subcubeOp)
+        {
+            int ops = 0;
+            var slice = new Slice(this);
+            slice[EDimension.Scenario] = scenarios;
+            slice[EDimension.Year] = years;
+            slice[EDimension.Period] = periods;
+            slice[EDimension.Entity] = entities;
+            slice[EDimension.Value] = values;
+
+            // Calculate number of iterations, and measure progress
+            var POVs = slice.Combos;
+            output.InitProgress(op, POVs.Length);
+            foreach(var pov in POVs) {
+                _log.FineFormat("{0} {1}", op, pov);
+                HFM.Try(() => subcubeOp(pov));
+                ops++;
+                if(output.IterationComplete()) {
+                    break;
+                }
+            }
+            output.EndProgress();
+            return ops;
+        }
+
     }
 
 

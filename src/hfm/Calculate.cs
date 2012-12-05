@@ -72,9 +72,9 @@ namespace HFM
                 string[] values,
                 IOutput output)
         {
-            var ops = DoCalcOp("Allocating", scenarios, years, periods, entities, values, output,
-                               (pov) => _hsvCalculate.Allocate(pov.Scenario.Id, pov.Year.Id, pov.Period.Id,
-                                                               pov.Entity.Id, pov.Entity.ParentId, pov.Value.Id));
+            var ops = _metadata.DoSubcubeOp("Allocating", scenarios, years, periods, entities, values, output,
+                                            (pov) => _hsvCalculate.Allocate(pov.Scenario.Id, pov.Year.Id, pov.Period.Id,
+                                                         pov.Entity.Id, pov.Entity.ParentId, pov.Value.Id));
             _log.InfoFormat("Allocate completed: {0} performed", ops);
         }
 
@@ -101,10 +101,9 @@ namespace HFM
                 bool force,
                 IOutput output)
         {
-            var ops = DoCalcOp("Caclulating", scenarios, years, periods, entities, values, output,
-                               (pov) => _hsvCalculate.ChartLogic(pov.Scenario.Id, pov.Year.Id, pov.Period.Id,
-                                                                 pov.Entity.Id, pov.Entity.ParentId, pov.Value.Id,
-                                                                 force));
+            var ops = _metadata.DoSubcubeOp("Caclulating", scenarios, years, periods, entities, values, output,
+                                            (pov) => _hsvCalculate.ChartLogic(pov.Scenario.Id, pov.Year.Id, pov.Period.Id,
+                                                         pov.Entity.Id, pov.Entity.ParentId, pov.Value.Id, force));
             _log.InfoFormat("Calculate completed: {0} performed", ops);
         }
 
@@ -131,10 +130,9 @@ namespace HFM
                 bool force,
                 IOutput output)
         {
-            var ops = DoCalcOp("Translating", scenarios, years, periods, entities, values, output,
-                               (pov) => _hsvCalculate.Translate(pov.Scenario.Id, pov.Year.Id, pov.Period.Id,
-                                                                pov.Entity.Id, pov.Entity.ParentId, pov.Value.Id,
-                                                                force, true));
+            var ops = _metadata.DoSubcubeOp("Translating", scenarios, years, periods, entities, values, output,
+                                            (pov) => _hsvCalculate.Translate(pov.Scenario.Id, pov.Year.Id, pov.Period.Id,
+                                                         pov.Entity.Id, pov.Entity.ParentId, pov.Value.Id, force, true));
             _log.InfoFormat("Translate completed: {0} performed", ops);
         }
 
@@ -223,36 +221,6 @@ namespace HFM
             }
             output.EndProgress();
             _log.InfoFormat("Equity Pick-Up completed: {0} performed", ops);
-        }
-
-
-        /// Generic method for performing a calculation operation over a series
-        /// of scenario, year, period, entity, and value members.
-        protected int DoCalcOp(string op, string[] scenarios, string[] years,
-                string[] periods, string[] entities, string[] values,
-                IOutput output, Action<POV> calcOp)
-        {
-            int ops = 0;
-            var slice = new Slice(_metadata);
-            slice[EDimension.Scenario] = scenarios;
-            slice[EDimension.Year] = years;
-            slice[EDimension.Period] = periods;
-            slice[EDimension.Entity] = entities;
-            slice[EDimension.Value] = values;
-
-            // Calculate number of iterations, and measure progress
-            var POVs = slice.Combos;
-            output.InitProgress(op, POVs.Length);
-            foreach(var pov in POVs) {
-                _log.FineFormat("{0} {1}", op, pov);
-                HFM.Try(() => calcOp(pov));
-                ops++;
-                if(output.IterationComplete()) {
-                    break;
-                }
-            }
-            output.EndProgress();
-            return ops;
         }
 
 
