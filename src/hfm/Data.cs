@@ -213,11 +213,34 @@ namespace HFM
         }
 
 
+        [Command("Retrieves the value(s) from a cell or slice. " +
+                 "The cell intersection(s) to be set can be specified using either a POV string, " +
+                 "a member list specification for each dimension, or a combination of both - provided " +
+                 "all dimensions are ultimately specified. If a dimension is specified both in the POV " +
+                 "and in a dimension setting, the dimension setting takes precedence.")]
+        public void GetCell(
+                Cells slice,
+                IOutput output)
+        {
+            var POVs = slice.POVs;
+            output.InitProgress("Retrieving cells", POVs.Length);
+            output.SetHeader("POV", 50, "Value", 15);
+            foreach(var pov in POVs) {
+                var val = GetCellValue(pov);
+                output.WriteRecord(pov, string.Format("{0,-15}", val == null ? "-" : val.ToString()));
+                if(output.IterationComplete()) {
+                    break;
+                }
+            }
+            output.EndProgress();
+        }
+
+
         protected void SetCellInternal(Cells slice, double amount, bool clear, IOutput output)
         {
-            var povs = slice.POVs;
-            output.InitProgress(string.Format("{0} cells", clear ? "Clearing" : "Setting"), povs.Length);
-            foreach(var pov in povs) {
+            var POVs = slice.POVs;
+            output.InitProgress(string.Format("{0} cells", clear ? "Clearing" : "Setting"), POVs.Length);
+            foreach(var pov in POVs) {
                 if(HFM.HasVariableCustoms) {
                     HFM.Try("Setting cell",
                             () => _hsvData.SetCellExtDim(pov.HfmPovCOM, amount, clear));
