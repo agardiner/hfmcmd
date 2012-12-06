@@ -110,6 +110,12 @@ namespace CommandLine
             return arg;
         }
 
+
+        public void Clear()
+        {
+            Arguments.Clear();
+        }
+
     }
 
 }

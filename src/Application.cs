@@ -81,12 +81,13 @@ namespace HFMCmd
         public void Run()
         {
             int rc = 0;
+            var cmdLineArgs = Environment.GetCommandLineArgs();
 
             // Define command-line UI
             _cmdLine = new UI(HFMCmd.Resource.Help.Instructions);
             _console = new ConsoleOutput(_cmdLine);
 
-            ConfigureLogging();
+            ConfigureLogging(cmdLineArgs);
 
             // Register commands
             _log.Fine("Loading available commands...");
@@ -100,8 +101,14 @@ namespace HFMCmd
             _context.Set(_console);
             _context.Verify();
 
-            SetupCommandLine();
-            rc = ProcessCommandLine();
+            if(cmdLineArgs.Length > 1) {
+                SetupCommandLine();
+                rc = ProcessCommandLine(cmdLineArgs);
+            }
+            else {
+                StartREPL();
+            }
+
             if(rc == 0) {
                 _log.Info("Exiting with status code 0");
             }
@@ -115,7 +122,7 @@ namespace HFMCmd
         /// <summary>
         /// Configures logging.
         /// </summary>
-        protected void ConfigureLogging()
+        protected void ConfigureLogging(string[] cmdLineArgs)
         {
             // Get repository, define custom levels
             _logRepository = LogManager.GetRepository();
@@ -134,7 +141,7 @@ namespace HFMCmd
             _logHierarchy.RendererMap.Put(typeof(Exception), new ExceptionMessageRenderer());
 
             // Set default log level
-            if(Environment.GetCommandLineArgs().Contains("--debugStartup")) {
+            if(cmdLineArgs.Contains("--debugStartup")) {
                 _logHierarchy.Root.Level = _logRepository.LevelMap["DEBUG"];
             }
             else {
@@ -273,11 +280,11 @@ namespace HFMCmd
 
 
         /// Process command-line arguments
-        protected int ProcessCommandLine()
+        protected int ProcessCommandLine(string[] cmdLineArgs)
         {
             int rc = 0;
             try {
-                var args = _cmdLine.Parse(Environment.GetCommandLineArgs());
+                var args = _cmdLine.Parse(cmdLineArgs);
                 if(args != null) {
                     DecryptValues(args);
                     string cmdOrFile = args["CommandOrFile"] as string;
@@ -367,6 +374,32 @@ namespace HFMCmd
                 }
             }
             return ok;
+        }
+
+
+        /// Launches in REPL mode
+        protected void StartREPL()
+        {
+            string input = null;
+            ValueArgument cmdArg = new PositionalArgument() {
+                Key = "Command",
+                Description = "The name of the command to execute, or Quit to exit",
+                IsRequired = true,
+                Validate = ValidateCommand
+            };
+
+            while(true) {
+                input = _cmdLine.ReadLine("hfm> ");
+
+                if(UI.Interrupted || String.Compare(input, "quit", StringComparison.OrdinalIgnoreCase) == 0) {
+                    break;
+                }
+
+                _cmdLine.Definition.Clear();
+                SetupCommandLine();
+                // TODO: Split command-line properly when quoted strings are used
+                ProcessCommandLine(("hfm " + input).Split(' '));
+            }
         }
 
 
