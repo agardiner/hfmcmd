@@ -5,8 +5,9 @@ using System.Text.RegularExpressions;
 using System.IO;
 
 using log4net;
-using HSVSESSIONLib;
+#if !LATE_BIND
 using HSVPROCESSFLOWLib;
+#endif
 using HFMCONSTANTSLib;
 
 using Command;
@@ -110,7 +111,11 @@ namespace HFM
 
 
         // Reference to HFM HsvProcessFlow object
-        protected HsvProcessFlow _hsvProcessFlow;
+#if LATE_BIND
+        internal readonly dynamic _hsvProcessFlow;
+#else
+        internal readonly HsvProcessFlow _hsvProcessFlow;
+#endif
         // Refernece to the Session object
         protected Session _session;
         // Reference to Metadata object
@@ -124,7 +129,11 @@ namespace HFM
         {
             _log.Trace("Constructing ProcessFlow object");
             _session = session;
+#if LATE_BIND
+            _hsvProcessFlow = session.HsvSession.ProcessFlow;
+#else
             _hsvProcessFlow = (HsvProcessFlow)session.HsvSession.ProcessFlow;
+#endif
             _metadata = session.Metadata;
             _security = session.Security;
         }

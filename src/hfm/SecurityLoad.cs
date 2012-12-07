@@ -2,7 +2,9 @@ using System;
 using System.IO;
 
 using log4net;
-using HSVSESSIONLib;
+
+// We have to include the following lib even when using dynamic, since it contains
+// the definition of the enums
 using HSVSECURITYLOADACVLib;
 
 using Command;
@@ -32,7 +34,8 @@ namespace HFM
             [Factory]
             public LoadOptions(SecurityLoad sl) :
                 base(typeof(IHsvLoadExtractOptions), typeof(IHsvLoadExtractOption),
-                     typeof(HSV_SECURITYLOAD_OPTION), sl.HsvSecurityLoad.LoadOptions)
+                     typeof(HSV_SECURITYLOAD_OPTION),
+                     (IHsvLoadExtractOptions)sl.HsvSecurityLoad.LoadOptions)
             {
             }
         }
@@ -53,7 +56,8 @@ namespace HFM
             [Factory]
             public ExtractOptions(SecurityLoad sl) :
                 base(typeof(IHsvLoadExtractOptions), typeof(IHsvLoadExtractOption),
-                     typeof(HSV_SECURITYEXTRACT_OPTION), sl.HsvSecurityLoad.ExtractOptions)
+                     typeof(HSV_SECURITYEXTRACT_OPTION),
+                     (IHsvLoadExtractOptions)sl.HsvSecurityLoad.ExtractOptions)
             {
             }
         }
@@ -64,14 +68,22 @@ namespace HFM
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
         // Reference to HFM HsvSecurityLoadACV object
+#if LATE_BIND
+        internal readonly dynamic HsvSecurityLoad;
+#else
         internal readonly HsvSecurityLoadACV HsvSecurityLoad;
+#endif
 
 
         [Factory]
         public SecurityLoad(Session session)
         {
             _log.Trace("Constructing SecurityLoad object");
+#if LATE_BIND
             HsvSecurityLoad = new HsvSecurityLoadACV();
+#else
+            HsvSecurityLoad = new HsvSecurityLoadACV();
+#endif
             HsvSecurityLoad.SetSession(session.HsvSession);
         }
 

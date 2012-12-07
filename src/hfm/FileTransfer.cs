@@ -3,8 +3,10 @@ using System.IO;
 using System.IO.Compression;
 
 using log4net;
+#if !LATE_BIND
 using HSXSERVERFILETRANSFERLib;
 using SCRIPTINGLib;
+#endif
 
 using Command;
 using HFMCmd;
@@ -24,13 +26,21 @@ namespace HFM
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
         // Reference to the HsxFileTransfer object
-        internal readonly IHsxServerFileTransfer _hsxFileTransfer;
+#if LATE_BIND
+        internal readonly dynamic HsxFileTransfer;
+#else
+        internal readonly IHsxServerFileTransfer HsxFileTransfer;
+#endif
 
 
-        public FileTransfer(IHsxServerFileTransfer hsxFileTransfer)
+        public FileTransfer(Server server)
         {
             _log.Trace("Constructing FileTransfer object");
-            _hsxFileTransfer = hsxFileTransfer;
+#if LATE_BIND
+            HsxFileTransfer = server.HsxServer.GetFileTransfer();
+#else
+            HsxFileTransfer = (IHsxServerFileTransfer)server.HsxServer.GetFileTransfer();
+#endif
         }
 
 
@@ -55,13 +65,17 @@ namespace HFM
             }
 
             // Determine file size on server, and monitor progress of download
+#if LATE_BIND
+            dynamic fso = session.HsvSession.CreateObject("Scripting.FileSystemObject");
+#else
             var fso = (FileSystemObject)session.HsvSession.CreateObject("Scripting.FileSystemObject");
+#endif
             var fileSize = (int)fso.GetFile(serverFile).Size;
             fso = null;
 
             output.InitProgress("Downloading");
             HFM.Try("Initiating download of file {0}", serverFile,
-                    () => _hsxFileTransfer.BeginTransferToClient(serverFile, false));
+                    () => HsxFileTransfer.BeginTransferToClient(serverFile, false));
             try {
                 // Create a memory stream to hold the downloaded gzipped bytes
                 using(var ms = new MemoryStream()) {
@@ -69,7 +83,7 @@ namespace HFM
                         using(var fs = new FileStream(targetPath, FileMode.Create)) {
                             while(!eof && !cancel) {
                                 HFM.Try("Retrieving file content",
-                                        () => _hsxFileTransfer.SendBytesToClient(out oBytes, out eof));
+                                        () => HsxFileTransfer.SendBytesToClient(out oBytes, out eof));
                                 bytes = (byte[])oBytes;
                                 if(bytes != null) {
                                     _log.DebugFormat("Downloaded {0} bytes", bytes.Length);
@@ -103,13 +117,13 @@ namespace HFM
             finally {
                 // Ensure we close file on server
                 HFM.Try("Completing transfer",
-                        () => _hsxFileTransfer.EndTransfer());
+                        () => HsxFileTransfer.EndTransfer());
             }
             output.EndProgress();
 
             if(!cancel) {
                 HFM.Try("Deleting file {0}", serverFile,
-                        () => _hsxFileTransfer.DeleteFileOnServer(serverFile));
+                        () => HsxFileTransfer.DeleteFileOnServer(serverFile));
                 _log.Info("File transfer completed successfully");
                 _log.FineFormat("{0} bytes downloaded, {1} bytes written",
                         totalRead, totalWritten);

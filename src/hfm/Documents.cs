@@ -6,8 +6,9 @@ using System.Linq;
 using System.Xml;
 
 using log4net;
-using HSVSESSIONLib;
+#if !LATE_BIND
 using HFMWDOCUMENTSLib;
+#endif
 using HFMCONSTANTSLib;
 
 using Command;
@@ -250,7 +251,11 @@ namespace HFM
 
 
         // Reference to HFM HFMwManageDocuments object
+#if LATE_BIND
+        internal readonly dynamic _documents;
+#else
         internal readonly HFMwManageDocuments _documents;
+#endif
         // Cache of folder -> List<DocumentInfo>
         internal Dictionary<string, List<DocumentInfo>> _documentCache;
 
@@ -260,7 +265,11 @@ namespace HFM
         public Documents(Session session)
         {
             _log.Trace("Constructing Documents object");
+#if LATE_BIND
+            _documents = HFM.CreateObject("Hyperion.HFMwManageDocuments");
+#else
             _documents = new HFMwManageDocuments();
+#endif
             _documents.SetWebSession(session.HFMwSession);
             _documentCache = new Dictionary<string, List<DocumentInfo>>(StringComparer.OrdinalIgnoreCase);
             LoadCache(@"\", true);

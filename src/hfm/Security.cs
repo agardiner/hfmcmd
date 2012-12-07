@@ -1,6 +1,8 @@
 using System;
 
 using log4net;
+// We have to include the following lib even when using dynamic, since it contains
+// the definition of the enums
 using HSVSECURITYACCESSLib;
 
 using Command;
@@ -73,20 +75,33 @@ namespace HFM
         // Reference to the Metadata module
         private Metadata _metadata;
         // Reference to the HsvSecurityAccess COM module
-        private HsvSecurityAccess _hsvSecurity;
+#if LATE_BIND
+        internal readonly dynamic HsvSecurity;
         // Reference to the IHsvDataSecurity COM interface
-        private IHsvDataSecurity HsvDataSecurity {
+        internal dynamic HsvDataSecurity {
             get {
-                return (IHsvDataSecurity)_hsvSecurity;
+                return HsvSecurity;
             }
         }
-
+#else
+        internal readonly HsvSecurityAccess HsvSecurity;
+        // Reference to the IHsvDataSecurity COM interface
+        internal IHsvDataSecurity HsvDataSecurity {
+            get {
+                return (IHsvDataSecurity)HsvSecurity;
+            }
+        }
+#endif
 
 
         public Security(Session session)
         {
             _log.Trace("Constructing Security object");
-            _hsvSecurity = (HsvSecurityAccess)session.HsvSession.Security;
+#if LATE_BIND
+            HsvSecurity = session.HsvSession.Security;
+#else
+            HsvSecurity = (HsvSecurityAccess)session.HsvSession.Security;
+#endif
             _metadata = session.Metadata;
         }
 
@@ -99,7 +114,7 @@ namespace HFM
             bool allowed = false;
 
             HFM.Try("Checking task permission",
-                    () => _hsvSecurity.IsConnectedUserAllowedToPerformTask((int)task, out allowed));
+                    () => HsvSecurity.IsConnectedUserAllowedToPerformTask((int)task, out allowed));
             if(!allowed) {
                 throw new AccessDeniedException(string.Format("You do not have permission to perform {0}", task));
             }
@@ -115,7 +130,7 @@ namespace HFM
             bool allowed = false;
 
             HFM.Try("Checking role permission",
-                    () => _hsvSecurity.IsConnectedUserInRole((int)role, out allowed));
+                    () => HsvSecurity.IsConnectedUserInRole((int)role, out allowed));
             if(!allowed) {
                 throw new AccessDeniedException(string.Format("You have not been assigned the role {0}", role));
             }

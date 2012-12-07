@@ -4,8 +4,9 @@ using System.Linq;
 
 using log4net;
 
-using HSVSESSIONLib;
+#if !LATE_BIND
 using HSVCALCULATELib;
+#endif
 using HFMCONSTANTSLib;
 
 using Command;
@@ -37,11 +38,15 @@ namespace HFM
 
 
         // Reference to the Session object
-        protected readonly Session _session;
+        private readonly Session _session;
         // Reference to a Metadata object
-        protected readonly Metadata _metadata;
+        private readonly Metadata _metadata;
         // Reference to HFM HsvCalculate COM object
-        protected readonly HsvCalculate _hsvCalculate;
+#if LATE_BIND
+        private readonly dynamic _hsvCalculate;
+#else
+        private readonly HsvCalculate _hsvCalculate;
+#endif
 
 
         public Calculate(Session session)
@@ -49,7 +54,11 @@ namespace HFM
             _log.Trace("Constructing Calculate object");
             _session = session;
             _metadata = session.Metadata;
+#if LATE_BIND
+            _hsvCalculate = session.HsvSession.Calculate;
+#else
             _hsvCalculate = (HsvCalculate)session.HsvSession.Calculate;
+#endif
         }
 
 

@@ -3,9 +3,6 @@ using System.Runtime.InteropServices;
 
 using log4net;
 
-using HSVRESOURCEMANAGERLib;
-using HFMCONSTANTSLib;
-
 
 namespace HFM
 {

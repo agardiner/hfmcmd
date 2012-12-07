@@ -2,8 +2,9 @@ using System;
 using System.IO;
 
 using log4net;
-using HSVSESSIONLib;
+#if !LATE_BIND
 using HSVRULESLOADACVLib;
+#endif
 using HFMCONSTANTSLib;
 
 using Command;
@@ -31,14 +32,22 @@ namespace HFM
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
         // Reference to HFM HsvRulesLoadACV object
+#if LATE_BIND
+        internal readonly dynamic HsvRulesLoad;
+#else
         internal readonly HsvRulesLoadACV HsvRulesLoad;
+#endif
 
 
         [Factory]
         public RulesLoad(Session session)
         {
             _log.Trace("Constructing RulesLoad object");
+#if LATE_BIND
+            HsvRulesLoad = HFM.CreateObject("Hyperion.HsvRulesLoadACV");
+#else
             HsvRulesLoad = new HsvRulesLoadACV();
+#endif
             HsvRulesLoad.SetSession(session.HsvSession, (int)tagHFM_LANGUAGES.HFM_LANGUAGE_INSTALLED);
         }
 

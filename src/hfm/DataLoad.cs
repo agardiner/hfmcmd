@@ -2,7 +2,9 @@ using System;
 using System.IO;
 
 using log4net;
-using HSVSESSIONLib;
+
+// We have to include the following lib even when using dynamic, since it contains
+// the definition of the enums
 using HSVCDATALOADLib;
 
 using Command;
@@ -66,7 +68,8 @@ namespace HFM
             [Factory]
             public LoadOptions(DataLoad dl) :
                 base(typeof(IHsvLoadExtractOptions), typeof(IHsvLoadExtractOption),
-                     typeof(HSV_DATALOAD_OPTION), dl.HsvcDataLoad.LoadOptions)
+                     typeof(HSV_DATALOAD_OPTION),
+                     (IHsvLoadExtractOptions)dl.HsvcDataLoad.LoadOptions)
             {
             }
         }
@@ -91,7 +94,8 @@ namespace HFM
             [Factory]
             public ExtractOptions(DataLoad dl) :
                 base(typeof(IHsvLoadExtractOptions), typeof(IHsvLoadExtractOption),
-                     typeof(HSV_DATAEXTRACT_OPTION), dl.HsvcDataLoad.ExtractOptions)
+                     typeof(HSV_DATAEXTRACT_OPTION),
+                     (IHsvLoadExtractOptions)dl.HsvcDataLoad.ExtractOptions)
             {
             }
         }
@@ -102,14 +106,22 @@ namespace HFM
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
         // Reference to HFM HsvcDataLoad object
+#if LATE_BIND
+        internal readonly dynamic HsvcDataLoad;
+#else
         internal readonly HsvcDataLoad HsvcDataLoad;
+#endif
 
 
         [Factory]
         public DataLoad(Session session)
         {
             _log.Trace("Constructing DataLoad object");
+#if LATE_BIND
+            HsvcDataLoad = HFM.CreateObject("Hyperion.HsvcDataLoad");
+#else
             HsvcDataLoad = new HsvcDataLoad();
+#endif
             HsvcDataLoad.SetSession(session.HsvSession);
         }
 

@@ -1,8 +1,10 @@
 using System;
 
 using log4net;
+#if !LATE_BIND
 using HSXSERVERLib;
 using HSXSERVERFILETRANSFERLib;
+#endif
 
 using Command;
 using HFMCmd;
@@ -28,15 +30,23 @@ namespace HFM
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
         // Reference to the HsxServer object
-        internal readonly HsxServer _hsxServer;
+#if LATE_BIND
+        internal readonly dynamic HsxServer;
+#else
+        internal readonly HsxServer HsxServer;
+#endif
         // Reference to a FileTransfer object
         protected FileTransfer _fileTransfer;
 
 
+#if LATE_BIND
+        public Server(dynamic hsxServer)
+#else
         public Server(HsxServer hsxServer)
+#endif
         {
             _log.Trace("Constructing Server object");
-            _hsxServer = hsxServer;
+            HsxServer = hsxServer;
         }
 
 
@@ -44,7 +54,7 @@ namespace HFM
         {
             get {
                 if(_fileTransfer == null) {
-                    _fileTransfer = new FileTransfer((IHsxServerFileTransfer)_hsxServer.GetFileTransfer());
+                    _fileTransfer = new FileTransfer(this);
                 }
                 return _fileTransfer;
             }
@@ -59,7 +69,7 @@ namespace HFM
             string[] sApps, sDescs;
 
             HFM.Try("Retrieving names of applications",
-                    () => _hsxServer.EnumDataSources(out products, out apps, out descs, out dsns));
+                    () => HsxServer.EnumDataSources(out products, out apps, out descs, out dsns));
             sApps = apps as string[];
             sDescs = descs as string[];
             output.SetHeader("Application", "Description", 50);
@@ -78,7 +88,7 @@ namespace HFM
             string[] dsns = null;
 
             HFM.Try("Retrieving names of DSNs",
-                    () => dsns = _hsxServer.EnumRegisteredDSNs() as string[]);
+                    () => dsns = HsxServer.EnumRegisteredDSNs() as string[]);
 
             if(dsns != null) {
                 output.WriteEnumerable(dsns, "DSN Name");
@@ -97,7 +107,7 @@ namespace HFM
             string folder = null;
 
             HFM.Try("Retrieving system folder",
-                    () => folder = _hsxServer.GetSystemFolder());
+                    () => folder = HsxServer.GetSystemFolder());
             output.WriteSingleValue(folder, "System Folder");
             return folder;
         }
@@ -113,7 +123,11 @@ namespace HFM
             bool isClassic = true;
 
             HFM.Try("Checking application",
-                    () => isClassic = ((IHsxServerInternal)_hsxServer).IsClassicHFMApplication(application));
+#if LATE_BIND
+                    () => isClassic = HsxServer.IsClassicHFMApplication(application));
+#else
+                    () => isClassic = ((IHsxServerInternal)HsxServer).IsClassicHFMApplication(application));
+#endif
             output.SetHeader("Application", "Type", 10);
             output.WriteSingleRecord(application, isClassic ? "Classic" : "EPMA");
             return isClassic;

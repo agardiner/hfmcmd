@@ -6,10 +6,12 @@ using System.Text.RegularExpressions;
 using System.Linq;
 
 using log4net;
+#if !LATE_BIND
 using HSVSESSIONLib;
 using HSVMETADATALib;
-using HFMCONSTANTSLib;
 using HFMSLICECOMLib;
+#endif
+using HFMCONSTANTSLib;
 
 using Command;
 using HFMCmd;
@@ -70,7 +72,11 @@ namespace HFM
         };
 
         // Reference to HFM HsvMetadata object
-        protected readonly HsvMetadata _hsvMetadata;
+#if LATE_BIND
+        internal readonly dynamic HsvMetadata;
+#else
+        internal readonly HsvMetadata HsvMetadata;
+#endif
         // True if the app supports phased submission groups
         protected bool? _usesPhasedSubmissions;
         // True if the current version of HFM accesses dimensions via properties
@@ -87,8 +93,6 @@ namespace HFM
         protected Dimension[] _dimensions;
 
 
-        /// Returns the HFM HsvMetadata object
-        internal HsvMetadata HsvMetadata { get { return _hsvMetadata; } }
         /// Returns the Scenario dimension
         public Dimension Scenario { get { return this[EDimension.Scenario]; } }
         /// Returns the Year dimension
@@ -205,15 +209,27 @@ namespace HFM
                 CheckDimId(dimId);
                 if(_dimensions[dimId] == null) {
                     string dimName = DimensionNames[dimId];
-                    IHsvTreeInfo dim = null;
+#if LATE_BIND
+                    dynamic dim = null;
                     if(UsesDimensionProperties) {
                         HFM.Try("Retrieving dimension {0}", dimName,
-                                () => dim = (IHsvTreeInfo)_hsvMetadata.get_Dimension((short)dimId));
+                                () => dim = HsvMetadata.get_Dimension((short)dimId));
                     }
                     else {
                         HFM.Try("Retrieving dimension {0}", dimName,
-                                () => dim = (IHsvTreeInfo)_hsvMetadata.GetDimension(dimId));
+                                () => dim = HsvMetadata.GetDimension(dimId));
                     }
+#else
+                    IHsvTreeInfo dim = null;
+                    if(UsesDimensionProperties) {
+                        HFM.Try("Retrieving dimension {0}", dimName,
+                                () => dim = (IHsvTreeInfo)HsvMetadata.get_Dimension((short)dimId));
+                    }
+                    else {
+                        HFM.Try("Retrieving dimension {0}", dimName,
+                                () => dim = (IHsvTreeInfo)HsvMetadata.GetDimension(dimId));
+                    }
+#endif
                     _dimensions[dimId] = new Dimension(dimName, dimId, this, dim);
                 }
                 return _dimensions[dimId];
@@ -226,7 +242,7 @@ namespace HFM
                 if(_usesPhasedSubmissions == null) {
                     bool usesPhasedSubmissions = false;
                     HFM.Try("Retrieving phased submission flag",
-                            () => _hsvMetadata.GetUseSubmissionPhaseFlag(out usesPhasedSubmissions));
+                            () => HsvMetadata.GetUseSubmissionPhaseFlag(out usesPhasedSubmissions));
                     _usesPhasedSubmissions = usesPhasedSubmissions;
                 }
                 return (bool)_usesPhasedSubmissions;
@@ -238,7 +254,11 @@ namespace HFM
         internal Metadata(Session session)
         {
             _log.Trace("Constructing Metadata object");
-            _hsvMetadata = (HsvMetadata)session.HsvSession.Metadata;
+#if LATE_BIND
+            HsvMetadata = session.HsvSession.Metadata;
+#else
+            HsvMetadata = (HsvMetadata)session.HsvSession.Metadata;
+#endif
             _dimensions = new Dimension[NumberOfDims];
         }
 
@@ -335,7 +355,7 @@ namespace HFM
             if(HFM.HasVariableCustoms) {
                 object oDimIds = null, oDimNames = null, oDimAliases = null, oSizes = null;
                 HFM.Try("Retrieving custom dimension details",
-                        () => _hsvMetadata.EnumCustomDimsForAppEx(out oDimIds, out oDimNames,
+                        () => HsvMetadata.EnumCustomDimsForAppEx(out oDimIds, out oDimNames,
                                                                   out oDimAliases, out oSizes));
                 _customDimIds = (int[])oDimIds;
                 _customDimNames = HFM.Object2Array<string>(oDimNames);
@@ -400,7 +420,7 @@ namespace HFM
         {
             int id = Member.NOT_USED;
             HFM.Try("Retrieving validation account",
-                    () => _hsvMetadata.GetValidationAccount(out id));
+                    () => HsvMetadata.GetValidationAccount(out id));
             return new Account(this[EDimension.Account], id);
         }
 
@@ -410,7 +430,7 @@ namespace HFM
         {
             int id = Member.NOT_USED;
             HFM.Try("Retrieving phased validation account",
-                    () => _hsvMetadata.GetByIndexValidationAccount(phaseId, out id));
+                    () => HsvMetadata.GetByIndexValidationAccount(phaseId, out id));
             return new Account(this[EDimension.Account], id);
         }
 
@@ -424,7 +444,7 @@ namespace HFM
             string[] labels;
 
             HFM.Try("Retrieving cell text labels",
-                    () => _hsvMetadata.EnumCellTextLabels(out oIds, out oLabels));
+                    () => HsvMetadata.EnumCellTextLabels(out oIds, out oLabels));
             ids = (int[])oIds;
             labels = HFM.Object2Array<string>(oLabels);
             output.WriteEnumerable(labels, "Label");
@@ -442,7 +462,7 @@ namespace HFM
             ECustomDimSize[] sizes;
 
             HFM.Try("Retrieving custom dimension details",
-                    () => _hsvMetadata.EnumCustomDimsForAppEx(out oDimIds, out oDimNames,
+                    () => HsvMetadata.EnumCustomDimsForAppEx(out oDimIds, out oDimNames,
                                                               out oDimAliases, out oSizes));
             dimIds = (int[])oDimIds;
             dimNames = HFM.Object2Array<string>(oDimNames);
@@ -511,31 +531,31 @@ namespace HFM
             switch(dimId) {
                 case (int)EDimension.Account:
                     HFM.Try("Retrieving Account phased submission flag",
-                            () => _hsvMetadata.GetSupportSubmissionPhaseForAccountFlag(out flag));
+                            () => HsvMetadata.GetSupportSubmissionPhaseForAccountFlag(out flag));
                     break;
                 case (int)EDimension.ICP:
                     HFM.Try("Retrieving ICP phased submission flag",
-                            () => _hsvMetadata.GetSupportSubmissionPhaseForICPFlag(out flag));
+                            () => HsvMetadata.GetSupportSubmissionPhaseForICPFlag(out flag));
                     break;
                 default:
                     if(dimId >= (int)EDimension.CustomBase && dimId < NumberOfCustomDims) {
                         HFM.Try("Retrieving Custom phased submission flag", () => {
                             if(HFM.HasVariableCustoms) {
-                                _hsvMetadata.GetSupportSubmissionPhaseForCustomXFlag(dimId, out flag);
+                                HsvMetadata.GetSupportSubmissionPhaseForCustomXFlag(dimId, out flag);
                             }
                             else {
                                 switch(dimId) {
                                     case (int)EDimension.Custom1:
-                                        _hsvMetadata.GetSupportSubmissionPhaseForCustom1Flag(out flag);
+                                        HsvMetadata.GetSupportSubmissionPhaseForCustom1Flag(out flag);
                                         break;
                                     case (int)EDimension.Custom2:
-                                        _hsvMetadata.GetSupportSubmissionPhaseForCustom2Flag(out flag);
+                                        HsvMetadata.GetSupportSubmissionPhaseForCustom2Flag(out flag);
                                         break;
                                     case (int)EDimension.Custom3:
-                                        _hsvMetadata.GetSupportSubmissionPhaseForCustom3Flag(out flag);
+                                        HsvMetadata.GetSupportSubmissionPhaseForCustom3Flag(out flag);
                                         break;
                                     case (int)EDimension.Custom4:
-                                        _hsvMetadata.GetSupportSubmissionPhaseForCustom4Flag(out flag);
+                                        HsvMetadata.GetSupportSubmissionPhaseForCustom4Flag(out flag);
                                         break;
                                 }
                             }
@@ -600,9 +620,13 @@ namespace HFM
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
         // Reference to the Metadata object
-        protected Metadata _metadata;
+        internal readonly Metadata Metadata;
         // Reference to HFM HsvTreeInfo object
-        protected IHsvTreeInfo _hsvTreeInfo;
+#if LATE_BIND
+        internal readonly dynamic HsvTreeInfo;
+#else
+        internal readonly IHsvTreeInfo HsvTreeInfo;
+#endif
         // Name of the dimension
         protected string _name;
         // Id of the dimension
@@ -615,10 +639,6 @@ namespace HFM
 
         // Properties
 
-        /// Internal access to the Metadata object
-        internal Metadata Metadata { get { return _metadata; } }
-        /// Internal access to the underlying HsvTreeInfo COM object
-        internal IHsvTreeInfo HsvTreeInfo { get { return _hsvTreeInfo; } }
         /// The name of the dimension
         public string Name { get { return _name; } }
         /// The id of the dimension
@@ -630,12 +650,16 @@ namespace HFM
 
 
         /// Constructor
+#if LATE_BIND
+        internal Dimension(string dimension, int id, Metadata metadata, dynamic treeInfo)
+#else
         internal Dimension(string dimension, int id, Metadata metadata, IHsvTreeInfo treeInfo)
+#endif
         {
             _name = dimension;
             _id = id;
-            _metadata = metadata;
-            _hsvTreeInfo = treeInfo;
+            Metadata = metadata;
+            HsvTreeInfo = treeInfo;
         }
 
 
@@ -980,6 +1004,12 @@ namespace HFM
     public class Entity : Member
     {
 
+#if LATE_BIND
+        internal dynamic HsvEntities { get { return _dimension.HsvTreeInfo; } }
+#else
+        internal HsvEntities HsvEntities { get { return (HsvEntities)_dimension.HsvTreeInfo; } }
+#endif
+
         /// Constructor
         public Entity(Dimension dimension, string name)
             : base(dimension, name)
@@ -997,7 +1027,7 @@ namespace HFM
             get {
                 int currId = -1;
                 HFM.Try("Retrieving default currency for entity {0}", Name,
-                        () => ((HsvEntities)_dimension.HsvTreeInfo).GetDefaultValueID(Id, out currId));
+                        () => HsvEntities.GetDefaultValueID(Id, out currId));
                 _log.DebugFormat("Default currency id is {0}", currId);
                 return currId;
             }
@@ -1014,7 +1044,12 @@ namespace HFM
 
     public class Account : Member
     {
+
+#if LATE_BIND
+        internal dynamic HsvAccounts { get { return _dimension.HsvTreeInfo; } }
+#else
         internal HsvAccounts HsvAccounts { get { return (HsvAccounts)_dimension.HsvTreeInfo; } }
+#endif
 
         /// Constructor
         internal Account(Dimension dimension, string name)
@@ -1418,12 +1453,20 @@ namespace HFM
             set { this[EDimension.Custom4] = value; }
         }
         /// Converts this POV to an HfmPovCOM object
+#if LATE_BIND
+        public dynamic HfmPovCOM
+#else
         public HfmPovCOM HfmPovCOM
+#endif
         {
             get {
                 Member member;
                 var customIds = new int[_metadata.NumberOfCustomDims];
+#if LATE_BIND
+                dynamic pov = HFM.CreateObject("Hyperion.HfmPovCOM");
+#else
                 var pov = new HfmPovCOM();
+#endif
                 for(int i = 0, c = 0; i < _members.Length; ++i) {
                     member = _members[i];
                     if(member != null) {
@@ -1444,10 +1487,18 @@ namespace HFM
             }
         }
         /// Converts this POV to an HfmSliceCOM object
+#if LATE_BIND
+        public dynamic HfmSliceCOM
+#else
         public HfmSliceCOM HfmSliceCOM
+#endif
         {
             get {
+#if LATE_BIND
+                dynamic slice = HFM.CreateObject("Hyperion.HfmSliceCOM");
+#else
                 var slice = new HfmSliceCOM();
+#endif
                 foreach(var member in _members) {
                     if(member != null) {
                         slice.SetFixedMember(member.Dimension.Id, member.Id);
@@ -1715,10 +1766,18 @@ namespace HFM
         /// Returns an array of all combinations of cells for specified dimensions in the slice
         public POV[] Combos { get { return GenerateAvailableCombos(); } }
         /// Converts this Slice to an HfmSliceCOM object
+#if LATE_BIND
+        public dynamic HfmSliceCOM
+#else
         public HfmSliceCOM HfmSliceCOM
+#endif
         {
             get {
+#if LATE_BIND
+                dynamic slice = HFM.CreateObject("Hyperion.HfmSliceCOM");
+#else
                 var slice = new HfmSliceCOM();
+#endif
                 foreach(var ml in _memberLists) {
                     if(ml != null) {
                         if(ml.Count > 1) {

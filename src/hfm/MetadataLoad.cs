@@ -2,7 +2,9 @@ using System;
 using System.IO;
 
 using log4net;
-using HSVSESSIONLib;
+
+// We have to include the following lib even when using dynamic, since it contains
+// the definition of the enums
 using HSVMETADATALOADACVLib;
 
 using Command;
@@ -73,7 +75,8 @@ namespace HFM
             [Factory]
             public LoadOptions(MetadataLoad mdl) :
                 base(typeof(IHsvLoadExtractOptions), typeof(IHsvLoadExtractOption),
-                     typeof(HSV_METADATALOAD_OPTION), mdl.HsvMetadataLoad.LoadOptions)
+                     typeof(HSV_METADATALOAD_OPTION),
+                     (IHsvLoadExtractOptions)mdl.HsvMetadataLoad.LoadOptions)
             {
             }
         }
@@ -109,7 +112,8 @@ namespace HFM
             [Factory]
             public ExtractOptions(MetadataLoad mdl) :
                 base(typeof(IHsvLoadExtractOptions), typeof(IHsvLoadExtractOption),
-                     typeof(HSV_METADATAEXTRACT_OPTION), mdl.HsvMetadataLoad.ExtractOptions)
+                     typeof(HSV_METADATAEXTRACT_OPTION),
+                     (IHsvLoadExtractOptions)mdl.HsvMetadataLoad.ExtractOptions)
             {
             }
         }
@@ -120,14 +124,22 @@ namespace HFM
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
         // Reference to HFM HsvMetadataLoadACV object
+#if LATE_BIND
+        internal readonly dynamic HsvMetadataLoad;
+#else
         internal readonly HsvMetadataLoadACV HsvMetadataLoad;
+#endif
 
 
         [Factory]
         public MetadataLoad(Session session)
         {
             _log.Trace("Constructing MetadataLoad object");
+#if LATE_BIND
+            HsvMetadataLoad = HFM.CreateObject("Hyperion.HsvMetadataLoadACV");
+#else
             HsvMetadataLoad = new HsvMetadataLoadACV();
+#endif
             HsvMetadataLoad.SetSession(session.HsvSession);
         }
 

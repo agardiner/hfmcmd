@@ -6,8 +6,10 @@ using System.Linq;
 using log4net;
 
 using HFMCONSTANTSLib;
+#if !LATE_BIND
 using HSVSESSIONLib;
 using HSVSYSTEMINFOLib;
+#endif
 
 using Command;
 using HFMCmd;
@@ -143,18 +145,24 @@ namespace HFM
         protected static readonly ILog _log = LogManager.GetLogger(
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-        private readonly HsvSystemInfo _hsvSystemInfo;
+#if LATE_BIND
+        internal readonly dynamic HsvSystemInfo;
+#else
+        internal readonly HsvSystemInfo HsvSystemInfo;
+#endif
 
         private ProgressMonitor _progressMonitor;
-
-        internal HsvSystemInfo HsvSystemInfo { get { return _hsvSystemInfo; } }
 
 
         /// Constructor
         public SystemInfo(Session session)
         {
             _log.Trace("Constructing SystemInfo object");
-            _hsvSystemInfo = (HsvSystemInfo)session.HsvSession.SystemInfo;
+#if LATE_BIND
+            HsvSystemInfo = session.HsvSession.SystemInfo;
+#else
+            HsvSystemInfo = (HsvSystemInfo)session.HsvSession.SystemInfo;
+#endif
         }
 
 
@@ -178,11 +186,11 @@ namespace HFM
 
             if(user != null) {
                 HFM.Try("Retrieving user activity id for {0}", user,
-                        () => _hsvSystemInfo.GetActivityUserID(user, out userId));
+                        () => HsvSystemInfo.GetActivityUserID(user, out userId));
             }
 
             HFM.Try("Retrieving details of tasks",
-                () => _hsvSystemInfo.EnumRunningTasks(taskType == ETaskType.All, (int)taskType,
+                () => HsvSystemInfo.EnumRunningTasks(taskType == ETaskType.All, (int)taskType,
                     user == null, userId, server == null, server,
                     !currentSessionOnly, taskStatus == ETaskStatus.All, (int)taskStatus,
                     0, 10000, // Retrieve the first 10,000 records
@@ -273,7 +281,7 @@ namespace HFM
             string desc = null;
 
             HFM.Try("Retrieving task progress",
-                    () => _hsvSystemInfo.GetRunningTaskProgress(task.TaskId, out progress,
+                    () => HsvSystemInfo.GetRunningTaskProgress(task.TaskId, out progress,
                                      out status, out lastUpdate, out desc));
             task.TaskStatus = (ETaskStatus)status;
             task.PercentageComplete = progress;
@@ -288,7 +296,7 @@ namespace HFM
         protected void CancelRunningTask(int taskId)
         {
             HFM.Try("Cancelling running task {0}", taskId,
-                    () => _hsvSystemInfo.StopRunningTask(taskId));
+                    () => HsvSystemInfo.StopRunningTask(taskId));
         }
 
 

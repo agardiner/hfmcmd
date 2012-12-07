@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 
 using log4net;
+#if !LATE_BIND
 using HSVDATALib;
+#endif
 using HFMCONSTANTSLib;
 
 using Command;
@@ -114,11 +116,15 @@ namespace HFM
 
 
         // Reference to the Session object
-        private Session _session;
+        private readonly Session _session;
         // Reference to the Metadata object
-        private Metadata _metadata;
+        private readonly Metadata _metadata;
         // Reference to the HsvData module
-        private HsvData _hsvData;
+#if LATE_BIND
+        private readonly dynamic _hsvData;
+#else
+        private readonly HsvData _hsvData;
+#endif
 
 
         public Data(Session session)
@@ -126,7 +132,11 @@ namespace HFM
             _log.Trace("Constructing Data object");
             _session = session;
             _metadata = session.Metadata;
+#if LATE_BIND
+            _hsvData = session.HsvSession.Data;
+#else
             _hsvData = (HsvData)session.HsvSession.Data;
+#endif
         }
 
 

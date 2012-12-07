@@ -4,8 +4,10 @@ using System.Runtime.InteropServices;
 
 using log4net;
 
-using HSVRESOURCEMANAGERLib;
 using HFMCONSTANTSLib;
+#if !LATE_BIND
+using HSVRESOURCEMANAGERLib;
+#endif
 
 using Command;
 using HFMCmd;
@@ -21,7 +23,11 @@ namespace HFM
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
         // Reference to HsvResourceManager used to obtain error message details.
+#if LATE_BIND
+        private static readonly dynamic _resourceManager;
+#else
         private static readonly HsvResourceManager _resourceManager;
+#endif
 
         // Flag indicating whether we have already logged the absence of ResourceManager
         private static bool _loggedErrorMessagesUnavailable = false;
@@ -34,7 +40,11 @@ namespace HFM
         static ResourceManager()
         {
             try {
+#if LATE_BIND
+                _resourceManager = HFM.CreateObject("Hyperion.HsvResourceManager");
+#else
                 _resourceManager = new HsvResourceManager();
+#endif
                 _resourceManager.Initialize((short)tagHFM_TIERS.HFM_TIER1);
 
                 var ver = (string)_resourceManager.GetCurrentVersionInUserDisplayFormat();

@@ -3,7 +3,8 @@ using System.IO;
 using System.Text;
 
 using log4net;
-using HSVSESSIONLib;
+// We have to include the following lib even when using dynamic, since it contains
+// the definition of the enums
 using HSVSTARSCHEMAACMLib;
 
 using Command;
@@ -118,12 +119,17 @@ namespace HFM
         // Reference to the current session
         protected readonly Session Session;
         // Reference to HFM HsvStarSchemaACM object
+#if LATE_BIND
+        protected readonly dynamic HsvStarSchemaACM;
+        protected dynamic HsvStarSchemaTemplates
+#else
         protected readonly HsvStarSchemaACM HsvStarSchemaACM;
-
-        // Reference to IHsvStarSchemaTemplates object
         protected IHsvStarSchemaTemplates HsvStarSchemaTemplates
+#endif
         {
-            get { return (IHsvStarSchemaTemplates)HsvStarSchemaACM; }
+            get {
+                return (IHsvStarSchemaTemplates)HsvStarSchemaACM;
+            }
         }
 
 
@@ -132,7 +138,11 @@ namespace HFM
         {
             _log.Trace("Constructing StarSchema object");
             Session = session;
+#if LATE_BIND
+            HsvStarSchemaACM = session.HsvSession.CreateObject("Hyperion.HsvStarSchemaACM");
+#else
             HsvStarSchemaACM = (HsvStarSchemaACM)session.HsvSession.CreateObject("Hyperion.HsvStarSchemaACM");
+#endif
             HsvStarSchemaACM.SetSession(session.HsvSession);
         }
 

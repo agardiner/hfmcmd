@@ -3,7 +3,9 @@ using System.Runtime.InteropServices;
 
 using log4net;
 
+#if !LATE_BIND
 using HSVRESOURCEMANAGERLib;
+#endif
 using HFMCONSTANTSLib;
 
 
@@ -37,6 +39,29 @@ namespace HFM
             }
         }
 
+
+#if LATE_BIND
+        /// <summary>
+        /// Method for instantiating a late-bound instance of an OLE automation
+        /// object by its program id.
+        /// </summary>
+        public static dynamic CreateObject(string hfmProgId)
+        {
+            try {
+                Type type = Type.GetTypeFromProgID(hfmProgId, true);
+                return Activator.CreateInstance(type);
+            }
+            catch(COMException ex) {
+                unchecked {
+                    if(ex.ErrorCode == (int)0x80040154) {
+                        _log.Error(string.Format("Unable to instantiate a {0} COM object; " +
+                                   "is HFM installed on this machine?", hfmProgId), ex);
+                    }
+                }
+                throw ex;
+            }
+        }
+#endif
 
         /// <summary>
         /// Encapsulate a common pattern for performing an API call against HFM.

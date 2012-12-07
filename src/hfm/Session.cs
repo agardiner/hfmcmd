@@ -1,9 +1,11 @@
 using System;
 
 using log4net;
+#if !LATE_BIND
 using HSVSESSIONLib;
 using HFMWSESSIONLib;
 using HSXSERVERLib;
+#endif
 
 using Command;
 
@@ -32,10 +34,17 @@ namespace HFM
         // Application name this session is with
         private readonly string _application;
 
+#if LATE_BIND
+        // Reference to HFM HsvSession object
+        private dynamic _hsvSession;
+        // Reference to a WebSession
+        private dynamic _hfmwSession;
+#else
         // Reference to HFM HsvSession object
         private HsvSession _hsvSession;
         // Reference to a WebSession
         private HFMwSession _hfmwSession;
+#endif
         // Reference to a Server object
         private Server _server;
         // Reference to a Metadata object
@@ -61,7 +70,11 @@ namespace HFM
         }
 
 
+#if LATE_BIND
+        internal dynamic HsvSession
+#else
         internal HsvSession HsvSession
+#endif
         {
             get {
                 if(_hsvSession == null) {
@@ -72,7 +85,11 @@ namespace HFM
         }
 
 
+#if LATE_BIND
+        internal dynamic HFMwSession
+#else
         internal HFMwSession HFMwSession
+#endif
         {
             get {
                 if(_hfmwSession == null) {
@@ -80,7 +97,11 @@ namespace HFM
                     HFM.Try(string.Format("Opening web application {0} on {1}", _application, _cluster),
                             () => hfmwSession = _connection.HFMwManageApplications.OpenApplication(_cluster,
                                                     _application));
+#if LATE_BIND
+                    _hfmwSession = hfmwSession;
+#else
                     _hfmwSession = (HFMwSession)hfmwSession;
+#endif
                 }
                 return _hfmwSession;
             }
@@ -179,11 +200,16 @@ namespace HFM
         {
             object hsxServer = null, hsvSession = null;
             HFM.Try(string.Format("Opening application {0} on {1}", _application, _cluster),
-                    () => _connection.HsxClient.OpenApplication(_cluster,
+                    () => _connection.Client.HsxClient.OpenApplication(_cluster,
                             "Financial Management", _application,
                             out hsxServer, out hsvSession));
+#if LATE_BIND
+            _hsvSession = hsvSession;
+            _server = new Server(hsxServer);
+#else
             _hsvSession = (HsvSession)hsvSession;
             _server = new Server((HsxServer)hsxServer);
+#endif
         }
     }
 

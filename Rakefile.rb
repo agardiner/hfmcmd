@@ -87,13 +87,26 @@ end
 
 
 def compile(version)
+  late_bind = version == "4.0"
   s = settings_for_version(version)
   options = "/nologo /target:exe /main:HFMCmd.Launcher /out:#{s[:exe]} /debug /optimize+"
+  options += " /define:LATE_BIND" if late_bind
   log4net_ref = "/lib:#{s[:log4net]} /reference:log4net.dll"
-  fso_ref = "/lib:lib /reference:Interop.SCRIPTINGLib.dll"
   hfm = ["/lib:#{HFM_LIB}"]
-  FileList["#{HFM_LIB}/*.dll"].each do |dll|
-    hfm << "#{s[:hfm_ref]}:#{File.basename(dll)}"
+  if late_bind
+    hfm << "#{s[:hfm_ref]}:Interop.HFMCONSTANTSLib.dll"
+    hfm << "#{s[:hfm_ref]}:Interop.HSVSECURITYACCESSLib.dll"
+    hfm << "#{s[:hfm_ref]}:Interop.HSVSTARSCHEMAACMLib.dll"
+    hfm << "#{s[:hfm_ref]}:Interop.HSVCDATALOADLib.dll"
+    hfm << "#{s[:hfm_ref]}:Interop.HSVJOURNALLOADACVLib.dll"
+    hfm << "#{s[:hfm_ref]}:Interop.HSVMETADATALOADACVLib.dll"
+    hfm << "#{s[:hfm_ref]}:Interop.HSVSECURITYLOADACVLib.dll"
+    fso_ref = ''
+  else
+    FileList["#{HFM_LIB}/*.dll"].each do |dll|
+      hfm << "#{s[:hfm_ref]}:#{File.basename(dll)}"
+    end
+    fso_ref = "/lib:lib /reference:Interop.SCRIPTINGLib.dll"
   end
   resources = FileList['gen/*.resources'].map{ |f| "/resource:#{f.gsub('/', '\\')}" }
   source = "src\\*.cs src\\command\\*.cs src\\commandline\\*.cs src\\yaml\\*.cs src\\hfm\\*.cs gen\\*.cs"

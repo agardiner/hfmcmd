@@ -2,7 +2,9 @@ using System;
 using System.IO;
 
 using log4net;
-using HSVSESSIONLib;
+
+// We have to include the following lib even when using dynamic, since it contains
+// the definition of the enums
 using HSVJOURNALLOADACVLib;
 
 using Command;
@@ -26,7 +28,8 @@ namespace HFM
             [Factory]
             public LoadOptions(JournalLoad jl) :
                 base(typeof(IHsvLoadExtractOptions), typeof(IHsvLoadExtractOption),
-                     typeof(HSV_JOURNALLOAD_OPTION), jl.HsvJournalLoadACV.LoadOptions)
+                     typeof(HSV_JOURNALLOAD_OPTION),
+                     (IHsvLoadExtractOptions)jl.HsvJournalLoadACV.LoadOptions)
             {
             }
         }
@@ -46,7 +49,8 @@ namespace HFM
             [Factory]
             public ExtractOptions(JournalLoad jl) :
                 base(typeof(IHsvLoadExtractOptions), typeof(IHsvLoadExtractOption),
-                     typeof(HSV_JOURNALDATAEXTRACT_OPTION), jl.HsvJournalLoadACV.ExtractOptions)
+                     typeof(HSV_JOURNALDATAEXTRACT_OPTION),
+                     (IHsvLoadExtractOptions)jl.HsvJournalLoadACV.ExtractOptions)
             {
             }
         }
@@ -57,14 +61,22 @@ namespace HFM
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
         // Reference to HFM HsvJournalLoadACV object
+#if LATE_BIND
+        internal readonly dynamic HsvJournalLoadACV;
+#else
         internal readonly HsvJournalLoadACV HsvJournalLoadACV;
+#endif
 
 
         [Factory]
         public JournalLoad(Session session)
         {
             _log.Trace("Constructing JournalLoad object");
+#if LATE_BIND
+            HsvJournalLoadACV = HFM.CreateObject("Hyperion.HsvJournalLoadAVC");
+#else
             HsvJournalLoadACV = new HsvJournalLoadACV();
+#endif
             HsvJournalLoadACV.SetSession(session.HsvSession);
         }
 

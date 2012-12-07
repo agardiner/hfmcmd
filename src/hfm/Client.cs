@@ -3,9 +3,11 @@ using System.IO;
 using System.Runtime.InteropServices;
 
 using log4net;
+#if !LATE_BIND
 using HSXCLIENTLib;
 using HSXSERVERLib;
 using HFMWAPPLICATIONSLib;
+#endif
 
 using Command;
 using HFMCmd;
@@ -52,10 +54,11 @@ namespace HFM
 
 
         // Reference to HFM HsxClient COM object
-        private readonly HsxClient _hsxClient;
-
-        /// Property for returning the HsxClient COM object
-        internal HsxClient HsxClient { get { return _hsxClient; } }
+#if LATE_BIND
+        internal readonly dynamic HsxClient;
+#else
+        internal readonly HsxClient HsxClient;
+#endif
 
 
         // Constructor
@@ -64,7 +67,11 @@ namespace HFM
         {
             _log.Trace("Constructing Client object");
             try {
-                _hsxClient = new HsxClient();
+#if LATE_BIND
+                HsxClient = HFM.CreateObject("Hyperion.HsxClient");
+#else
+                HsxClient = new HsxClient();
+#endif
             }
             catch(COMException ex) {
                 unchecked {
@@ -87,8 +94,12 @@ namespace HFM
         {
             object server = null;
             HFM.Try("Retrieving HsxServer instance",
-                    () => server = _hsxClient.GetServerOnCluster(cluster));
+                    () => server = HsxClient.GetServerOnCluster(cluster));
+#if LATE_BIND
+            dynamic hsxServer = server;
+#else
             var hsxServer = (HsxServer)server;
+#endif
             return new Server(hsxServer);
         }
 
@@ -109,7 +120,7 @@ namespace HFM
                            IsSensitive = true)]
                 string password)
         {
-            return new Connection(_hsxClient, domain, userName, password);
+            return new Connection(this, domain, userName, password);
         }
 
 
@@ -122,7 +133,7 @@ namespace HFM
                 [Parameter("An SSO token obtained from an existing Shared Services connection")]
                 string token)
         {
-            return new Connection(_hsxClient, token);
+            return new Connection(this, token);
         }
 
 
@@ -132,7 +143,7 @@ namespace HFM
             string[] clusters = null;
 
             HFM.Try("Retrieving names of registered clusters / servers",
-                    () => clusters = _hsxClient.EnumRegisteredClusterNames() as string[]);
+                    () => clusters = HsxClient.EnumRegisteredClusterNames() as string[]);
             if(clusters != null) {
                 output.SetHeader("Cluster");
                 foreach(var cluster in clusters) {
@@ -160,7 +171,7 @@ namespace HFM
             string cluster = null;
             // TODO: This seems to always throw an exception!?
             HFM.Try("Obtaining cluster information for server",
-                    () => _hsxClient.GetClusterInfo(server, loadBalanced, out cluster));
+                    () => HsxClient.GetClusterInfo(server, loadBalanced, out cluster));
             if(cluster != null) {
                 output.WriteSingleValue(cluster, "Cluster Name");
             }
@@ -172,7 +183,7 @@ namespace HFM
         {
             string domain = null, userid = null;
             HFM.Try("Determining current logged on Windows user",
-                    () => _hsxClient.DetermineWindowsLoggedOnUser(out domain, out userid));
+                    () => HsxClient.DetermineWindowsLoggedOnUser(out domain, out userid));
             if(output != null) {
                 output.SetHeader("Domain", "User Name", 30);
                 output.WriteSingleRecord(domain, userid);
@@ -206,8 +217,11 @@ namespace HFM
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
 
-        private HsxClient _hsxClient;
+#if LATE_BIND
+        private dynamic _hfmwManageApps;
+#else
         private HFMwManageApplications _hfmwManageApps;
+#endif
 
         private string _domain;
         private string _userName;
@@ -215,13 +229,21 @@ namespace HFM
         private string _token;
         protected bool _appOpened;
 
-        internal HsxClient HsxClient { get { return _hsxClient; } }
+        internal readonly Client Client;
+#if LATE_BIND
+        internal dynamic HFMwManageApplications
+#else
         internal HFMwManageApplications HFMwManageApplications
+#endif
         {
             get {
                 if(_hfmwManageApps == null) {
                     _log.Trace("Creating HFMwManageApplications instance");
+#if LATE_BIND
+                    _hfmwManageApps = HFM.CreateObject("Hyperion.HFMwManageApplications");
+#else
                     _hfmwManageApps = new HFMwManageApplications();
+#endif
                     HFM.Try("Setting logon info for web application",
                             () => _hfmwManageApps.SetLogonInfoSSO(_domain, _userName,
                                                                   _token, _password));
@@ -232,23 +254,23 @@ namespace HFM
 
 
 
-        internal Connection(HsxClient client, string domain, string userName, string password)
+        internal Connection(Client client, string domain, string userName, string password)
         {
-            _hsxClient = client;
+            Client = client;
             _domain = domain;
             _userName = userName;
             _password = password;
             HFM.Try("Setting logon credentials via username and password",
-                    () => _hsxClient.SetLogonInfoSSO(domain, userName, null, password));
+                    () => Client.HsxClient.SetLogonInfoSSO(domain, userName, null, password));
         }
 
 
-        internal Connection(HsxClient client, string token)
+        internal Connection(Client client, string token)
         {
-            _hsxClient = client;
+            Client = client;
             _token = token;
             HFM.Try("Setting logon credentials via SSO token",
-                    () => _hsxClient.SetLogonInfoSSO(null, null, token, null));
+                    () => Client.HsxClient.SetLogonInfoSSO(null, null, token, null));
         }
 
 
@@ -262,7 +284,7 @@ namespace HFM
             string domain = null, user = null, token = null;
 
             HFM.Try("Retrieving logon info",
-                () => token = _hsxClient.GetLogonInfoSSO(out domain, out user));
+                () => token = Client.HsxClient.GetLogonInfoSSO(out domain, out user));
             if(!_appOpened) {
                 _log.Warn("SSO token cannot be retrieved until an application has been opened");
             }
@@ -301,7 +323,7 @@ namespace HFM
         {
             string[] projects = null;
             HFM.Try("Retrieving names of provisioning projects",
-                    () => projects = _hsxClient.EnumProvisioningProjects(cluster) as string[]);
+                    () => projects = Client.HsxClient.EnumProvisioningProjects(cluster) as string[]);
             if(output != null && projects != null) {
                 output.WriteEnumerable(projects, "Project", 40);
             }
@@ -334,9 +356,9 @@ namespace HFM
             byte[] profile = File.ReadAllBytes(profilePath);
 
             HFM.Try(string.Format("Creating application {0} on {1}", application, cluster),
-                    () => _hsxClient.CreateApplicationCAS(cluster, "Financial Management",
-                            application, description, "", profile, null, null, null, null,
-                            sharedServicesProject, appWebServerUrl));
+                    () => Client.HsxClient.CreateApplicationCAS(cluster, "Financial Management",
+                                application, description, "", profile, null, null, null, null,
+                                sharedServicesProject, appWebServerUrl));
         }
 
 
@@ -351,7 +373,7 @@ namespace HFM
                 string application)
         {
             HFM.Try(string.Format("Deleting application {0} on {1}", application, cluster),
-                    () => _hsxClient.DeleteApplication(cluster, "Financial Management", application));
+                    () => Client.HsxClient.DeleteApplication(cluster, "Financial Management", application));
         }
 
 
@@ -364,7 +386,7 @@ namespace HFM
         {
             bool hasAccess = false;
             HFM.Try("Checking if user has CreateApplication rights",
-                    () => _hsxClient.DoesUserHaveCreateApplicationRights(cluster, out hasAccess));
+                    () => Client.HsxClient.DoesUserHaveCreateApplicationRights(cluster, out hasAccess));
             if(output != null) {
                 output.SetHeader("Cluster", "Create Application Rights", 28);
                 output.WriteSingleRecord(cluster, hasAccess ? "Yes" : "No");
@@ -382,7 +404,7 @@ namespace HFM
         {
             bool hasAdmin = false;
             HFM.Try("Checking if user has SystemAdmin rights",
-                    () => _hsxClient.DoesUserHaveSystemAdminRights(cluster, out hasAdmin));
+                    () => Client.HsxClient.DoesUserHaveSystemAdminRights(cluster, out hasAdmin));
             if(output != null) {
                 output.SetHeader("Cluster", "System Admin Rights", 20);
                 output.WriteSingleRecord(cluster, hasAdmin ? "Yes" : "No");
