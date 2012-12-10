@@ -133,6 +133,63 @@ def package(package_name, *files)
   "tools\\7za.exe a #{PACKAGE_DIR}/#{package_name}.zip #{file_list}"
 end
 
+
+def compare_hfm_versions
+  versions = []
+  methods = Hash.new { |h,k| h[k] = {}}
+  FileList['lib/hfm-*'].each do |hfm_dir|
+    hfm_dir =~ /([\d.]+)$/
+    versions << $1
+    dump_vtable hfm_dir, $1, methods
+  end
+
+  count = 0
+  f = File.new('hfm_vtable_changes.txt', 'w')
+  f.puts "Library\tClass\tMethod\t#{versions.join("\t")}"
+  methods.sort.each do |method, slots|
+    if slots.values.uniq.size > 1
+      f.puts "#{method}\t#{versions.map { |ver| slots[ver] || '-'}.join("\t")}"
+      count += 1
+    end
+  end
+  f.close
+  puts "Found #{count} vtable layout changes"
+end
+
+
+def dump_vtable(dir, ver, methods)
+  puts "Processing #{dir}..."
+  FileList["#{dir}/*.dll"].each do |dll|
+    dll =~ /Interop\.(\w+)\.dll/
+    mod = $1
+    cls_or_ifc = nil
+    count = 0
+    out = `tools\\ILDasm.exe /tokens /text /noca /pubonly #{dll}`.split("\n")
+    is_class = false
+    get_name = false
+    slot = nil
+    out.each do |line|
+      if line =~ /^\.class/
+        puts "  #{mod} #{cls_or_ifc}... #{count}" if count > 0
+        is_class = !line.match(/\binterface\b/)
+        cls_or_ifc = line.match(/(\w+)$/)[1]
+        count = 0
+        next
+      end
+      if is_class && line =~ /^\s+\.method \/\*([0-9A-F]+)/
+        get_name = true
+        slot = $1
+      elsif get_name
+        if line =~ /(\w+)(?:\(\)|\(\[)/
+          methods["#{mod}\t#{cls_or_ifc}\t#{$1}"][ver] = slot
+          count += 1
+          get_name = false
+        end
+      end
+    end
+  end
+end
+
 # ---------
 
 directory BUILD_DIR
@@ -233,6 +290,11 @@ desc "Remove all generated files"
 task :clean do
   FileUtils.rm_rf BUILD_DIR
   FileUtils.rm_rf RELEASE_DIR
+end
+
+
+task :compare_hfm_versions do
+  compare_hfm_versions
 end
 
 
