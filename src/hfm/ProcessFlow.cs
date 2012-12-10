@@ -164,9 +164,13 @@ namespace HFM
         {
             string sGroup = null, sPhase = null;
             if(HFM.HasVariableCustoms) {
+#if HFM_11_1_2_2
                 HFM.Try("Retrieving submission group and phase",
                         () => _hsvProcessFlow.GetGroupPhaseFromCellExtDim(pov.HfmPovCOM,
                                      out sGroup, out sPhase));
+#else
+                HFM.ThrowIncompatibleLibraryEx();
+#endif
             }
             else {
                 HFM.Try("Retrieving submission group and phase",
@@ -739,8 +743,12 @@ namespace HFM
             output.SetHeader("POV", 58, "Process State", 15);
             foreach(var pov in GetProcessUnits(slice)) {
                 if(HFM.HasVariableCustoms) {
+#if HFM_11_1_2_2
                     HFM.Try("Retrieving phased submission process state for {0}", pov,
                             () => _hsvProcessFlow.GetPhasedSubmissionStateExtDim(pov.HfmPovCOM, out state));
+#else
+                    HFM.ThrowIncompatibleLibraryEx();
+#endif
                 }
                 else {
                     HFM.Try("Retrieving phased submission process state for {0}", pov,
@@ -761,10 +769,14 @@ namespace HFM
                    oAnnotations = null, oPaths = null, oFiles = null;
 
             if(HFM.HasVariableCustoms) {
+#if HFM_11_1_2_2
                 HFM.Try("Retrieving process history for {0}", pov,
                         () => _hsvProcessFlow.PhasedSubmissionGetHistory2ExtDim(pov.HfmPovCOM,
                                         out oDates, out oUsers, out oActions, out oStates,
                                         out oAnnotations, out oPaths, out oFiles));
+#else
+                HFM.ThrowIncompatibleLibraryEx();
+#endif
             }
             else {
                 HFM.Try("Retrieving process history {0}", pov,
@@ -785,10 +797,14 @@ namespace HFM
             short newState = 0;
 
             if(HFM.HasVariableCustoms) {
+#if HFM_11_1_2_2
                 HFM.Try("Setting phased submission state for {0}", pov,
                         () => _hsvProcessFlow.PhasedSubmissionProcessManagementChangeStateForMultipleEntities2ExtDim(
                                     pov.HfmSliceCOM, annotation, (int)action, false, false,
                                     (short)targetState, paths, files, out newState));
+#else
+                HFM.ThrowIncompatibleLibraryEx();
+#endif
             }
             else {
                 HFM.Try("Setting phased submission state for {0}", pov,

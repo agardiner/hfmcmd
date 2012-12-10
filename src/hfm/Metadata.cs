@@ -9,7 +9,9 @@ using log4net;
 #if !LATE_BIND
 using HSVSESSIONLib;
 using HSVMETADATALib;
+#if HFM_11_1_2_2
 using HFMSLICECOMLib;
+#endif
 #endif
 using HFMCONSTANTSLib;
 
@@ -39,19 +41,19 @@ namespace HFM
     /// </summary>
     public enum EDimension
     {
-        Scenario = tagHFMDIMENSIONS2.DIMID_SCENARIO,
-        Year = tagHFMDIMENSIONS2.DIMID_YEAR,
-        Period = tagHFMDIMENSIONS2.DIMID_PERIOD,
-        View = tagHFMDIMENSIONS2.DIMID_VIEW,
-        Entity = tagHFMDIMENSIONS2.DIMID_ENTITY,
-        Value = tagHFMDIMENSIONS2.DIMID_VALUE,
-        Account = tagHFMDIMENSIONS2.DIMID_ACCOUNT,
-        ICP = tagHFMDIMENSIONS2.DIMID_ICP,
-        CustomBase = tagHFMDIMENSIONS2.DIMID_CUSTOMBASE,
-        Custom1 = tagHFMDIMENSIONS.DIMENSIONCUSTOM1,
-        Custom2 = tagHFMDIMENSIONS.DIMENSIONCUSTOM2,
-        Custom3 = tagHFMDIMENSIONS.DIMENSIONCUSTOM3,
-        Custom4 = tagHFMDIMENSIONS.DIMENSIONCUSTOM4
+        Scenario   = tagHFMDIMENSIONS.DIMENSIONSCENARIO,
+        Year       = tagHFMDIMENSIONS.DIMENSIONYEAR,
+        Period     = tagHFMDIMENSIONS.DIMENSIONPERIOD,
+        View       = tagHFMDIMENSIONS.DIMENSIONVIEW,
+        Entity     = tagHFMDIMENSIONS.DIMENSIONENTITY,
+        Value      = tagHFMDIMENSIONS.DIMENSIONVALUE,
+        Account    = tagHFMDIMENSIONS.DIMENSIONACCOUNT,
+        ICP        = tagHFMDIMENSIONS.DIMENSIONICP,
+        CustomBase = tagHFMDIMENSIONS.DIMENSIONCUSTOM1,
+        Custom1    = tagHFMDIMENSIONS.DIMENSIONCUSTOM1,
+        Custom2    = tagHFMDIMENSIONS.DIMENSIONCUSTOM2,
+        Custom3    = tagHFMDIMENSIONS.DIMENSIONCUSTOM3,
+        Custom4    = tagHFMDIMENSIONS.DIMENSIONCUSTOM4
     }
 
 
@@ -353,6 +355,7 @@ namespace HFM
         {
             _customDimMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             if(HFM.HasVariableCustoms) {
+#if HFM_11_1_2_2
                 object oDimIds = null, oDimNames = null, oDimAliases = null, oSizes = null;
                 HFM.Try("Retrieving custom dimension details",
                         () => HsvMetadata.EnumCustomDimsForAppEx(out oDimIds, out oDimNames,
@@ -364,6 +367,9 @@ namespace HFM
                     _customDimMap[_customDimNames[i]] = i;
                     _customDimMap[_customDimAliases[i]] = i;
                 }
+#else
+                HFM.ThrowIncompatibleLibraryEx();
+#endif
             }
             else {
                 _customDimIds = new int[] {
@@ -456,22 +462,9 @@ namespace HFM
                  Since = "11.1.2.2")]
         public void EnumCustomDims(IOutput output)
         {
-            object oDimIds = null, oDimNames = null, oDimAliases = null, oSizes = null;
-            int[] dimIds;
-            string[] dimNames, dimAliases;
-            ECustomDimSize[] sizes;
-
-            HFM.Try("Retrieving custom dimension details",
-                    () => HsvMetadata.EnumCustomDimsForAppEx(out oDimIds, out oDimNames,
-                                                              out oDimAliases, out oSizes));
-            dimIds = (int[])oDimIds;
-            dimNames = HFM.Object2Array<string>(oDimNames);
-            dimAliases = HFM.Object2Array<string>(oDimAliases);
-            sizes = (ECustomDimSize[])oSizes;
-
-            output.SetHeader("Dimension Name", "Dimension Alias", "Size", 8);
-            for(int i = 0; i < dimIds.Length; ++i) {
-                output.WriteRecord(dimNames[i], dimAliases[i], sizes[i]);
+            output.SetHeader("Dimension Name", "Dimension Alias");
+            for(int i = 0; i < CustomDimIds.Length; ++i) {
+                output.WriteRecord(CustomDimNames[i], CustomDimAliases[i]);
             }
             output.End();
             // TODO: Work out how to return this
@@ -1453,6 +1446,7 @@ namespace HFM
             set { this[EDimension.Custom4] = value; }
         }
         /// Converts this POV to an HfmPovCOM object
+#if HFM_11_1_2_2
 #if LATE_BIND
         public dynamic HfmPovCOM
 #else
@@ -1510,6 +1504,7 @@ namespace HFM
                 return slice;
             }
         }
+#endif
 
 
         /// Constructor
@@ -1766,6 +1761,7 @@ namespace HFM
         /// Returns an array of all combinations of cells for specified dimensions in the slice
         public POV[] Combos { get { return GenerateAvailableCombos(); } }
         /// Converts this Slice to an HfmSliceCOM object
+#if HFM_11_1_2_2
 #if LATE_BIND
         public dynamic HfmSliceCOM
 #else
@@ -1797,6 +1793,7 @@ namespace HFM
                 return slice;
             }
         }
+#endif
 
 
         /// <summary>

@@ -97,24 +97,29 @@ namespace HFM
                 [Parameter("Path to the generated rules extract file")]
                 string rulesFile,
                 [Parameter("Path to the extract log file; if not specified, defaults to same path " +
-                           "and name as extract file.", DefaultValue = null)]
+                           "and name as extract file.",
+                           DefaultValue = null)]
                 string logFile,
-                [Parameter("Format in which to extract rules", DefaultValue = ERulesFormat.Native)]
+                [Parameter("Format in which to extract rules",
+                           Since = "11.1.2.2",
+                           DefaultValue = ERulesFormat.Native)]
                 ERulesFormat rulesFormat)
         {
             if(logFile == null || logFile == "") {
                 logFile = Path.ChangeExtension(rulesFile, ".log");
             }
-            // TODO: Display options etc
-            _log.FineFormat("    Rules file: {0}", rulesFile);
-            _log.FineFormat("    Log file:     {0}", logFile);
 
             // Ensure rulesFile and logFile are writeable locations
             Utilities.EnsureFileWriteable(rulesFile);
             Utilities.EnsureFileWriteable(logFile);
 
+#if HFM_11_1_2_2
             HFM.Try("Extracting rules",
                     () => HsvRulesLoad.ExtractCalcRulesEx(rulesFile, logFile, (int)rulesFormat));
+#else
+            HFM.Try("Extracting rules",
+                    () => HsvRulesLoad.ExtractCalcRules(rulesFile, logFile));
+#endif
         }
 
 
@@ -166,9 +171,6 @@ namespace HFM
             if(logFile == null || logFile == "") {
                 logFile = Path.ChangeExtension(memberListFile, ".log");
             }
-            // TODO: Display options etc
-            _log.FineFormat("    Member Lists file: {0}", memberListFile);
-            _log.FineFormat("    Log file:     {0}", logFile);
 
             // Ensure rulesFile and logFile are writeable locations
             Utilities.EnsureFileWriteable(memberListFile);

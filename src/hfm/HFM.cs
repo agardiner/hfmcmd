@@ -63,6 +63,15 @@ namespace HFM
         }
 #endif
 
+        public static void ThrowIncompatibleLibraryEx()
+        {
+            throw new Exception("The installed version of HFM on this machine supports features " +
+                                "that were not available in the library with which HFMCmd was " +
+                                "compiled. Please download the correct version of HFMCmd for " +
+                                "HFM version " + Version);
+        }
+
+
         /// <summary>
         /// Encapsulate a common pattern for performing an API call against HFM.
         /// </summary>

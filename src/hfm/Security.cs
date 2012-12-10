@@ -144,9 +144,13 @@ namespace HFM
         {
             int accessRights = 0;
             if(HFM.HasVariableCustoms) {
+#if HFM_11_1_2_2
                 HFM.Try("Retrieving cell access rights",
                         () => HsvDataSecurity.GetCellLevelAccessRightsExtDim(pov.HfmPovCOM,
                                                                              out accessRights));
+#else
+                HFM.ThrowIncompatibleLibraryEx();
+#endif
             }
             else {
                 HFM.Try("Retrieving cell access rights",
@@ -168,9 +172,13 @@ namespace HFM
             short currentState = 0;
             if(_metadata.UsesPhasedSubmissions) {
                 if(HFM.HasVariableCustoms) {
+#if HFM_11_1_2_2
                     HFM.Try("Retrieving phased submission access rights",
                             () => HsvDataSecurity.GetProcessUnitAccessRightsAndStateExExtDim(pov.HfmPovCOM,
                                         Member.NOT_USED, out accessRights, out currentState));
+#else
+                    HFM.ThrowIncompatibleLibraryEx();
+#endif
                 }
                 else {
                     HFM.Try("Retrieving phased submission access rights",

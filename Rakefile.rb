@@ -1,5 +1,6 @@
 # Define constants for file locations etc
-HFM_LIB         = 'lib/hfm-11.1.2.2'
+HFM_VER         = ENV['hfm'] || '11.1.2.2'
+HFM_LIB         = "lib/hfm-#{HFM_VER}"
 LOG4NET35_LIB   = 'lib\log4net-1.2.11\bin\net\3.5\release'
 LOG4NET40_LIB   = 'lib\log4net-1.2.11\bin\net\4.0\release'
 FRAMEWORK35_DIR = 'C:\WINDOWS\Microsoft.NET\Framework\v3.5'
@@ -89,7 +90,7 @@ end
 def compile(version)
   late_bind = version == "4.0"
   s = settings_for_version(version)
-  options = "/nologo /target:exe /main:HFMCmd.Launcher /out:#{s[:exe]} /debug /optimize+"
+  options = "/nologo /target:exe /main:HFMCmd.Launcher /out:#{s[:exe]} /debug /optimize+ /define:HFM_#{HFM_VER.gsub('.', '_')}"
   options += " /define:LATE_BIND" if late_bind
   log4net_ref = "/lib:#{s[:log4net]} /reference:log4net.dll"
   hfm = ["/lib:#{HFM_LIB}"]

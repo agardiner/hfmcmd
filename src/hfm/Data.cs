@@ -252,8 +252,12 @@ namespace HFM
             output.InitProgress(string.Format("{0} cells", clear ? "Clearing" : "Setting"), POVs.Length);
             foreach(var pov in POVs) {
                 if(HFM.HasVariableCustoms) {
+#if HFM_11_1_2_2
                     HFM.Try("Setting cell",
                             () => _hsvData.SetCellExtDim(pov.HfmPovCOM, amount, clear));
+#else
+                    HFM.ThrowIncompatibleLibraryEx();
+#endif
                 }
                 else {
                     HFM.Try("Setting cell",
@@ -292,8 +296,12 @@ namespace HFM
             double amount = 0;
             int status = 0;
             if(HFM.HasVariableCustoms) {
+#if HFM_11_1_2_2
                 HFM.Try("Getting cell data value for {0}", pov,
                         () => _hsvData.GetCellExtDim(pov.HfmPovCOM, out amount, out status));
+#else
+                HFM.ThrowIncompatibleLibraryEx();
+#endif
             }
             else {
                 HFM.Try("Getting cell data value for {0}", pov,
