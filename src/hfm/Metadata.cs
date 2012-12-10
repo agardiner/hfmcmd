@@ -315,33 +315,28 @@ namespace HFM
                     if(_customDimNames == null) {
                         GetCustomDims();
                     }
-                    if(HFM.HasVariableCustoms) {
-                        var re = new Regex(@"^Custom(\d+)$", RegexOptions.IgnoreCase);
-                        var match = re.Match(dimName);
-                        int custom = -1;
-                        if(match.Success) {
-                            custom = int.Parse(match.Groups[1].Value) - 1;
-                            if(custom < _customDimIds.Length) {
-                                dimId = (int)EDimension.CustomBase + custom;
-                                dimName = _customDimNames[custom];
-                            }
-                            else {
-                                throw new ArgumentException(string.Format("Unknown dimension name '{0}'", dimName));
-                            }
+                    var re = new Regex(@"^Custom(\d+)$", RegexOptions.IgnoreCase);
+                    var match = re.Match(dimName);
+                    int custom = -1;
+                    if(match.Success) {
+                        custom = int.Parse(match.Groups[1].Value) - 1;
+                        if(custom < _customDimIds.Length) {
+                            dimId = (int)EDimension.CustomBase + custom;
+                            dimName = _customDimNames[custom];
                         }
                         else {
-                            if(_customDimMap.ContainsKey(dimName)) {
-                                custom = _customDimMap[dimName];
-                                dimId = _customDimIds[custom];
-                                dimName = _customDimNames[custom];
-                            }
-                            else {
-                                throw new ArgumentException(string.Format("Unknown dimension name '{0}'", dimName));
-                            }
+                            throw new ArgumentException(string.Format("Unknown dimension name '{0}'", dimName));
                         }
                     }
                     else {
-                        throw new ArgumentException(string.Format("Unknown dimension name '{0}'", dimName));
+                        if(_customDimMap.ContainsKey(dimName)) {
+                            custom = _customDimMap[dimName];
+                            dimId = _customDimIds[custom];
+                            dimName = _customDimNames[custom];
+                        }
+                        else {
+                            throw new ArgumentException(string.Format("Unknown dimension name '{0}'", dimName));
+                        }
                     }
                     break;
             }
@@ -489,7 +484,8 @@ namespace HFM
             [Parameter("The member list(s) containing the members are to be returned; " +
                        "should be enclosed in { and }, e.g. {[Base]}, {Sports Equipment}, etc. " +
                        "If no member lists are specified, all members in the dimension are returned.",
-                       Alias = "MemberList", DefaultValue = "{[Hierarchy]}")]
+                       Alias = "MemberList",
+                       DefaultValue = new string[] { "{[Hierarchy]}" })]
             string[] memberLists,
             IOutput output)
         {

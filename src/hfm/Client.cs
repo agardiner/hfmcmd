@@ -65,6 +65,7 @@ namespace HFM
         [Factory]
         public Client()
         {
+            HFM.CheckVersionCompatibility();
             _log.Trace("Constructing Client object");
             try {
 #if LATE_BIND
