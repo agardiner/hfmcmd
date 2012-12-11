@@ -44,9 +44,16 @@ To get detailed help for a specific command, use:
 ## Downloading Pre-Built Binaries
 
 HFMCmd supports 2 different builds, one for .NET 3.5 and one for .NET 4.0.
-Functionally, the two builds are identical; the only difference is the size of
-the executable, and the required version of the .NET framework. Most machines
-will already have .NET 3.5 installed, so pick that version if you are unsure.
+Functionally, the two builds are identical; however, the .NET 3.5 builds only
+support early binding, which means they must be compiled for a specific version
+of HFM. The .NET 4.0 build, on the other hand, utilises the new dynamic
+functionality in .NET 4.0, which provides late-binding and allows a single
+HFMCmd executable to work with different versions of HFM.
+
+The .NET 4.0 build is the preferred version, but unfortunately .NET 4.0 is not
+as widely deployed, and may not be installed on the machine on which you want to
+run HFMCmd. In this case, you should choose the .NET 3.5 build for the version
+of HFM that you are running.
 
 Pre-built binaries are available at https://github.com/agardiner/hfmcmd/downloads.
 
@@ -65,7 +72,7 @@ where it is to run.
 
 ## Running HFMCmd
 
-HFMCmd supports two modes of operation:
+HFMCmd supports the following modes of operation:
 
 1.  A single command can be entered on the command-line, along with
     all of the options it requires as keyword arguments, e.g.
@@ -75,7 +82,7 @@ HFMCmd supports two modes of operation:
           AppName:IFRS Scenario:Actual Year:2008 Periods:May-July Entity:GROUP
     ```
 
-2.  Commands can be read from a command-file, e.g.
+2.  Commands can be read from a command-file specified on the command-line, e.g.
 
     ```
       HFMCmd.exe consolidate.hfm
@@ -97,6 +104,13 @@ HFMCmd supports two modes of operation:
         Year: 2008
         Periods: May-July
         Entity: GROUP
+    ```
+
+3. An interactive shell can be started, where commands can be entered at an hfm>
+   prompt. To enter the shell, start HFMCmd with no arguments, i.e.
+
+    ```
+      HFMCmd.exe
     ```
 
 
