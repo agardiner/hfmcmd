@@ -66,19 +66,19 @@ namespace HFM
         public void Allocate(
                 [Parameter("The scenario(s) in which to perform the allocation",
                            Alias = "Scenario")]
-                string[] scenarios,
+                IEnumerable<string> scenarios,
                 [Parameter("The year(s) for which to perform the allocation",
                            Alias = "Year")]
-                string[] years,
+                IEnumerable<string> years,
                 [Parameter("The period(s) over which the allocation should be performed",
                            Alias = "Period")]
-                string[] periods,
+                IEnumerable<string> periods,
                 [Parameter("The entity member(s) for which the allocation should be performed",
                            Alias = "Entity")]
-                string[] entities,
+                IEnumerable<string> entities,
                 [Parameter("The value member(s) for which the allocation should be peformed",
                            Alias = "Value")]
-                string[] values,
+                IEnumerable<string> values,
                 IOutput output)
         {
             var ops = _metadata.DoSubcubeOp("Allocating", scenarios, years, periods, entities, values, output,
@@ -92,19 +92,19 @@ namespace HFM
         public void ChartLogic(
                 [Parameter("The scenario(s) in which to perform the calculation",
                            Alias = "Scenario")]
-                string[] scenarios,
+                IEnumerable<string> scenarios,
                 [Parameter("The year(s) for which to perform the calculation",
                            Alias = "Year")]
-                string[] years,
+                IEnumerable<string> years,
                 [Parameter("The period(s) over which the calculation should be performed",
                            Alias = "Period")]
-                string[] periods,
+                IEnumerable<string> periods,
                 [Parameter("The entities for which the calculation should be performed",
                            Alias = "Entity")]
-                string[] entities,
+                IEnumerable<string> entities,
                 [Parameter("The value member(s) for which the calculation should be peformed",
                            Alias = "Value")]
-                string[] values,
+                IEnumerable<string> values,
                 [Parameter("Flag indicating whether to force a calculation when not needed",
                            DefaultValue = false)]
                 bool force,
@@ -121,19 +121,19 @@ namespace HFM
         public void Translate(
                 [Parameter("The scenario(s) in which to perform the translation",
                            Alias = "Scenario")]
-                string[] scenarios,
+                IEnumerable<string> scenarios,
                 [Parameter("The year(s) for which to perform the translation",
                            Alias = "Year")]
-                string[] years,
+                IEnumerable<string> years,
                 [Parameter("The period(s) over which the translation should be performed",
                            Alias = "Period")]
-                string[] periods,
+                IEnumerable<string> periods,
                 [Parameter("The entities for which the translation should be performed",
                            Alias = "Entity")]
-                string[] entities,
+                IEnumerable<string> entities,
                 [Parameter("The value member(s) for which the translation should be peformed",
                            Alias = "Value")]
-                string[] values,
+                IEnumerable<string> values,
                 [Parameter("Flag indicating whether to force a translation when not needed",
                            DefaultValue = false)]
                 bool force,
@@ -150,16 +150,16 @@ namespace HFM
         public void Consolidate(
                 [Parameter("The scenario(s) in which to perform the consolidation",
                            Alias = "Scenario")]
-                string[] scenarios,
+                IEnumerable<string> scenarios,
                 [Parameter("The year(s) for which to perform the consolidation",
                            Alias = "Year")]
-                string[] years,
+                IEnumerable<string> years,
                 [Parameter("The period(s) over which the consolidation should be performed",
                            Alias = "Period")]
-                string[] periods,
+                IEnumerable<string> periods,
                 [Parameter("The entities for which the consolidation should be performed",
                            Alias = "Entity")]
-                string[] entities,
+                IEnumerable<string> entities,
                 [Parameter("The type of consolidation to perform",
                            DefaultValue = EConsolidationType.Impacted)]
                 EConsolidationType consolidationType,
@@ -199,13 +199,13 @@ namespace HFM
         public void CalculateEPU(
                 [Parameter("The scenario in which to perform the equity pick-up",
                            Alias = "Scenario")]
-                string[] scenarios,
+                IEnumerable<string> scenarios,
                 [Parameter("The year for which to perform the equity pick-up",
                            Alias = "Year")]
-                string[] years,
+                IEnumerable<string> years,
                 [Parameter("The period(s) over which the equity pick-up should be performed",
                            Alias = "Period")]
-                string[] periods,
+                IEnumerable<string> periods,
                 [Parameter("Flag indicating whether to recalculate equity pick-up for all owner-owned pairs, " +
                            "or only those pairs that have been impacted",
                            DefaultValue = false)]

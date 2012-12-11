@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Collections.Generic;
 
 using log4net;
 
@@ -196,13 +197,13 @@ namespace HFM
                 string year,
                 [Parameter("The period(s) to include in the extract",
                            Alias = "Period")]
-                string[] periods,
+                IEnumerable<string> periods,
                 [Parameter("The entities to include in the extract",
                            Alias = "Entity")]
-                string[] entities,
+                IEnumerable<string> entities,
                 [Parameter("The accounts to include in the extract",
                            Alias = "Account")]
-                string[] accounts,
+                IEnumerable<string> accounts,
                 ExtractOptions options,
                 Metadata metadata)
         {

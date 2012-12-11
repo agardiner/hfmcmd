@@ -294,7 +294,7 @@ namespace CommandLine
         /// Parses the supplied set of arg strings using the list of Argument
         // definitions maintained by this command-line UI instance.
         /// </summary>
-        public Dictionary<string, object> Parse(string[] args)
+        public Dictionary<string, object> Parse(IEnumerable<string> args)
         {
             var parser = new Parser(Definition);
             var result = parser.Parse(new List<string>(args));

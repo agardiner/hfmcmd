@@ -122,7 +122,7 @@ namespace HFMCmd
         /// <summary>
         /// Configures logging.
         /// </summary>
-        protected void ConfigureLogging(string[] cmdLineArgs)
+        protected void ConfigureLogging(IEnumerable<string> cmdLineArgs)
         {
             // Get repository, define custom levels
             _logRepository = LogManager.GetRepository();
@@ -280,7 +280,7 @@ namespace HFMCmd
 
 
         /// Process command-line arguments
-        protected int ProcessCommandLine(string[] cmdLineArgs)
+        protected int ProcessCommandLine(IEnumerable<string> cmdLineArgs)
         {
             int rc = 0;
             try {

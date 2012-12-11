@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 using log4net;
@@ -198,7 +199,7 @@ namespace HFM
                 [Parameter("Name of the cluster on which to delete system errors")]
                 string cluster,
                 [Parameter("List of error numbers to delete", DefaultValue = null)]
-                string[] errorReferences)
+                IEnumerable<string> errorReferences)
         {
             // TODO: Implement me!
         }

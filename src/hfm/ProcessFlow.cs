@@ -227,7 +227,7 @@ namespace HFM
                 string annotation,
                 [Parameter("Document attachment(s) to be applied to each process unit or phased submission",
                            DefaultValue = null)]
-                string[] attachments,
+                IEnumerable<string> attachments,
                 IOutput output)
         {
             SetProcessState(slice, EProcessAction.Start, ERole.ProcessFlowSupervisor,
@@ -245,7 +245,7 @@ namespace HFM
                 string annotation,
                 [Parameter("Document attachment(s) to be applied to each process unit or phased submission",
                            DefaultValue = null)]
-                string[] attachments,
+                IEnumerable<string> attachments,
                 [Parameter("Consolidate the process unit if consolidation is necessary to promote.",
                            DefaultValue = true)]
                 bool consolidateIfNeeded,
@@ -276,7 +276,7 @@ namespace HFM
                 string annotation,
                 [Parameter("Document attachment(s) to be applied to each process unit or phased submission",
                            DefaultValue = null)]
-                string[] attachments,
+                IEnumerable<string> attachments,
                 IOutput output)
         {
             SetProcessState(slice, EProcessAction.Reject, ERole.ProcessFlowReviewer1, EProcessState.NotSupported,
@@ -294,7 +294,7 @@ namespace HFM
                 string annotation,
                 [Parameter("Document attachment(s) to be applied to each process unit or phased submission",
                            DefaultValue = null)]
-                string[] attachments,
+                IEnumerable<string> attachments,
                 [Parameter("Consolidate the process unit if consolidation is necessary to submit.",
                            DefaultValue = true)]
                 bool consolidateIfNeeded,
@@ -313,7 +313,7 @@ namespace HFM
                 string annotation,
                 [Parameter("Document attachment(s) to be applied to each process unit or phased submission",
                            DefaultValue = null)]
-                string[] attachments,
+                IEnumerable<string> attachments,
                 [Parameter("Consolidate the process unit if consolidation is necessary to submit.",
                            DefaultValue = true)]
                 bool consolidateIfNeeded,
@@ -332,7 +332,7 @@ namespace HFM
                 string annotation,
                 [Parameter("Document attachment(s) to be applied to each process unit or phased submission",
                            DefaultValue = null)]
-                string[] attachments,
+                IEnumerable<string> attachments,
                 [Parameter("Consolidate the process unit if consolidation is necessary to approve.",
                            DefaultValue = true)]
                 bool consolidateIfNeeded,
@@ -351,7 +351,7 @@ namespace HFM
                 string annotation,
                 [Parameter("Document attachment(s) to be applied to each process unit or phased submission",
                            DefaultValue = null)]
-                string[] attachments,
+                IEnumerable<string> attachments,
                 [Parameter("Consolidate the process unit if consolidation is necessary to publish.",
                            DefaultValue = true)]
                 bool consolidateIfNeeded,
@@ -380,7 +380,7 @@ namespace HFM
         /// Method to be implemented in sub-classes for setting the state of
         /// process unit(s) represented by the ProcessUnits.
         protected void SetProcessState(ProcessUnits slice, EProcessAction action, ERole role,
-                EProcessState targetState, string annotation, string[] documents,
+                EProcessState targetState, string annotation, IEnumerable<string> documents,
                 bool consolidateIfNeeded, IOutput output)
         {
             string[] paths = null, files = null;
@@ -394,11 +394,12 @@ namespace HFM
 
             // Convert document references
             if(documents != null) {
-                paths = new string[documents.Length];
-                files = new string[documents.Length];
-                for(int i = 0; i < documents.Length; ++i) {
-                    paths[i] = Path.GetDirectoryName(documents[i]);
-                    files[i] = Path.GetFileName(documents[i]);
+                var docs = documents.ToArray();
+                paths = new string[docs.Length];
+                files = new string[docs.Length];
+                for(int i = 0; i < docs.Length; ++i) {
+                    paths[i] = Path.GetDirectoryName(docs[i]);
+                    files[i] = Path.GetFileName(docs[i]);
                 }
             }
 

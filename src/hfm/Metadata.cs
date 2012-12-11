@@ -473,7 +473,7 @@ namespace HFM
 
 
         [Command("Returns the names of the member lists for a dimension")]
-        public string[] EnumMemberLists(
+        public IEnumerable<string> EnumMemberLists(
             [Parameter("The dimension whose member lists are to be returned")]
             string dimension,
             IOutput output)
@@ -492,7 +492,7 @@ namespace HFM
                        "If no member lists are specified, all members in the dimension are returned.",
                        Alias = "MemberList",
                        DefaultValue = new string[] { "{[Hierarchy]}" })]
-            string[] memberLists,
+            IEnumerable<string> memberLists,
             IOutput output)
         {
             var members = this[dimension].GetMembers(memberLists);
@@ -577,8 +577,8 @@ namespace HFM
 
         /// Generic method for performing an operation over a series
         /// of scenario, year, period, entity, and value members.
-        internal int DoSubcubeOp(string op, string[] scenarios, string[] years,
-                string[] periods, string[] entities, string[] values,
+        internal int DoSubcubeOp(string op, IEnumerable<string> scenarios, IEnumerable<string> years,
+                IEnumerable<string> periods, IEnumerable<string> entities, IEnumerable<string> values,
                 IOutput output, Action<POV> subcubeOp)
         {
             int ops = 0;
@@ -719,7 +719,7 @@ namespace HFM
         /// Returns an array containing the labels of all members in the
         /// dimension.
         /// </summary>
-        public string[] EnumAllMembers(IOutput output)
+        public IEnumerable<string> EnumAllMembers(IOutput output)
         {
             object oLabels = null;
             string[] labels;
@@ -737,7 +737,7 @@ namespace HFM
         /// Returns an array containing the names of all member lists in the
         /// dimension.
         /// </summary>
-        public string[] EnumMemberLists(IOutput output)
+        public IEnumerable<string> EnumMemberLists(IOutput output)
         {
             object oLists = null;
             string[] lists;
@@ -1665,8 +1665,8 @@ namespace HFM
                 else if(value is string) {
                     _memberLists[dimId] = new MemberList(_metadata[dimId], value as string);
                 }
-                else if(value is string[]) {
-                    _memberLists[dimId] = new MemberList(_metadata[dimId], value as string[]);
+                else if(value is IEnumerable<string>) {
+                    _memberLists[dimId] = new MemberList(_metadata[dimId], value as IEnumerable<string>);
                 }
                 else {
                     throw new ArgumentException(string.Format("Invalid type for Slice dimension {0}",
@@ -1676,7 +1676,7 @@ namespace HFM
         }
         /// Returns the names of the custom dimensions; useful for sub-classes
         /// use a Slice sub-class as a parameter to a command
-        public string[] DynamicSettingNames
+        public IEnumerable<string> DynamicSettingNames
         {
             get {
                 int numCustoms = _metadata.NumberOfCustomDims;

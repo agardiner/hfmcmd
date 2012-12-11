@@ -145,19 +145,19 @@ namespace HFM
         public void Lock(
                 [Parameter("The scenario(s) to lock",
                            Alias = "Scenario")]
-                string[] scenarios,
+                IEnumerable<string> scenarios,
                 [Parameter("The year(s) to lock",
                            Alias = "Year")]
-                string[] years,
+                IEnumerable<string> years,
                 [Parameter("The period(s) to lock",
                            Alias = "Period")]
-                string[] periods,
+                IEnumerable<string> periods,
                 [Parameter("The entity member(s) to lock",
                            Alias = "Entity")]
-                string[] entities,
+                IEnumerable<string> entities,
                 [Parameter("The value member(s) to lock",
                            Alias = "Value")]
-                string[] values,
+                IEnumerable<string> values,
                 IOutput output)
         {
             var ops = _metadata.DoSubcubeOp("Locking", scenarios, years, periods, entities, values, output,
@@ -172,19 +172,19 @@ namespace HFM
         public void Unlock(
                 [Parameter("The scenario(s) to unlock",
                            Alias = "Scenario")]
-                string[] scenarios,
+                IEnumerable<string> scenarios,
                 [Parameter("The year(s) to unlock",
                            Alias = "Year")]
-                string[] years,
+                IEnumerable<string> years,
                 [Parameter("The period(s) to unlock",
                            Alias = "Period")]
-                string[] periods,
+                IEnumerable<string> periods,
                 [Parameter("The entity member(s) to unlock",
                            Alias = "Entity")]
-                string[] entities,
+                IEnumerable<string> entities,
                 [Parameter("The value member(s) to unlock",
                            Alias = "Value")]
-                string[] values,
+                IEnumerable<string> values,
                 IOutput output)
         {
             var ops = _metadata.DoSubcubeOp("Unlocking", scenarios, years, periods, entities, values, output,

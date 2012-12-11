@@ -262,7 +262,7 @@ namespace Command
     /// </summary>
     public interface IDynamicSettingsCollection : ISettingsCollection
     {
-        string[] DynamicSettingNames { get; }
+        IEnumerable<string> DynamicSettingNames { get; }
     }
 
 
