@@ -48,7 +48,7 @@ namespace HFM
 #elif HFM_11_1_2_1
             if(Version < new Version("11.1") || Version > new Version("11.1.2.1")) {
 #elif HFM_11_1_2_2
-            if(Version >= new Version("11.1.2.2")) {
+            if(Version < new Version("11.1.2.2")) {
 #endif
                 ThrowIncompatibleLibraryEx();
             }
