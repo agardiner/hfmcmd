@@ -113,6 +113,8 @@ namespace CommandLine
 
         /// Flag indicating whether console output is redirected
         private bool _isRedirected = false;
+        /// Length of content on last incomplete line
+        private int _lineLength;
 
         /// The set of possible arguments to be recognised.
         public Definition Definition;
@@ -321,6 +323,7 @@ namespace CommandLine
                     System.Console.Out.WriteLine(line);
                 }
             }
+            _lineLength = 0;
         }
 
 
@@ -330,6 +333,7 @@ namespace CommandLine
         public void WriteLine()
         {
             System.Console.Out.WriteLine();
+            _lineLength = 0;
         }
 
 
@@ -340,20 +344,27 @@ namespace CommandLine
         public void Write(string line)
         {
             System.Console.Out.Write(line);
+            _lineLength = line.Length;
         }
 
 
         /// <summary>
-        /// Clears the current line of the console.
+        /// Clears the last text written to the console using Write.
+        /// Note that this may be more than a single line of text, if the
+        /// window width is less than the length of the string written.
         /// </summary>
         public void ClearLine()
         {
-            if(ConsoleWidth > -1 && System.Console.CursorLeft > 0) {
-                var buf = new char[ConsoleWidth - 1];
+            while(ConsoleWidth > -1 && _lineLength > 0) {
+                var buf = new char[ConsoleWidth];
                 System.Console.CursorLeft = 0;
                 System.Console.Write(buf);
                 System.Console.CursorLeft = 0;
+                System.Console.CursorTop = System.Console.CursorTop - 2;
+                _lineLength = _lineLength - ConsoleWidth;
             }
+            System.Console.CursorTop = System.Console.CursorTop + 1;
+            _lineLength = 0;
         }
 
 
