@@ -241,7 +241,7 @@ namespace :dotnet35 do
   desc "Create a download package for the .NET 3.5 framework"
   task :package => :build do
     ver = get_version
-    sh package "HFMCmd_#{ver}_for_.NET_3.5", HFMCMD35_BUNDLE, PACKAGE_FILES
+    sh package "HFMCmd_#{ver}_for_.NET_3.5_HFM_#{HFM_VER}", HFMCMD35_BUNDLE, PACKAGE_FILES
   end
 end
 
