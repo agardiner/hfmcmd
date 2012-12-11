@@ -228,8 +228,12 @@ namespace HFM
                                 () => dim = (IHsvTreeInfo)HsvMetadata.get_Dimension((short)dimId));
                     }
                     else {
+#if !HFM_9_3_1
                         HFM.Try("Retrieving dimension {0}", dimName,
                                 () => dim = (IHsvTreeInfo)HsvMetadata.GetDimension(dimId));
+#else
+                        HFM.ThrowIncompatibleLibraryEx();
+#endif
                     }
 #endif
                     _dimensions[dimId] = new Dimension(dimName, dimId, this, dim);
@@ -436,6 +440,7 @@ namespace HFM
         }
 
 
+#if !HFM_9_3_1
         [Command("Lists the cell text labels for an application",
                  Since = "11.1.2.2")]
         public void EnumCellTextLabels(IOutput output)
@@ -451,6 +456,7 @@ namespace HFM
             output.WriteEnumerable(labels, "Label");
             // TODO: Work out how to return labels and ids; array of Members?
         }
+#endif
 
 
         [Command("Lists the custom dimension names, aliases, and sizes for an application",
@@ -530,7 +536,11 @@ namespace HFM
                     if(dimId >= (int)EDimension.CustomBase && dimId < NumberOfCustomDims) {
                         HFM.Try("Retrieving Custom phased submission flag", () => {
                             if(HFM.HasVariableCustoms) {
+#if !HFM_9_3_1
                                 HsvMetadata.GetSupportSubmissionPhaseForCustomXFlag(dimId, out flag);
+#else
+                                HFM.ThrowIncompatibleLibraryEx();
+#endif
                             }
                             else {
                                 switch(dimId) {
@@ -1058,8 +1068,12 @@ namespace HFM
             int customNum = _dimension.Metadata.CheckCustomDimId(customDimId);
 
             if(HFM.HasVariableCustoms) {
+#if !HFM_9_3_1
                 HFM.Try("Retrieving top member of custom {0} hierarchy for account {1}", customNum, Name,
                         () => HsvAccounts.GetTopMemberOfValidCustomXHierarchy(customDimId, Id, out topCustomId));
+#else
+                HFM.ThrowIncompatibleLibraryEx();
+#endif
             }
             else {
                 switch(customDimId) {

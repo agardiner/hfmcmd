@@ -29,17 +29,21 @@ namespace HFM
 #if LATE_BIND
         internal readonly dynamic HsxFileTransfer;
 #else
-        internal readonly IHsxServerFileTransfer HsxFileTransfer;
+        internal readonly IHsxServerFileTransfer HsxFileTransfer = null;
 #endif
 
 
         public FileTransfer(Server server)
         {
             _log.Trace("Constructing FileTransfer object");
+#if !HFM_9_3_1
 #if LATE_BIND
             HsxFileTransfer = server.HsxServer.GetFileTransfer();
 #else
             HsxFileTransfer = (IHsxServerFileTransfer)server.HsxServer.GetFileTransfer();
+#endif
+#else
+            HFM.ThrowIncompatibleLibraryEx();
 #endif
         }
 

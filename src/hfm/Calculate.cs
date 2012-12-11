@@ -193,6 +193,7 @@ namespace HFM
         }
 
 
+#if HFM_11_1_2_2
         [Command("Performs an Equity Pick-up adjustment calculation",
                  Since = "11.1.2.2")]
         public void CalculateEPU(
@@ -231,6 +232,7 @@ namespace HFM
             output.EndProgress();
             _log.InfoFormat("Equity Pick-Up completed: {0} performed", ops);
         }
+#endif
 
 
         /// Calculates a Scenario/Year/Period/Entity combination specified in

@@ -37,6 +37,7 @@ namespace HFM
         Warehouse = EA_EXTRACT_TYPE_FLAGS.EA_EXTRACT_TYPE_WAREHOUSE
     }
 
+#if !HFM_9_3_1
     /// <summary>
     /// Defines the flat file extract types
     /// </summary>
@@ -45,6 +46,7 @@ namespace HFM
         FlatFile = EA_EXTRACT_TYPE_FLAGS.EA_EXTRACT_TYPE_FLATFILE,
         FlatFileNoHeader = EA_EXTRACT_TYPE_FLAGS.EA_EXTRACT_TYPE_FLATFILE_NOHEADER
     }
+#endif
 
 #if HFM_11_1_2_2
     /// <summary>
@@ -220,6 +222,7 @@ namespace HFM
         }
 
 
+#if !HFM_9_3_1
         [Command("Extracts HFM data to a flat file",
                  Since = "11.1.1")]
         public void ExtractDataToFlatFile(
@@ -285,6 +288,7 @@ namespace HFM
             var ft = Session.Server.FileTransfer;
             ft.RetrieveFile(Session, serverFile, extractFile, decompress, output);
         }
+#endif
 
 
         [Command("Returns a list of Extended Analytics extract template names for the current user")]

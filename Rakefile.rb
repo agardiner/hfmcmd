@@ -306,5 +306,5 @@ end
 
 
 task :default => 'dotnet35:build'
-task :build => [:set_build, 'dotnet35:build', 'dotnet40:build']
+task :build => ['dotnet35:build', 'dotnet40:build']
 task :package => [:build, 'dotnet35:package', 'dotnet40:package']
