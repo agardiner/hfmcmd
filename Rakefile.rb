@@ -10,13 +10,13 @@ BUILD_DIR       = 'gen'
 RELEASE_DIR     = 'bin'
 PACKAGE_DIR     = 'package'
 
-BUILD35_DIR     = "#{BUILD_DIR}/3.5"
-RELEASE35_DIR   = "#{RELEASE_DIR}/3.5"
+BUILD35_DIR     = "#{BUILD_DIR}/NET_3.5_HFM_#{HFM_VER}"
+RELEASE35_DIR   = "#{RELEASE_DIR}/NET_3.5_HFM_#{HFM_VER}"
 HFMCMD35_EXE    = "#{BUILD35_DIR}/HFMCmd.exe"
 HFMCMD35_BUNDLE = "#{RELEASE35_DIR}/HFMCmd.exe"
 
-BUILD40_DIR     = "#{BUILD_DIR}/4.0"
-RELEASE40_DIR   = "#{RELEASE_DIR}/4.0"
+BUILD40_DIR     = "#{BUILD_DIR}/NET_4.0"
+RELEASE40_DIR   = "#{RELEASE_DIR}/NET_4.0"
 HFMCMD40_EXE    = "#{BUILD40_DIR}/HFMCmd.exe"
 HFMCMD40_BUNDLE = "#{RELEASE40_DIR}/HFMCmd.exe"
 
@@ -51,13 +51,17 @@ def settings_for_version(version)
 end
 
 
-def increment_build
+def increment_build(version)
   require 'erb'
 
   commits = `git log --oneline`
   commits = commits.split("\n")
   @build_num = commits.size
   @git_hash = commits[0].split(' ')[0]
+  @platform = ".NET #{version}"
+  if version == "3.5"
+    @platform += " / HFM #{HFM_VER}"
+  end
   template = File.read('properties\AssemblyInfo.cs.erb')
   erb = ERB.new(template)
   File.open('gen\AssemblyInfo.cs', "w") do |f|
@@ -88,6 +92,7 @@ end
 
 
 def compile(version)
+  increment_build(version)
   late_bind = version == "4.0"
   s = settings_for_version(version)
   options = "/nologo /target:exe /main:HFMCmd.Launcher /out:#{s[:exe]} /debug /optimize+ /define:HFM_#{HFM_VER.gsub('.', '_')}"
@@ -207,20 +212,6 @@ RESOURCES.each do |resx|
   file resx
   name = File.basename(resx, '.resx')
   task :resources => "gen/HFMCmd.Resource.#{name}.resources"
-end
-
-
-# Define rule for generating AssemblyInfo.cs
-file 'properties/AssemblyInfo.cs.erb'
-file 'gen/AssemblyInfo.cs' => 'properties/AssemblyInfo.cs.erb' do
-  increment_build
-end
-task :properties => 'gen/AssemblyInfo.cs'
-
-
-desc "Updates the build to the current build number"
-task :set_build do
-  increment_build
 end
 
 
