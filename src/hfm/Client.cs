@@ -70,7 +70,7 @@ namespace HFM
             _log.Trace("Constructing Client object");
             try {
 #if LATE_BIND
-                HsxClient = HFM.CreateObject("Hyperion.HsxClient");
+                HsxClient = HFM.CreateObject("Hyperion.HFMClient");
 #else
                 HsxClient = new HsxClient();
 #endif
