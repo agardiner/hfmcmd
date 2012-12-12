@@ -194,8 +194,8 @@ namespace YAML
         /// with leading '-').</param>
         protected Node ProcessListElement(Node context, string line)
         {
-            object value = ParseValue(line.Substring(1).Trim());
-            return context.Add(new Node(value));
+            var value = ParseValue(null, line.Substring(1).Trim());
+            return context.Add(value);
         }
 
 
@@ -209,8 +209,8 @@ namespace YAML
         {
             string key = line.Substring(0, line.IndexOf(":")).Trim();
             line = line.Substring(line.IndexOf(":") + 1).Trim();
-            object value = ParseValue(line);
-            return context.Add(new Node(key, value));
+            var node = ParseValue(key, line);
+            return context.Add(node);
         }
 
 
@@ -219,46 +219,45 @@ namespace YAML
         /// </summary>
         /// <param name="value">The string that is to be parsed.</param>
         /// <returns>An object that is the parsed value of the string.</returns>
-        protected object ParseValue(string value)
+        protected Node ParseValue(string key, string value)
         {
-            if (value.ToUpper() == "TRUE") {
-                return true;
+            if(value.ToUpper() == "TRUE") {
+                return new Node(key, true);
             }
-            else if (value.ToUpper() == "FALSE") {
-                return false;
+            else if(value.ToUpper() == "FALSE") {
+                return new Node(key, false);
             }
-            else if (value == "") {
-                return null;
+            else if(value == "") {
+                return new Node(key, null);
             }
-            else if (Regex.Match(value, @"\A([""'])(.*)\1\Z").Success) {
-                return value.Substring(1, value.Length - 2);
+            else if(Regex.Match(value, @"\A([""'])(.*)\1\Z").Success) {
+                return new Node(key, value.Substring(1, value.Length - 2));
             }
-            else if (Regex.Match(value, @"\A\[?(.+)(,(.+))+\]?\Z").Success) {
+            else if(Regex.Match(value, @"\A\[?(.+)(,(.+))+\]?\Z").Success) {
                 // Value is an array of items
-                if (value.StartsWith("[") && value.EndsWith("]"))
-                {
+                if(value.StartsWith("[") && value.EndsWith("]")) {
                     value = value.Substring(1, value.Length - 2);
                 }
                 string[] vals = value.Split(',');
-                Node coll = new Node();
-                foreach (string val in vals) {
-                    coll.Add(new Node(ParseValue(val)));
+                Node coll = new Node(key, null);
+                foreach(string val in vals) {
+                    coll.Add(ParseValue(null, val.Trim()));
                 }
                 return coll;
             }
-            else if (Regex.Match(value, @"\{(.+:.+)(?:,(.+:.+))*\}").Success) {
+            else if(Regex.Match(value, @"\{(.+:.+)(?:,(.+:.+))*\}").Success) {
                 // Value is an dictionary of items
                 value = value.Substring(1, value.Length - 2);
                 string[] vals = value.Split(',');
-                Node coll = new Node();
-                foreach (string val in vals) {
-                    string key = val.Substring(0, val.IndexOf(':'));
-                    coll.Add(new Node(key, ParseValue(val.Substring(val.IndexOf(':') + 1))));
+                Node coll = new Node(key, null);
+                foreach(string val in vals) {
+                    string subkey = val.Substring(0, val.IndexOf(':'));
+                    coll.Add(ParseValue(subkey, val.Substring(val.IndexOf(':') + 1)));
                 }
                 return coll;
             }
             else {
-                return value;
+                return new Node(key, value);
             }
         }
 
