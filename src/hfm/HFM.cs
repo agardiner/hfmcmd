@@ -69,7 +69,7 @@ namespace HFM
             }
             catch(COMException ex) {
                 unchecked {
-                    if(ex.ErrorCode == (int)0x80040154) {
+                    if(ex.ErrorCode == (int)0x80040154 || ex.ErrorCode == (int)0x800401F3) {
                         _log.Error(string.Format("Unable to instantiate a {0} COM object; " +
                                    "is HFM installed on this machine?", hfmProgId), ex);
                     }
