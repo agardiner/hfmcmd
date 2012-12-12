@@ -17,6 +17,7 @@ using HFMCONSTANTSLib;
 
 using Command;
 using HFMCmd;
+using Utilities;
 
 
 namespace HFM
@@ -1169,7 +1170,7 @@ namespace HFM
         /// as {[Base]}.
         /// </summary>
         protected internal MemberList(Dimension dimension, string memberSpec)
-            : this(dimension, memberSpec.Split(','))
+            : this(dimension, memberSpec.SplitCSV())
         { }
 
 

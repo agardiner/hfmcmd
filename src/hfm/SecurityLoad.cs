@@ -9,6 +9,7 @@ using HSVSECURITYLOADACVLib;
 
 using Command;
 using HFMCmd;
+using Utilities;
 
 
 namespace HFM
@@ -105,8 +106,8 @@ namespace HFM
             }
 
             // Ensure security file exists and logFile is writeable
-            Utilities.EnsureFileExists(securityFile);
-            Utilities.EnsureFileWriteable(logFile);
+            FileUtilities.EnsureFileExists(securityFile);
+            FileUtilities.EnsureFileWriteable(logFile);
 
             HFM.Try("Loading security",
                     () => HsvSecurityLoad.Load(securityFile, logFile, out oWarnings));
@@ -134,8 +135,8 @@ namespace HFM
             _log.FineFormat("    Log file:     {0}", logFile);
 
             // Ensure securityFile and logFile are writeable locations
-            Utilities.EnsureFileWriteable(securityFile);
-            Utilities.EnsureFileWriteable(logFile);
+            FileUtilities.EnsureFileWriteable(securityFile);
+            FileUtilities.EnsureFileWriteable(logFile);
 
             HFM.Try("Extracting security",
                     () => HsvSecurityLoad.Extract(securityFile, logFile));

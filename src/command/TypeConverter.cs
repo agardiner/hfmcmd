@@ -5,6 +5,8 @@ using System.Linq;
 
 using log4net;
 
+using Utilities;
+
 
 namespace Command
 {
@@ -165,7 +167,7 @@ namespace Command
         /// Converts a string to an array of objects
         protected object ConvertArray(string val, Type type)
         {
-            string[] vals = val.Split(',');     // TODO: Handle quoted values
+            string[] vals = val.SplitCSV();
             var obj = Array.CreateInstance(type, vals.Length);
             for(int i = 0; i < vals.Length; ++i) {
                 obj.SetValue(ConvertTo(vals[i], type), i);

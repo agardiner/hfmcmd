@@ -9,6 +9,7 @@ using HSVSTARSCHEMAACMLib;
 
 using Command;
 using HFMCmd;
+using Utilities;
 
 
 namespace HFM
@@ -441,7 +442,7 @@ namespace HFM
         {
             string template = null;
 
-            Utilities.EnsureFileExists(templateFile);
+            FileUtilities.EnsureFileExists(templateFile);
             using(var sr = new StreamReader(templateFile)) {
                 template = sr.ReadToEnd();
             }
@@ -567,7 +568,7 @@ namespace HFM
             string log = null;
             bool hasLog = false;
 
-            Utilities.EnsureFileWriteable(logFile);
+            FileUtilities.EnsureFileWriteable(logFile);
             HFM.Try("Retrieving EA extract log file",
                     () => HsvStarSchemaACM.GetExtractLogData(out log, out hasLog));
             if(hasLog) {

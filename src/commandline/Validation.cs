@@ -5,6 +5,8 @@ using System.Linq;
 
 using log4net;
 
+using Utilities;
+
 
 namespace CommandLine
 {
@@ -93,7 +95,7 @@ namespace CommandLine
             var ok = true;
             errorMsg = null;
             if(Values != null) {
-                var values = PermitMultipleValues ? value.Split(',') : new string[] { value };
+                var values = PermitMultipleValues ? value.SplitCSV() : new string[] { value };
                 foreach(var val in values) {
                     ok = ok && (CaseSensitive ? Values.Contains(val) :
                             Values.Contains(val, StringComparer.OrdinalIgnoreCase));

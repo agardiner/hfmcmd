@@ -10,6 +10,7 @@ using HSVCDATALOADLib;
 
 using Command;
 using HFMCmd;
+using Utilities;
 
 
 namespace HFM
@@ -133,9 +134,10 @@ namespace HFM
                            "source directory, use wildcards in the file name",
                            Alias = "DataFile")]
                 string dataFiles,
-                [Parameter("Path to the folder in which to create log files; if not specified, defaults to same folder " +
-                           "as the source data file. Log files have the same file name (but with a .log extension) as " +
-                           "the file from which the data is loaded",
+                [Parameter("Path to the folder in which to create log files; if not specified, " +
+                           "defaults to same folder as the source data file. Log files have the " +
+                           "same file name (but with a .log extension) as the file from which " +
+                           "the data is loaded",
                            DefaultValue = null)]
                 string logDir,
                 LoadOptions options,
@@ -146,7 +148,7 @@ namespace HFM
             bool didError = false;
             string logFile;
 
-            var paths = Utilities.GetMatchingFiles(dataFiles);
+            var paths = FileUtilities.GetMatchingFiles(dataFiles);
             _log.InfoFormat("Found {0} data files to process", paths.Count);
             output.InitProgress("Data Load", paths.Count);
             foreach(var dataFile in paths) {
@@ -159,8 +161,8 @@ namespace HFM
                 }
 
                 // Ensure data file exists and logFile is writeable
-                Utilities.EnsureFileExists(dataFile);
-                Utilities.EnsureFileWriteable(logFile);
+                FileUtilities.EnsureFileExists(dataFile);
+                FileUtilities.EnsureFileWriteable(logFile);
 
                 _log.InfoFormat("Loading data from {0}", dataFile);
                 HFM.Try("Loading data", () => {
@@ -220,8 +222,8 @@ namespace HFM
             }
 
             // Ensure dataFile and logFile are writeable locations
-            Utilities.EnsureFileWriteable(dataFile);
-            Utilities.EnsureFileWriteable(logFile);
+            FileUtilities.EnsureFileWriteable(dataFile);
+            FileUtilities.EnsureFileWriteable(logFile);
 
             HFM.Try("Extracting data",
                     () => HsvcDataLoad.Extract(dataFile, logFile));

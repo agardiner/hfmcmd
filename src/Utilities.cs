@@ -9,7 +9,7 @@ using System.Linq;
 using log4net;
 
 
-namespace HFMCmd
+namespace Utilities
 {
 
     /// <summary>
@@ -46,6 +46,41 @@ namespace HFMCmd
             }
             return sb.ToString();
         }
+
+
+        /// <summary>
+        /// Splits a line of text into comma-separated fields. Handles quoted
+        /// fields containing commas.
+        /// </summary>
+        public static string[] SplitCSV(this string line)
+        {
+            return line.SplitQuoted(",");
+        }
+
+
+        /// <summary>
+        /// Splits a line of text into space-separated fields. Handles quoted
+        /// fields containing spaces.
+        /// </summary>
+        public static string[] SplitSpaces(this string line)
+        {
+            return line.SplitQuoted(@"\s+");
+        }
+
+
+        /// <summary>
+        /// Splits a line of text into fields on the specified separator.
+        /// Handles quoted fields that contain the separator.
+        /// </summary>
+        public static string[] SplitQuoted(this string line, string separator)
+        {
+            var re = string.Format("{0}(?=(?:[^\"]*\"[^\"]*[\"^{0}]*\")*(?![^\"]*\"))",
+                                   separator);
+            var fields = Regex.Split(line, re);
+            return fields.Select(f => f.Trim().Trim(new char[] { '"' })
+                                       .Replace("\"\"", "\"")).ToArray();
+        }
+
     }
 
 
@@ -53,7 +88,7 @@ namespace HFMCmd
     /// <summary>
     /// Utility class providing a collection of static utility methods.
     /// </summary>
-    public static class Utilities
+    public static class FileUtilities
     {
         // Reference to class logger
         private static readonly ILog _log = LogManager.GetLogger(
@@ -99,7 +134,7 @@ namespace HFMCmd
 
             if(includeSubDirs) {
                 foreach(var dirPath in Directory.GetDirectories(sourceDir)) {
-                    var dir = Utilities.GetDirectoryName(dirPath);
+                    var dir = GetDirectoryName(dirPath);
                     _log.DebugFormat("Recursing into {0}", Path.Combine(sourceDir, dir));
                     files.AddRange(FindMatchingFiles(Path.Combine(sourceDir, dir), nameRE, includeSubDirs, depth + 1));
                 }

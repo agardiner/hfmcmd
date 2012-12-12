@@ -9,6 +9,7 @@ using HSVMETADATALOADACVLib;
 
 using Command;
 using HFMCmd;
+using Utilities;
 
 
 namespace HFM
@@ -159,8 +160,8 @@ namespace HFM
             }
 
             // Ensure metadata file exists and logFile is writeable
-            Utilities.EnsureFileExists(metadataFile);
-            Utilities.EnsureFileWriteable(logFile);
+            FileUtilities.EnsureFileExists(metadataFile);
+            FileUtilities.EnsureFileWriteable(logFile);
 
             HFM.Try("Loading metadata",
                     () => HsvMetadataLoad.Load(metadataFile, logFile));
@@ -184,8 +185,8 @@ namespace HFM
             _log.FineFormat("    Log file:     {0}", logFile);
 
             // Ensure extractFile and logFile are writeable locations
-            Utilities.EnsureFileWriteable(metadataFile);
-            Utilities.EnsureFileWriteable(logFile);
+            FileUtilities.EnsureFileWriteable(metadataFile);
+            FileUtilities.EnsureFileWriteable(logFile);
 
             HFM.Try("Extracting metadata",
                     () => HsvMetadataLoad.Extract(metadataFile, logFile));

@@ -15,6 +15,7 @@ using log4net.Repository.Hierarchy;
 using Command;
 using CommandLine;
 using Encryption;
+using Utilities;
 
 
 namespace HFMCmd
@@ -391,14 +392,15 @@ namespace HFMCmd
             while(true) {
                 input = _cmdLine.ReadLine("hfm> ");
 
-                if(UI.Interrupted || String.Compare(input, "quit", StringComparison.OrdinalIgnoreCase) == 0) {
+                if(UI.Interrupted ||
+                   String.Compare(input, "exit", StringComparison.OrdinalIgnoreCase) == 0 ||
+                   String.Compare(input, "quit", StringComparison.OrdinalIgnoreCase) == 0) {
                     break;
                 }
 
                 _cmdLine.Definition.Clear();
                 SetupCommandLine();
-                // TODO: Split command-line properly when quoted strings are used
-                ProcessCommandLine(("hfm " + input).Split(' '));
+                ProcessCommandLine(("hfm " + input).SplitSpaces());
             }
         }
 

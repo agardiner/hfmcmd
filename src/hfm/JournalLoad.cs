@@ -9,6 +9,7 @@ using HSVJOURNALLOADACVLib;
 
 using Command;
 using HFMCmd;
+using Utilities;
 
 
 namespace HFM
@@ -98,7 +99,7 @@ namespace HFM
         {
             string logFile;
 
-            var paths = Utilities.GetMatchingFiles(journalFiles);
+            var paths = FileUtilities.GetMatchingFiles(journalFiles);
             _log.InfoFormat("Found {0} journal files to process", paths.Count);
             output.InitProgress("Journal Load", paths.Count);
             foreach(var jnlFile in paths) {
@@ -111,8 +112,8 @@ namespace HFM
                 }
 
                 // Ensure data file exists and logFile is writeable
-                Utilities.EnsureFileExists(jnlFile);
-                Utilities.EnsureFileWriteable(logFile);
+                FileUtilities.EnsureFileExists(jnlFile);
+                FileUtilities.EnsureFileWriteable(logFile);
 
                 _log.InfoFormat("Loading journals from {0}", jnlFile);
                 HFM.Try("Loading data", () => {
@@ -150,8 +151,8 @@ namespace HFM
             }
 
             // Ensure dataFile and logFile are writeable locations
-            Utilities.EnsureFileWriteable(journalFile);
-            Utilities.EnsureFileWriteable(logFile);
+            FileUtilities.EnsureFileWriteable(journalFile);
+            FileUtilities.EnsureFileWriteable(logFile);
 
             HFM.Try("Extracting journals",
                     () => HsvJournalLoadACV.Extract(journalFile, logFile));

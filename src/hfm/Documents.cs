@@ -13,6 +13,7 @@ using HFMCONSTANTSLib;
 
 using Command;
 using HFMCmd;
+using Utilities;
 
 
 namespace HFM
@@ -403,7 +404,7 @@ namespace HFM
             _log.TraceFormat("Searching for {0} at {1}", name, path);
             DocumentInfo docInfo = null;
             if(_documentCache.ContainsKey(path)) {
-                var nameRE = Utilities.ConvertWildcardPatternToRE(name);
+                var nameRE = FileUtilities.ConvertWildcardPatternToRE(name);
                 docInfo = _documentCache[path].FirstOrDefault(doc =>
                         nameRE.IsMatch(doc.Name) && doc.IsDocumentType(docType));
             }
@@ -432,7 +433,7 @@ namespace HFM
                 EPublicPrivate visibility,
                 IOutput output)
         {
-            var nameRE = Utilities.ConvertWildcardPatternToRE(name);
+            var nameRE = FileUtilities.ConvertWildcardPatternToRE(name);
             List<DocumentInfo> docs = new List<DocumentInfo>();
 
             if(_documentCache.ContainsKey(path)) {
@@ -511,7 +512,7 @@ namespace HFM
             else {
                 throw new DocumentException("No document named {0} could be found at {1}", name, path);
             }
-            return Utilities.GetBytes(docContent);
+            return FileUtilities.GetBytes(docContent);
         }
 
 
@@ -691,7 +692,7 @@ namespace HFM
                 bool overwrite,
                 IOutput output)
         {
-            var files = Utilities.FindMatchingFiles(sourceDir, name, includeSubDirs);
+            var files = FileUtilities.FindMatchingFiles(sourceDir, name, includeSubDirs);
             var loaded = 0;
 
             _log.InfoFormat("Loading documents from {0} to {1}", sourceDir, targetFolder);
@@ -699,7 +700,7 @@ namespace HFM
 
             foreach(var filePath in files) {
                 var file = Path.GetFileName(filePath);
-                var tgtFolder = Path.Combine(targetFolder, Utilities.PathDifference(sourceDir, filePath));
+                var tgtFolder = Path.Combine(targetFolder, FileUtilities.PathDifference(sourceDir, filePath));
                 CreateFolder(tgtFolder, null, securityClass, isPrivate, EDocumentType.All, false);
                 if(overwrite || !DoesDocumentExist(tgtFolder, file, EDocumentType.All)) {
                     var doc = new DocumentInfo(filePath);
@@ -756,7 +757,7 @@ namespace HFM
             }
             output.InitProgress("Extracting documents", docs.Count);
             foreach(var doc in docs) {
-                tgtPath = Path.Combine(targetDir, Utilities.PathDifference(path, doc.Folder));
+                tgtPath = Path.Combine(targetDir, FileUtilities.PathDifference(path, doc.Folder));
                 filePath = Path.Combine(tgtPath, doc.DefaultFileName);
                 if(doc.IsFolder) {
                     if(!Directory.Exists(filePath)) {
