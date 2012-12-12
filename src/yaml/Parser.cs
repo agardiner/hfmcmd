@@ -240,13 +240,7 @@ namespace YAML
                 if(value.StartsWith("[") && value.EndsWith("]")) {
                     value = value.Substring(1, value.Length - 2);
                 }
-                System.Console.WriteLine("Line: ", value);
-                System.Console.WriteLine("Space separated: ");
-                string[] vals = value.SplitSpaces();
-                foreach(var s in vals) { System.Console.WriteLine(s); }
-                System.Console.WriteLine("Comma separated: ");
-                vals = value.SplitCSV();
-                foreach(var s in vals) { System.Console.WriteLine(s); }
+                string[] vals = value.SplitCSV();
                 Node coll = new Node(key, null);
                 foreach(string val in vals) {
                     coll.Add(new Node(null, val));

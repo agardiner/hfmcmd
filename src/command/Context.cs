@@ -491,7 +491,11 @@ namespace Command
                 sb.AppendFormat("{0,-24}", name.Substring(1));
                 sb.Append(": ");
                 if(val.GetType().IsArray) {
-                    sb.Append(string.Join(", ", ((object[])val).Select(o => o.ToString()).ToArray()));
+                    sb.Append(string.Join(", ", ((object[])val).Select(o =>
+                                    o.ToString().IndexOf(",") >= 0 ?
+                                        string.Format("\"{0}\"", o.ToString().Replace("\"", "\"\"")) :
+                                        o.ToString()
+                              ).ToArray()));
                 }
                 else {
                     sb.Append(val);
@@ -518,7 +522,6 @@ namespace Command
                     var vals = ((IEnumerable<object>)val).ToArray();
                     var ary = Array.CreateInstance(elType, vals.Length);
                     for(int i = 0; i < vals.Length; ++i) {
-                        _log.Info(vals[i]);
                         ary.SetValue(_registry.TypeConverter.ConvertTo(vals[i].ToString(), elType), i);
                     }
                     return ary;
