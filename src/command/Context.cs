@@ -176,8 +176,8 @@ namespace Command
         public bool HasObject(Type type)
         {
             var result = _context.Any(o => type.IsInstanceOfType(o));
-            _log.DebugFormat("Context {1} contain an object of type {0}", type,
-                    result ? "does" : "does not");
+            _log.DebugFormat("Context {1} an object of type {0}", type,
+                    result ? "contains" : "does not contain");
             return result;
         }
 
@@ -503,20 +503,34 @@ namespace Command
         /// Ensures a value to be passed as a setting is of the right ParameterType
         private object ConvertSetting(object val, ISetting setting)
         {
-            if(setting.ParameterType.IsAssignableFrom(val.GetType())) {
+            var type = setting.ParameterType;
+            if(type.IsAssignableFrom(val.GetType())) {
                 return val;
             }
             else if(val is string) {
-                return _registry.TypeConverter.ConvertTo(val as string, setting.ParameterType);
+                return _registry.TypeConverter.ConvertTo(val as string, type);
             }
-            else {
-                throw new ArgumentException(string.Format("Unable to convert {0} to {1} for {2}",
-                            val.GetType().Name, setting.ParameterType.Name, setting.Name));
+            else if(val is IEnumerable<object> && type.IsGenericType &&
+                    type.GetGenericTypeDefinition() == typeof(IEnumerable<>)) {
+                var elType = type.GetGenericArguments()[0];
+                if(_registry.TypeConverter.CanConvert(elType)) {
+                    _log.DebugFormat("Converting {0} to {1}[]", val.GetType(), elType);
+                    var vals = ((IEnumerable<object>)val).ToArray();
+                    var ary = Array.CreateInstance(elType, vals.Length);
+                    for(int i = 0; i < vals.Length; ++i) {
+                        _log.Info(vals[i]);
+                        ary.SetValue(_registry.TypeConverter.ConvertTo(vals[i].ToString(), elType), i);
+                    }
+                    return ary;
+                }
             }
+            throw new ArgumentException(string.Format("Unable to convert {0} to {1} for setting {2}",
+                        val.GetType().Name, setting.ParameterType.Name, setting.Name));
         }
 
 
-        private ISettingsCollection PrepareSettingsCollectionArg(Command cmd, CommandParameter param, Dictionary<string, object> args, StringBuilder sb)
+        private ISettingsCollection PrepareSettingsCollectionArg(Command cmd, CommandParameter param,
+                Dictionary<string, object> args, StringBuilder sb)
         {
             // Attempt to create an instance of the collection class if necessary
             if(!HasObject(param.ParameterType)) {

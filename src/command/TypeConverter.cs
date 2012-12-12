@@ -34,11 +34,19 @@ namespace Command
     /// <summary>
     /// Provides a general purpose and extensible ITypeConverter implementation.
     /// String-to-object type conversions can be registered in an instance of
-    /// this class via lambda functions. Additionally, default mappings for int,
-    /// double, bool, enums, and arrays of the above are provided.
+    /// this class via lambda functions. Additionally, default mappings are
+    /// provided for:
+    /// - string, int, double, and bool primitives
+    /// - DateTime objects
+    /// - enums
+    /// - Arrays and IEnumerable<> of any of the above
     /// </summary>
     public class PluggableTypeConverter : ITypeConverter
     {
+        // Reference to class logger
+        protected static readonly ILog _log = LogManager.GetLogger(
+            System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
         // Collection of mapping functions for converting strings to target types
         private Dictionary<Type, Func<string, Type, object>> _maps;
 
@@ -91,12 +99,16 @@ namespace Command
             if(type.IsArray) {
                 return type.GetElementType().IsEnum || _maps.ContainsKey(type.GetElementType());
             }
+            else if(type.IsGenericType && type.GetGenericTypeDefinition() ==  typeof(IEnumerable<>)) {
+                var args = type.GetGenericArguments();
+                if(args.Length == 1) {
+                    return args[0].IsEnum || _maps.ContainsKey(args[0]);
+                }
+            }
             else if(type.IsEnum) {
                 return true;
             }
-            else {
-                return _maps.ContainsKey(type);
-            }
+            return _maps.ContainsKey(type);
         }
 
 
@@ -115,6 +127,9 @@ namespace Command
                 }
                 else if(type.IsArray) {
                     return ConvertArray(value, type.GetElementType());
+                }
+                else if(type.IsGenericType && type.GetGenericTypeDefinition() ==  typeof(IEnumerable<>)) {
+                    return ConvertArray(value, type.GetGenericArguments()[0]);
                 }
             }
             throw new ArgumentException(
