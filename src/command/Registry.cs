@@ -206,9 +206,9 @@ namespace Command
         /// <summary>
         /// Returns each Command that is currently registered.
         /// </summary>
-        public IEnumerable<Command> EachCommand()
+        public IEnumerable<Command> Commands()
         {
-            return _commands.Values.OrderBy(c => c.Name);
+            return _commands.Values.Distinct().OrderBy(c => c.Name);
         }
 
 

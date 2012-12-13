@@ -68,6 +68,8 @@ namespace HFMCmd
         private ILoggerRepository _logRepository;
         /// Reference to the logger hierarchy
         private Hierarchy _logHierarchy;
+        /// Flag indicating if we are in REPL mode
+        private bool _inREPL = false;
 
 
         /// Constructor
@@ -389,6 +391,12 @@ namespace HFMCmd
                 Validate = ValidateCommand
             };
 
+            System.Console.Title = string.Format("{0} Shell", ApplicationInfo.Title);
+            _cmdLine.DisplayTitle(System.Console.Out);
+            _cmdLine.WriteLine("Enter 'help' for help, or 'quit' to exit");
+            _cmdLine.WriteLine();
+
+            _inREPL = true;
             while(true) {
                 input = _cmdLine.ReadLine("hfm> ");
 
@@ -402,6 +410,7 @@ namespace HFMCmd
                 SetupCommandLine();
                 ProcessCommandLine(("hfm " + input).SplitSpaces());
             }
+            _inREPL = false;
         }
 
 
@@ -409,33 +418,20 @@ namespace HFMCmd
         [Command("Displays help information")]
         public void Help(
                 [Parameter("The name of a command for which to display detailed help",
-                 DefaultValue = null, Uda = "PositionalArg")]
+                 DefaultValue = null,
+                 Uda = "PositionalArg")]
                 string command,
                 IOutput output)
         {
             if(output == null) return;
             if(command == null) {
                 // Display general help
-                output.WriteLine(HFMCmd.Resource.Help.General);
+                output.WriteLine(string.Format(HFMCmd.Resource.Help.General,
+                           _inREPL ? "" : ApplicationInfo.ExeName));
             }
             else if(string.Equals(command, "Commands", StringComparison.OrdinalIgnoreCase)) {
                 // Display a list of commands in two columns
-                _log.Info("Displaying available commands:");
-                output.SetHeader("Commands", 40, "", 40);
-                var cmds = _commands.EachCommand().ToArray();
-                int limit = cmds.Length / 2;
-                if(cmds.Length % 2 == 1) { limit++; }
-                for(var i = 0; i < limit; ++i) {
-                    if(limit + i < cmds.Length) {
-                        output.WriteRecord(cmds[i], cmds[limit + i]);
-                    }
-                    else {
-                        output.WriteRecord(cmds[i], "");
-                    }
-                }
-                output.End(true);
-                output.WriteSingleValue(string.Format("For detailed help on any of the above commands, " +
-                                        "use the command '{0} Help <CommandName>'", ApplicationInfo.ExeName));
+                OutputCommands(output);
             }
             else {
                 // Display help for the requested command
@@ -460,6 +456,40 @@ namespace HFMCmd
                     }
                     output.End(true);
                 }
+            }
+        }
+
+
+        private void OutputCommands(IOutput output)
+        {
+            int cols = _cmdLine.ConsoleWidth / 32;
+            var headers = new object[cols * 2];
+            var values = new object[cols];
+
+            _log.Info("Displaying available commands:");
+            for(var i = 0; i < cols; i++) {
+                headers[i*2] = i == 0 ? "Commands" : "";
+                headers[i*2+1] = 32;
+            }
+            output.SetHeader(headers);
+            var cmds = _commands.Commands().ToArray();
+            int rows = cmds.Length / cols;
+            if(cmds.Length % cols != 0) { rows++; }
+            for(var i = 0; i < rows; ++i) {
+                for(var j = 0; j < cols; ++j) {
+                    values[j] = (i+j*rows < cmds.Length) ? (object)cmds[i+j*rows] : (object)"";
+                }
+                output.WriteRecord(values);
+            }
+            output.End(true);
+            if(_inREPL) {
+                output.WriteSingleValue("For detailed help on any of the above commands, " +
+                                        "use the command 'Help <CommandName>'");
+            }
+            else {
+                output.WriteSingleValue(string.Format("For detailed help on any of the above commands, " +
+                                        "use the command '{0} Help <CommandName>'",
+                                        ApplicationInfo.ExeName));
             }
         }
 

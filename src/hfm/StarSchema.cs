@@ -305,7 +305,7 @@ namespace HFM
 
         [Command("Creates an Extended Analytics extract template for a relational database target" +
                  "on the HFM server for the logged in user")]
-        public void CreateStarSchemaDataExtractTemplate(
+        public void CreateStarSchemaExtractTemplate(
                 [Parameter("The name to give to the template")]
                 string templateName,
                 [Parameter("The name of the DSN that contains the connection details for the " +
@@ -352,7 +352,7 @@ namespace HFM
 
 
         [Command("Creates an Extended Analytics extract template on the HFM server for the logged in user")]
-        public void CreateFlatFileDataExtractTemplate(
+        public void CreateFlatFileExtractTemplate(
                 [Parameter("The name to give to the template")]
                 string templateName,
                 [Parameter("Whether to include dynamic accounts",

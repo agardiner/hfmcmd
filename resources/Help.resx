@@ -124,18 +124,17 @@
     </value>
   </data>
 
-  <data name="Usage" xml:space="preserve">
-    <value>
-  Usage: {0}
-    </value>
-  </data>
-
   <data name="General">
     <value>
-      Some general help to go here!
+        {0} is a tool for performing or automating many different kinds of
+        operations in Oracle Hyperion Financial Management (HFM) via the
+        command-line. Commands can be entered on the command-line, via a
+        command file, or interactively.
 
-      To obtain a list of available commands, use:
-        {0} Help Commands
+        To obtain a list of available commands, use:
+          {0} Help Commands
+
+        More help can be found on-line, at http://agardiner.github.com/hfmcmd/
     </value>
   </data>
 

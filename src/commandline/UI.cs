@@ -145,18 +145,26 @@ namespace CommandLine
 
 
         /// <summary>
+        /// Displays the application title, version etc.
+        /// </summary>
+        public void DisplayTitle(TextWriter console)
+        {
+            console.WriteLine("{0} {1}  [{2}]", ApplicationInfo.Title,
+                    ApplicationInfo.Version.ToString(), ApplicationInfo.Product);
+            console.WriteLine("Copyright (c) {0}", ApplicationInfo.Copyright);
+            console.WriteLine();
+        }
+
+
+        /// <summary>
         /// Displays a usgae message, based on the allowed arguments and purpose
         /// represented by this class.
         /// </summary>
         public void DisplayUsage(TextWriter console, Dictionary<string, object> args)
         {
-            console.WriteLine("{0} {1}  [{2}]", ApplicationInfo.Title,
-                    ApplicationInfo.Version.ToString(), ApplicationInfo.Product);
-            console.WriteLine("Copyright (c) {0}", ApplicationInfo.Copyright);
+            DisplayTitle(console);
 
-            console.WriteLine();
             console.WriteLine(ApplicationInfo.Description);
-
             if(Definition.HelpInstructions != null) {
                 console.WriteLine();
                 console.WriteLine(Definition.HelpInstructions.Trim(), ApplicationInfo.ExeName);
@@ -209,6 +217,7 @@ namespace CommandLine
             }
             console.WriteLine();
         }
+
 
         /// Outputs a single argument definition
         protected void OutputArg(Argument arg, TextWriter console) {
@@ -300,7 +309,7 @@ namespace CommandLine
             var result = parser.Parse(new List<string>(args));
             if(parser.ShowUsage) {
                 DisplayUsage(System.Console.Error, result);
-                result = null;  // Don't act on what we parsed
+                result = null;  // Don't act on whatever we parsed
             }
             else if(parser.ParseException != null) {
                 throw parser.ParseException;

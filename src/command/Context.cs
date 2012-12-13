@@ -127,7 +127,7 @@ namespace Command
         /// </summary>
         public void Verify()
         {
-            foreach(var cmd in _registry.EachCommand()) {
+            foreach(var cmd in _registry.Commands()) {
                 _log.TraceFormat("Validating command {0}", cmd.Name);
                 foreach(var parm in cmd.Parameters) {
                     _log.TraceFormat("Validating command parameter {0}", parm.Name);
