@@ -60,7 +60,7 @@ namespace HFM
 
     [Setting("POV", "A Point-of-View expression, such as 'S#Actual.Y#2010.P#May." +
              "E#E1.V#<Entity Currency>'. Use a POV expression to select members " +
-             "from multiple dimensions in one go. Note that if a dimension member is " +
+             "from multiple dimensions in one go.\nNote that if a dimension member is " +
              "specified in the POV expression and via a setting for the dimension, the " +
              "dimension setting takes precedence.",
              ParameterType = typeof(string), Order = 0),

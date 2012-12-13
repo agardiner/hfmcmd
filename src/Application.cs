@@ -436,6 +436,7 @@ namespace HFMCmd
             else {
                 // Display help for the requested command
                 var cmd = _commands[command];
+                _log.InfoFormat("Displaying help for command {0}:", cmd.Name);
                 var desc = cmd.Description;
                 if(desc != null) {
                     if(!desc.EndsWith(".")) { desc = desc + "."; }

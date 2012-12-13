@@ -96,7 +96,8 @@ namespace HFMCmd
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
         // Characters at which line breaks can be created
-        public static char[] WHITESPACE = new char[] { ' ', '\n', '\t' };
+        public static char[] LINEBREAKS = new char[] { '\n', '\r' };
+        public static char[] WHITESPACE = new char[] { ' ', '\t' };
         public static char[] WORDBREAKS = new char[] { '-', ',', '.', ';', '#', ')', ']', '}' };
 
 
@@ -134,18 +135,25 @@ namespace HFMCmd
         {
             List<string> lines = new List<string>();
             var sVal = value == null ? "" : value.ToString().Trim();
+            var nlPos = 0;
             var wsPos = 0;
             var wbPos = 0;
             string chunk;
 
             while(sVal.Length > width) {
                 chunk = sVal.Substring(0, width + 1);
+                nlPos = chunk.IndexOfAny(LINEBREAKS);
                 wsPos = chunk.LastIndexOfAny(WHITESPACE);
                 wbPos = chunk.LastIndexOfAny(WORDBREAKS, width - 1);
-                if(wsPos > 0 && wsPos > wbPos || (wbPos > 5 && wbPos - 5 < wsPos)) {
+                if(nlPos >= 0) {
+                    // Break at new-line
+                    lines.Add(sVal.Substring(0, nlPos).Trim());
+                    sVal = sVal.Substring(nlPos+1).Trim();
+                }
+                else if(wsPos > 0 && wsPos > wbPos || (wbPos > 5 && wbPos - 5 < wsPos)) {
                     // Break at whitespace
                     lines.Add(sVal.Substring(0, wsPos).Trim());
-                    sVal = sVal.Substring(wsPos).Trim();
+                    sVal = sVal.Substring(wsPos + 1).Trim();
                 }
                 else if(wbPos > 0) {
                     // Break at word-break character
