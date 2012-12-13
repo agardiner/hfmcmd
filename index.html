@@ -86,9 +86,11 @@ commands available for performing most operations associated with:</p>
 <h2>Downloading Pre-Built Binaries</h2>
 
 <p>HFMCmd supports 2 different builds, one for .NET 3.5 and one for .NET 4.0.
-Functionally, the two builds are identical; the only difference is the size of
-the executable, and the required version of the .NET framework. Most machines
-will already have .NET 3.5 installed, so pick that version if you are unsure.</p>
+Functionally, the two builds are identical; however, the .NET 3.5 builds only
+support early binding, which means they must be compiled for a specific version
+of HFM. The .NET 4.0 build, on the other hand, utilises the new dynamic
+functionality in .NET 4.0, which provides late-binding and allows a single HFMCmd
+executable to work with different versions of HFM.</p>
 
 <p>The following pre-built binaries are available:</p>
 <ul>
@@ -109,7 +111,7 @@ where it is to run.</p>
 
 <h2>Running HFMCmd</h2>
 
-<p>HFMCmd supports two modes of operation:</p>
+<p>HFMCmd supports the following modes of operation:</p>
 
 <ol>
 <li>
@@ -121,7 +123,7 @@ all of the options it requires as keyword arguments, e.g.</p>
 </code></pre>
 </li>
 <li>
-<p>Commands can be read from a command-file, e.g.</p>
+<p>Commands can be read from a command-file specified on the command-line, e.g.</p>
 
 <pre><code>  HFMCmd.exe consolidate.hfm
 </code></pre>
@@ -143,6 +145,10 @@ all of the options it requires as keyword arguments, e.g.</p>
     <span class="l-Scalar-Plain">Entity</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">GROUP</span>
 </pre></div>
 </li>
+<li><p>An interactive shell can be started, where commands can be entered at an hfm&gt; prompt. To enter the shell, start HFMCmd with no arguments, i.e.
+<pre><code>  HFMCmd.exe
+</code></pre>
+
 </ol><h2>Supported Versions of HFM</h2>
 
 <p>HFMCmd has been designed to work with multiple different versions of HFM, and
