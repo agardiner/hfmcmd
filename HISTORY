@@ -20,3 +20,13 @@
 - Fix bugs introduced to the Calculate module in 0.3.0, due to the adoption of
   Slice for POV combination generation in place of Linq.
 
+
+[0.4.0] Builds for specific HFM versions                            13-Dec-2012
+- Due to differences in the type libraries between versions of HFM, it became
+  clear that different builds of HFMCmd would be required for each major version
+  of HFM, at least under .NET 3.5. Under .NET 4.0, the introduction of the new
+  dynamic type functionality provides a possible solution using late-binding of
+  COM methods, but this is not yet functional in this release.
+- Added an interactive shell mode of operation; to access, just start HFMCmd
+  without any parameters. This will drop you at a hfm> prompt, where you can
+  then enter commands interactively.
