@@ -1,0 +1,167 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>HFMCmd by agardiner</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    <script src="javascripts/respond.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <!--[if lt IE 8]>
+    <link rel="stylesheet" href="stylesheets/ie.css">
+    <![endif]-->
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+  </head>
+  <body>
+      <div id="header">
+        <nav>
+          <li class="fork"><a href="https://github.com/agardiner/hfmcmd">View On GitHub</a></li>
+          <li class="downloads"><a href="https://github.com/agardiner/hfmcmd/zipball/master">ZIP</a></li>
+          <li class="downloads"><a href="https://github.com/agardiner/hfmcmd/tarball/master">TAR</a></li>
+          <li class="title">DOWNLOADS</li>
+        </nav>
+      </div><!-- end header -->
+
+    <div class="wrapper">
+
+      <section>
+        <div id="title">
+          <h1>HFMCmd</h1>
+          <p>A command-line interface for Hyperion Financial Management</p>
+          <hr>
+          <span class="credits left">Project maintained by <a href="https://github.com/agardiner">agardiner</a></span>
+          <span class="credits right">Hosted on GitHub Pages &mdash; Theme by <a href="http://twitter.com/#!/michigangraham">mattgraham</a></span>
+        </div>
+
+        <h1>HFMCmd</h1>
+
+<p>HFMCmd is a command-line tool for performing or automating operations in Oracle
+Hyperion Financial Management (HFM). It provides a command-line interface for
+performing a wide range of repetitive and/or bulk operations on an HFM
+application in a simple manner, and facilitates lights out automation of HFM.</p>
+
+<p>HFMCmd uses the published HFM API to perform operations against an HFM
+application, but it provides more than just a thin wrapper over the HFM API:</p>
+
+<ul>
+<li>Where an API function might operate on a single item (e.g. the
+Consolidate API function takes a single Scenario / Year / Entity combination),
+the corresponding command in HFMCmd will typically accept a collection of members
+for each dimension, and automatically manage the looping over each combination.</li>
+<li>Most commands with a large number of parameters provide sensible defaults for
+many parameters. You can consult the online help to determine which parameters
+are required, and which have default values.</li>
+<li>Long-running operations provide progress bars that provide feedback as the
+operation completes.</li>
+<li>Substitution variables can be defined (or environment variables can be used),
+and can then be used virtually anywhere in a command.</li>
+</ul><p>In this manner, bulk operations can be performed quickly and easily on large
+numbers of scenarios, entities, etc.</p>
+
+<h2>Available Commands</h2>
+
+<p>The available commands are continuously being added to, but already there are
+commands available for performing most operations associated with:</p>
+
+<ul>
+<li>Metadata management (e.g. loading / extracting metadata, rules, etc)</li>
+<li>Calculation, consolidation, translation, etc</li>
+<li>Process management (starting, promoting, rejecting, submitting, approving etc)</li>
+<li>Document management (e.g. loading / extracting web forms, reports, etc)</li>
+</ul><p>To see a complete list of available commands, run:</p>
+
+<pre><code>HFMCmd Help Commands
+</code></pre>
+
+<p>To get detailed help for a specific command, use:</p>
+
+<pre><code>HFMCmd Help &lt;CommandName&gt;
+</code></pre>
+
+<h2>Downloading Pre-Built Binaries</h2>
+
+<p>HFMCmd supports 2 different builds, one for .NET 3.5 and one for .NET 4.0.
+Functionally, the two builds are identical; the only difference is the size of
+the executable, and the required version of the .NET framework. Most machines
+will already have .NET 3.5 installed, so pick that version if you are unsure.</p>
+
+<p>Pre-built binaries are available at <a href="https://github.com/agardiner/hfmcmd/downloads">https://github.com/agardiner/hfmcmd/downloads</a>.</p>
+
+<h2>Installation</h2>
+
+<p>HFMCmd is built as a single standalone .EXE file; no installation is required,
+simply unzip it to a directory somewhere, and it is ready to run.</p>
+
+<h3>Pre-Requisites</h3>
+
+<p>HFMCmd does require an existing installation of the .NET framework, as already
+described. It also requires at least a client installation of HFM on the machine
+where it is to run.</p>
+
+<h2>Running HFMCmd</h2>
+
+<p>HFMCmd supports two modes of operation:</p>
+
+<ol>
+<li>
+<p>A single command can be entered on the command-line, along with
+all of the options it requires as keyword arguments, e.g.</p>
+
+<pre><code>  HFMCmd.exe Consolidate UserName:admin Password:password ClusterName:PROD
+      AppName:IFRS Scenario:Actual Year:2008 Periods:May-July Entity:GROUP
+</code></pre>
+</li>
+<li>
+<p>Commands can be read from a command-file, e.g.</p>
+
+<pre><code>  HFMCmd.exe consolidate.hfm
+</code></pre>
+
+<p>Contents of consolidate.hfm:</p>
+
+<div class="highlight"><pre>  <span class="l-Scalar-Plain">SetLogonInfo</span><span class="p-Indicator">:</span>
+    <span class="l-Scalar-Plain">UserName</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">admin</span>
+    <span class="l-Scalar-Plain">Password</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">password</span>
+
+  <span class="l-Scalar-Plain">OpenApplication</span><span class="p-Indicator">:</span>
+    <span class="l-Scalar-Plain">ClusterName</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">PROD</span>
+    <span class="l-Scalar-Plain">AppName</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">IFRS</span>
+
+  <span class="l-Scalar-Plain">Consolidate</span><span class="p-Indicator">:</span>
+    <span class="l-Scalar-Plain">Scenario</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">Actual</span>
+    <span class="l-Scalar-Plain">Year</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">2008</span>
+    <span class="l-Scalar-Plain">Periods</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">May-July</span>
+    <span class="l-Scalar-Plain">Entity</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">GROUP</span>
+</pre></div>
+</li>
+</ol><h2>Supported Versions of HFM</h2>
+
+<p>HFMCmd has been designed to work with multiple different versions of HFM, and
+should work with versions 9.3 through to 11.1.2.2, including support for the new
+extended dimensionality in 11.1.2.2.</p>
+
+<h2>Licence</h2>
+
+<p>HFMCmd is open source software, licenced under a BSD-style licence. That means
+it is free to use or modify by anyone for any purpose - but no responsibility is
+taken for any bugs, issues or losses that may arise in the use of the software.
+See the LICENCE file for more details.</p>
+
+<h2>Issues / Bugs / Feature Requests</h2>
+
+<p>If you do identify an issue, bug, or missing feature, you can log an Issue at
+<a href="https://github.com/agardiner/hfmcmd/issues">https://github.com/agardiner/hfmcmd/issues</a>. There is no guarantee your issue
+will be addressed, but you have a better chance if you log an issue and provide
+clear and concise details.</p>
+      </section>
+
+    </div>
+    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
+    
+  </body>
+</html>
