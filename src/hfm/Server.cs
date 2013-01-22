@@ -54,6 +54,7 @@ namespace HFM
         {
             get {
                 if(_fileTransfer == null) {
+                    _log.Trace("Constructing FileTransfer object");
                     _fileTransfer = new FileTransfer(this);
                 }
                 return _fileTransfer;
