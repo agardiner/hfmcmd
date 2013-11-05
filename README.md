@@ -55,7 +55,7 @@ as widely deployed, and may not be installed on the machine on which you want to
 run HFMCmd. In this case, you should choose the .NET 3.5 build for the version
 of HFM that you are running.
 
-Pre-built binaries are available at https://github.com/agardiner/hfmcmd/downloads.
+Pre-built binaries are available at https://github.com/agardiner/hfmcmd/releases.
 
 
 ## Installation
