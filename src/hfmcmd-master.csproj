@@ -1,0 +1,249 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{9D1C0FEC-1B34-4FC4-A2A0-A5797CB2ABF4}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>HFMCmd</RootNamespace>
+    <AssemblyName>HFMCmd</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;HFM_11_1_2_2, Patch300</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Interop.HFMCONSTANTSLib">
+      <HintPath>..\lib\hfm-11.1.2.2.300\Interop.HFMCONSTANTSLib.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="Interop.HFMSLICECOMLib">
+      <HintPath>..\lib\hfm-11.1.2.2.300\Interop.HFMSLICECOMLib.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="Interop.HFMWAPPLICATIONSLib">
+      <HintPath>..\lib\hfm-11.1.2.2.300\Interop.HFMWAPPLICATIONSLib.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="Interop.HFMWDOCUMENTSLib">
+      <HintPath>..\lib\hfm-11.1.2.2.300\Interop.HFMWDOCUMENTSLib.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="Interop.HFMWSESSIONLib">
+      <HintPath>..\lib\hfm-11.1.2.2.300\Interop.HFMWSESSIONLib.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="Interop.HSVCALCULATELib">
+      <HintPath>..\lib\hfm-11.1.2.2.300\Interop.HSVCALCULATELib.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="Interop.HSVCDATALOADLib">
+      <HintPath>..\lib\hfm-11.1.2.2.300\Interop.HSVCDATALOADLib.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="Interop.HSVDATALib">
+      <HintPath>..\lib\hfm-11.1.2.2.300\Interop.HSVDATALib.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="Interop.HSVJOURNALLOADACVLib">
+      <HintPath>..\lib\hfm-11.1.2.2.300\Interop.HSVJOURNALLOADACVLib.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="Interop.HSVJOURNALSLib">
+      <HintPath>..\lib\hfm-11.1.2.2.300\Interop.HSVJOURNALSLib.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="Interop.HSVMETADATALib">
+      <HintPath>..\lib\hfm-11.1.2.2.300\Interop.HSVMETADATALib.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="Interop.HSVMETADATALOADACVLib">
+      <HintPath>..\lib\hfm-11.1.2.2.300\Interop.HSVMETADATALOADACVLib.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="Interop.HSVPROCESSFLOWLib">
+      <HintPath>..\lib\hfm-11.1.2.2.300\Interop.HSVPROCESSFLOWLib.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="Interop.HSVRESOURCEMANAGERLib">
+      <HintPath>..\lib\hfm-11.1.2.2.300\Interop.HSVRESOURCEMANAGERLib.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="Interop.HSVRULESLOADACVLib">
+      <HintPath>..\lib\hfm-11.1.2.2.300\Interop.HSVRULESLOADACVLib.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="Interop.HSVSECURITYACCESSLib">
+      <HintPath>..\lib\hfm-11.1.2.2.300\Interop.HSVSECURITYACCESSLib.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="Interop.HSVSECURITYLOADACVLib">
+      <HintPath>..\lib\hfm-11.1.2.2.300\Interop.HSVSECURITYLOADACVLib.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="Interop.HSVSESSIONLib">
+      <HintPath>..\lib\hfm-11.1.2.2.300\Interop.HSVSESSIONLib.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="Interop.HSVSTARSCHEMAACMLib">
+      <HintPath>..\lib\hfm-11.1.2.2.300\Interop.HSVSTARSCHEMAACMLib.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="Interop.HSVSYSTEMINFOLib">
+      <HintPath>..\lib\hfm-11.1.2.2.300\Interop.HSVSYSTEMINFOLib.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="Interop.HSXCLIENTLib">
+      <HintPath>..\lib\hfm-11.1.2.2.300\Interop.HSXCLIENTLib.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="Interop.HSXSERVERFILETRANSFERLib">
+      <HintPath>..\lib\hfm-11.1.2.2.300\Interop.HSXSERVERFILETRANSFERLib.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="Interop.HSXSERVERLib">
+      <HintPath>..\lib\hfm-11.1.2.2.300\Interop.HSXSERVERLib.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="Interop.SCRIPTINGLib">
+      <HintPath>..\lib\Interop.SCRIPTINGLib.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="log4net">
+      <HintPath>..\lib\log4net-1.2.11\bin\net\4.0\release\log4net.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Security" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Application.cs" />
+    <Compile Include="commandline\Argument.cs" />
+    <Compile Include="commandline\Definition.cs" />
+    <Compile Include="commandline\Parser.cs" />
+    <Compile Include="commandline\UI.cs" />
+    <Compile Include="commandline\Validation.cs" />
+    <Compile Include="command\Attributes.cs" />
+    <Compile Include="command\Command.cs" />
+    <Compile Include="command\Context.cs" />
+    <Compile Include="command\Registry.cs" />
+    <Compile Include="command\TypeConverter.cs" />
+    <Compile Include="Encryption.cs" />
+    <Compile Include="Resource\Help.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Help.resx</DependentUpon>
+    </Compile>
+    <Compile Include="hfm\Calculate.cs" />
+    <Compile Include="hfm\Client.cs" />
+    <Compile Include="hfm\Data.cs" />
+    <Compile Include="hfm\DataLoad.cs" />
+    <Compile Include="hfm\Documents.cs" />
+    <Compile Include="hfm\Exception.cs" />
+    <Compile Include="hfm\FileTransfer.cs" />
+    <Compile Include="hfm\HFM.cs" />
+    <Compile Include="hfm\JournalLoad.cs" />
+    <Compile Include="hfm\LoadExtractOptions.cs" />
+    <Compile Include="hfm\Metadata.cs" />
+    <Compile Include="hfm\MetadataLoad.cs" />
+    <Compile Include="hfm\ProcessFlow.cs" />
+    <Compile Include="hfm\ResourceManager.cs" />
+    <Compile Include="hfm\RulesLoad.cs" />
+    <Compile Include="hfm\Security.cs" />
+    <Compile Include="hfm\SecurityLoad.cs" />
+    <Compile Include="hfm\Server.cs" />
+    <Compile Include="hfm\Session.cs" />
+    <Compile Include="hfm\StarSchema.cs" />
+    <Compile Include="hfm\SystemInfo.cs" />
+    <Compile Include="Log4NetExtensions.cs" />
+    <Compile Include="Output.cs" />
+    <Compile Include="ProgressMonitor.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Utilities.cs" />
+    <Compile Include="yaml\Node.cs" />
+    <Compile Include="yaml\Parser.cs" />
+    <Compile Include="yaml\PreProcessor.cs" />
+    <Compile Include="yaml\XmlConversion.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resource\Help.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Help.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include=".NETFramework,Version=v4.0">
+      <Visible>False</Visible>
+      <ProductName>Microsoft .NET Framework 4 %28x86 and x64%29</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1 Client Profile</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Windows.Installer.4.5">
+      <Visible>False</Visible>
+      <ProductName>Windows Installer 4.5</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PreBuildEvent>
+    </PreBuildEvent>
+  </PropertyGroup>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

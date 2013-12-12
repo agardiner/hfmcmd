@@ -118,7 +118,7 @@ HFMCmd supports the following modes of operation:
 
 HFMCmd has been designed to work with multiple different versions of HFM, and
 should work with versions 9.3 through to 11.1.2.2, including support for the new
-extended dimensionality in 11.1.2.2.
+extended dimensionality in 11.1.2.2 and 11.1.2.2.300.
 
 
 ## Licence
@@ -136,3 +136,19 @@ https://github.com/agardiner/hfmcmd/issues. There is no guarantee your issue
 will be addressed, but you have a better chance if you log an issue and provide
 clear and concise details.
 
+## Build Instructions
+
+HFMCmd can be rebuilt to support each environment. See examples below.
+
+.NET 3.5 HFM 11.1.2.2
+```
+build.bat 35 HFM_11_1_2_2
+```
+.NET 4.0 HFM 11.1.2.2
+```
+build.bat 40 HFM_11_1_2_2
+```
+.NET 4.0 HFM 11.1.2.2.300
+```
+build.bat 40 HFM_11_1_2_2_300
+```
