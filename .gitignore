@@ -1,3 +1,9 @@
 bin/*
+obj/*
 gen/*
 package/*
+*/bin/*
+*/obj/*
+*.csproj.user
+*.vs10x
+*.suo
