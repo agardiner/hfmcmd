@@ -141,10 +141,14 @@ clear and concise details.
 HFMCmd can be rebuilt to support each environment. See examples below.
 
 .NET 3.5 HFM 11.1.2.2
-ex. > build.bat 35 HFM_11_1_2_2
-
+```
+build.bat 35 HFM_11_1_2_2
+```
 .NET 4.0 HFM 11.1.2.2
-ex. > build.bat 40 HFM_11_1_2_2
-
+```
+build.bat 40 HFM_11_1_2_2
+```
 .NET 4.0 HFM 11.1.2.2.300
-ex. > build.bat 40 HFM_11_1_2_2_300
+```
+build.bat 40 HFM_11_1_2_2_300
+```
