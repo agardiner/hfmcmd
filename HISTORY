@@ -38,5 +38,5 @@
   includeData (boolean). At this time the value is assumed to be for internal
   use and it has been set as true.
   
-[0.4.2] Support for Runtime Variables in YML
+[0.4.2] Support for Runtime Variables in YML                        12-Dec-2013
 - Implemented runtime variable support for YML files. 
