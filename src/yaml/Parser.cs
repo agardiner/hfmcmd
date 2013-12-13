@@ -52,7 +52,8 @@ namespace YAML
         /// </summary>
         public override string Message
         {
-            get {
+            get
+            {
                 return string.Format("Parse error in {0} at line {1}: {2}",
                                      FileName, Line, base.Message);
             }
@@ -69,7 +70,7 @@ namespace YAML
         protected struct NodeLevel
         {
             public Node Node;
-            public int  Indentation;
+            public int Indentation;
         }
 
 
@@ -99,34 +100,40 @@ namespace YAML
             NodeLevel context = new NodeLevel() { Node = new Node(), Indentation = -2 };
             _stack.Push(context);
 
-            using(_preprocessor = new Preprocessor(fileName, variables))
+            using (_preprocessor = new Preprocessor(fileName, variables))
             {
                 string line;
 
                 // Process each line of the file
-                do {
+                do
+                {
                     line = _preprocessor.ReadLine();
-                    if(line == null) { continue; }
+                    if (line == null) { continue; }
 
-                    if(line.Trim().Length > 0 && !line.Trim().StartsWith("#")) {
+                    if (line.Trim().Length > 0 && !line.Trim().StartsWith("#"))
+                    {
                         // First line determines type of parent collection
-                        try {
-                            ProcessLine(line);
+                        try
+                        {
+                            ProcessLine(line, variables);
                         }
-                        catch(ParseException) {
+                        catch (ParseException)
+                        {
                             throw;
                         }
-                        catch(Exception ex) {
+                        catch (Exception ex)
+                        {
                             throw new ParseException("An exception occurred",
                                 ex, _preprocessor.File, _preprocessor.Line);
                         }
                     }
                 }
-                while(line != null);
+                while (line != null);
             }
 
             // Get root object to return; this is at the bottom of the stack
-            do {
+            do
+            {
                 context = _stack.Pop();
             }
             while (_stack.Count > 0);
@@ -139,7 +146,7 @@ namespace YAML
         /// Process a single line of text into the Node that is the current
         /// context.
         /// </summary>
-        protected void ProcessLine(string line)
+        protected void ProcessLine(string line, Dictionary<string, object> variables)
         {
             // Determine if line is at same level of indentation as previous
             NodeLevel context = _stack.Peek();
@@ -150,34 +157,42 @@ namespace YAML
             int indentation = indent.Length;
 
             // Ensure indentation is via spaces and not tabs
-            if(indent.IndexOf('\t') >= 0) {
+            if (indent.IndexOf('\t') >= 0)
+            {
                 throw new ParseException("Tab characters must not be used for indentation (use spaces instead)",
                     _preprocessor.File, _preprocessor.Line);
             }
 
-            if(indentation < context.Indentation) {
+            if (indentation < context.Indentation)
+            {
                 // Finished populating current nesting
-                while (indentation < context.Indentation) {
+                while (indentation < context.Indentation)
+                {
                     _stack.Pop();
                     context = _stack.Peek();
                 }
-                if(indentation != context.Indentation) {
+                if (indentation != context.Indentation)
+                {
                     throw new ParseException("Unexpected indentation level (got " + indentation +
                         ", expected " + context.Indentation + ")", _preprocessor.File, _preprocessor.Line);
                 }
             }
-            if(indentation == context.Indentation) {
+            if (indentation == context.Indentation)
+            {
                 _stack.Pop();
                 context = _stack.Peek();
             }
 
-            if(line.StartsWith("-")) {
+            if (line.StartsWith("-"))
+            {
                 node = ProcessListElement(context.Node, line);
             }
-            else if(line.IndexOf(":") > 0) {
-                node = ProcessDictionaryElement(context.Node, line);
+            else if (line.IndexOf(":") > 0)
+            {
+                node = ProcessDictionaryElement(context.Node, line, variables);
             }
-            else {
+            else
+            {
                 // NOTE: Non-standard YAML, but simplifies control file specification
                 // Basically, if we find a line that is simply a string on its own,
                 // assume it is a list element and process it as such.
@@ -207,62 +222,95 @@ namespace YAML
         /// <param name="context">Node containing the Dictionary to which the
         /// element should be added.</param>
         /// <param name="line">The line containing the key: value pair.</param>
-        protected Node ProcessDictionaryElement(Node context, string line)
+        protected Node ProcessDictionaryElement(Node context, string line, Dictionary<string, object> variables)
         {
             string key = line.Substring(0, line.IndexOf(":")).Trim();
             line = line.Substring(line.IndexOf(":") + 1).Trim();
-            var node = ParseValue(key, line);
+            var node = ParseValue(key, line, variables);
             return context.Add(node);
         }
 
-
+        protected Node ParseValue(string key, string value)
+        {
+            return ParseValue(key, value, new Dictionary<string, object>());
+        }
         /// <summary>
         /// Converts a string value to a string, int or boolean type.
         /// </summary>
         /// <param name="value">The string that is to be parsed.</param>
         /// <returns>An object that is the parsed value of the string.</returns>
-        protected Node ParseValue(string key, string value)
+        protected Node ParseValue(string key, string value, Dictionary<string, object> variables)
         {
-            if(value.ToUpper() == "TRUE") {
+            if (value.ToUpper() == "TRUE")
+            {
                 return new Node(key, true);
             }
-            else if(value.ToUpper() == "FALSE") {
+            else if (value.ToUpper() == "FALSE")
+            {
                 return new Node(key, false);
             }
-            else if(value == "") {
+            else if (value == "")
+            {
                 return new Node(key, null);
             }
-            else if(Regex.Match(value, @"\A([""'])(.*)\1\Z").Success) {
+            else if (Regex.Match(value, @"\A([""'])(.*)\1\Z").Success)
+            {
                 return new Node(key, value.Substring(1, value.Length - 2));
             }
-            else if(Regex.Match(value, @"\A\[?(.+)(,(.+))+\]?\Z").Success) {
+            else if (Regex.Match(value, @"\A\[?(.+)(,(.+))+\]?\Z").Success)
+            {
                 // Value is an array of items
-                if(value.StartsWith("[") && value.EndsWith("]")) {
+                if (value.StartsWith("[") && value.EndsWith("]"))
+                {
                     value = value.Substring(1, value.Length - 2);
                 }
                 string[] vals = value.SplitCSV();
                 Node coll = new Node(key, null);
-                foreach(string val in vals) {
+                foreach (string val in vals)
+                {
                     coll.Add(new Node(null, val));
                 }
                 return coll;
             }
-            else if(Regex.Match(value, @"\{(.+:.+)(?:,(.+:.+))*\}").Success) {
+            else if (Regex.Match(value, @"\{(.+:.+)(?:,(.+:.+))*\}").Success)
+            {
                 // Value is an dictionary of items
                 value = value.Substring(1, value.Length - 2);
                 string[] vals = value.SplitCSV();
                 Node coll = new Node(key, null);
-                foreach(string val in vals) {
+                foreach (string val in vals)
+                {
                     string subkey = val.Substring(0, val.IndexOf(':'));
                     coll.Add(ParseValue(subkey, val.Substring(val.IndexOf(':') + 1)));
                 }
                 return coll;
             }
-            else {
+            else if (Regex.Match(value, @"\{\{([^\}]+)\}\}").Success)
+            {
+                return new Node(key, MultipleReplace(value, variables));
+            }
+            else
+            {
                 return new Node(key, value);
             }
         }
 
+        /// <summary>
+        /// Performs replacements on a string of data based on a dictionary of replacement values.
+        /// </summary>
+        /// <param name="text">A string containing the original text.</param>
+        /// <param name="replacements">A dictionary of replacement values.</param>
+        /// <returns>Returns a string containing the text after replacements.</returns>
+        static string MultipleReplace(string text, Dictionary<string, object> replacements)
+        {
+            string[] dict = new string[replacements.Count];
+            int i = 0;
+            foreach (string key in replacements.Keys)
+                dict[i++] = key;
+            return Regex.Replace(text,
+                String.Format("{{{{({0})}}}}", String.Join("|", dict)),
+                delegate(Match m) { return replacements[m.Groups[1].ToString()].ToString(); }
+                );
+        }
     }
-
 }

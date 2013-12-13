@@ -37,3 +37,6 @@
   HsvStarSchemaACM.CreateStarSchemaExtDim added a thirteenth parameter,
   includeData (boolean). At this time the value is assumed to be for internal
   use and it has been set as true.
+  
+[0.4.2] Support for Runtime Variables in YML
+- Implemented runtime variable support for YML files. 

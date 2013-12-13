@@ -105,7 +105,34 @@ HFMCmd supports the following modes of operation:
         Periods: May-July
         Entity: GROUP
     ```
+	
+	Alternatively runtime variables can be passed in command line for specified
+	settings.
+	
+	```
+	HFMCmd.exe consolidate.hfm Year:2012
+	```
+	
+	    Contents of consolidate.hfm:
 
+    ```yaml
+      SetLogonInfo:
+        UserName: admin
+        Password: password
+
+      OpenApplication:
+        ClusterName: PROD
+        AppName: IFRS
+
+      Consolidate:
+        Scenario: Actual
+        Year: {{Year}}
+        Periods: May-July
+        Entity: GROUP
+    ```
+	
+	In the above example {{Year}} would be replaced with 2012.
+	
 3. An interactive shell can be started, where commands can be entered at an hfm>
    prompt. To enter the shell, start HFMCmd with no arguments, i.e.
 
