@@ -113,7 +113,7 @@ HFMCmd supports the following modes of operation:
 	HFMCmd.exe consolidate.hfm Year:2012
 	```
 	
-	    Contents of consolidate.hfm:
+	Contents of consolidate.hfm:
 
     ```yaml
       SetLogonInfo:
