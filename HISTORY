@@ -30,3 +30,10 @@
 - Added an interactive shell mode of operation; to access, just start HFMCmd
   without any parameters. This will drop you at a hfm> prompt, where you can
   then enter commands interactively.
+
+[0.4.1] Added support for 11.1.2.2.300                              12-Dec-2013
+- Increased flexability in build process to allow for Patch 30x variants.
+- Bug fix for 11.1.2.2.300 where undocumented change to 
+  HsvStarSchemaACM.CreateStarSchemaExtDim added a thirteenth parameter,
+  includeData (boolean). At this time the value is assumed to be for internal
+  use and it has been set as true.
