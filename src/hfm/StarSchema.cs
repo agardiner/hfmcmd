@@ -499,9 +499,14 @@ namespace HFM
                                     slice.Account.MemberIds, slice.ICP.MemberIds, slice.Custom1.MemberIds,
                                     slice.Custom2.MemberIds, slice.Custom3.MemberIds, slice.Custom4.MemberIds));
                 }
-
-                // Monitor progress
-                MonitorEAExtract(output);
+                try
+                {
+                    // Monitor progress
+                    MonitorEAExtract(output);
+                } catch (Exception ex) {
+                    // This was needed to allow for execution via ODI.
+                    _log.WarnFormat("Error whilte extracting data for {0}, Message: {1}", slice, ex.Message);
+                }
             }
             finally {
                 // Retrieve log file

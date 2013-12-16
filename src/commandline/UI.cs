@@ -68,12 +68,20 @@ namespace CommandLine
         {
             get {
                 bool esc = false;
-
-                if(System.Console.KeyAvailable) {
-                    var keyInfo = System.Console.ReadKey();
-                    if(keyInfo.Key == System.ConsoleKey.Escape) {
-                        esc = true;
+                try
+                {
+                    if (System.Console.KeyAvailable)
+                    {
+                        var keyInfo = System.Console.ReadKey();
+                        if (keyInfo.Key == System.ConsoleKey.Escape)
+                        {
+                            esc = true;
+                        }
                     }
+                }
+                catch (InvalidOperationException)
+                {
+                    // Couldn't read from standard input
                 }
                 return esc;
             }

@@ -104,18 +104,22 @@ namespace HFMCmd
             _context.Set(_console);
             _context.Verify();
 
-            if(cmdLineArgs.Length > 1) {
+            if (cmdLineArgs.Length > 1)
+            {
                 SetupCommandLine();
                 rc = ProcessCommandLine(cmdLineArgs);
             }
-            else {
+            else
+            {
                 StartREPL();
             }
 
-            if(rc == 0) {
+            if (rc == 0)
+            {
                 _log.Info("Exiting with status code 0");
             }
-            else {
+            else
+            {
                 _log.FatalFormat("Exiting with status code {0}", rc);
             }
             System.Environment.Exit(rc);
