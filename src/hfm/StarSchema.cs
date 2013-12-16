@@ -476,19 +476,17 @@ namespace HFM
             _log.InfoFormat("Extracting data for {0}", slice);
             try {
                 if(HFM.HasVariableCustoms) {
-#if HFM_11_1_2_2 && !Patch300
+                    bool includeData = true; // new parameter introduced between 11.1.2.2 and 11.1.2.2.305
+#if HFM_11_1_2_2
                     HFM.Try(() => HsvStarSchemaACM.CreateStarSchemaExtDim(dsn, prefix, pushType,
-                                    extractType, includeDynamicAccts, includeCalculatedData, includeDerivedData,
+                                    extractType,
+#if Patch300
+                                    includeData,
+#endif
+                                    includeDynamicAccts, includeCalculatedData, includeDerivedData,
                                     lineItems, includeCellText, includePhasedSubmissionGroupData, delimiter,
                                     slice.HfmSliceCOM, out taskId));
                     _log.DebugFormat("Task id: {0}", taskId);
-#elif HFM_11_1_2_2 && Patch300
-                    bool includeData = true; // new parameter introduced between 11.1.2.2 and 11.1.2.2.305
-                     HFM.Try(() => HsvStarSchemaACM.CreateStarSchemaExtDim(dsn, prefix, pushType,
-                                    extractType, includeData, includeDynamicAccts, includeCalculatedData, includeDerivedData,
-                                    lineItems, includeCellText, includePhasedSubmissionGroupData, delimiter,
-                                    slice.HfmSliceCOM, out taskId));
-                    _log.DebugFormat("Task id: {0}", taskId);  
 #else
                     HFM.ThrowIncompatibleLibraryEx();
 #endif
