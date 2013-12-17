@@ -348,12 +348,14 @@ namespace HFMCmd
         protected bool InvokeCommand(string command, Dictionary<string, object> args)
         {
             bool ok = true;
-            try {
+            try
+            {
                 _context.Invoke(command, args);
             }
-            catch(Exception ex) {
-                _log.Error(string.Format("An error occurred while attempting to invoke command {0}:",
-                           _commands[command].Name), ex);
+            catch (Exception ex)
+            {
+                _log.Error(string.Format("An error occurred while attempting to invoke command {0} args {1}:",
+                           _commands[command].Name, string.Join(";", args.Select(x => x.Key + "=" + x.Value).ToArray())), ex);
                 ok = false;
             }
             return ok;
