@@ -261,17 +261,25 @@ namespace HFM
                 IOutput output,
                 Client client)
         {
-            int taskId = DoEAExtract("", "EA_FILE", (SS_PUSH_OPTIONS)EPushType.Create,
-                            (EA_EXTRACT_TYPE_FLAGS)(includeHeader ? EFileExtractType.FlatFile :
-                                                                    EFileExtractType.FlatFileNoHeader),
-                            includeDynamicAccounts, includeCalculatedData, includeDerivedData,
-                            false, false,
+            int taskId = 0;
+            try
+            {
+                taskId = DoEAExtract("", "EA_FILE", (SS_PUSH_OPTIONS)EPushType.Create,
+                                (EA_EXTRACT_TYPE_FLAGS)(includeHeader ? EFileExtractType.FlatFile :
+                                                                        EFileExtractType.FlatFileNoHeader),
+                                includeDynamicAccounts, includeCalculatedData, includeDerivedData,
+                                false, false,
 #if HFM_11_1_2_2
-                            (EA_LINEITEM_OPTIONS)lineItems,
+ (EA_LINEITEM_OPTIONS)lineItems,
 #endif
-                            delimiter, logFile, slice,
-                            output);
-
+ delimiter, logFile, slice,
+                                output);
+            }
+            catch (Exception ex)
+            {
+                _log.Warn(string.Format("Unknown Error: {0}", ex.Message), ex);
+                throw ex;
+            }
             // Get the path to the extract file
             string path = null;
             HFM.Try("Retrieving extract file path",
@@ -474,16 +482,19 @@ namespace HFM
 
             // Perform the EA extract
             _log.InfoFormat("Extracting data for {0}", slice);
-            try {
-                if(HFM.HasVariableCustoms) {
+            try
+            {
+                if (HFM.HasVariableCustoms)
+                {
+                    _log.Debug("Variable Customs Enabled");
                     bool includeData = true; // new parameter introduced between 11.1.2.2 and 11.1.2.2.305
 #if HFM_11_1_2_2
                     HFM.Try(() => HsvStarSchemaACM.CreateStarSchemaExtDim(dsn, prefix, pushType,
                                     extractType,
 #if Patch300
-                                    includeData,
+ includeData,
 #endif
-                                    includeDynamicAccts, includeCalculatedData, includeDerivedData,
+ includeDynamicAccts, includeCalculatedData, includeDerivedData,
                                     lineItems, includeCellText, includePhasedSubmissionGroupData, delimiter,
                                     slice.HfmSliceCOM, out taskId));
                     _log.DebugFormat("Task id: {0}", taskId);
@@ -491,7 +502,8 @@ namespace HFM
                     HFM.ThrowIncompatibleLibraryEx();
 #endif
                 }
-                else {
+                else
+                {
                     HFM.Try(() => HsvStarSchemaACM.CreateStarSchema(dsn, prefix, pushType,
                                     extractType, !includeDynamicAccts, slice.Scenario.MemberIds,
                                     slice.Year.MemberIds, slice.Period.MemberIds, slice.View.MemberIds,
@@ -499,14 +511,13 @@ namespace HFM
                                     slice.Account.MemberIds, slice.ICP.MemberIds, slice.Custom1.MemberIds,
                                     slice.Custom2.MemberIds, slice.Custom3.MemberIds, slice.Custom4.MemberIds));
                 }
-                try
-                {
-                    // Monitor progress
-                    MonitorEAExtract(output);
-                } catch (Exception ex) {
-                    // This was needed to allow for execution via ODI.
-                    _log.WarnFormat("Error whilte extracting data for {0}, Message: {1}", slice, ex.Message);
-                }
+                // Monitor progress
+                MonitorEAExtract(output);
+            }
+            catch (Exception ex)
+            {
+                _log.Fatal(string.Format("Error while extracting data for {0}, Message: {1}", slice, ex.Message), ex);
+                throw ex;
             }
             finally {
                 // Retrieve log file
@@ -577,6 +588,7 @@ namespace HFM
         {
             string log = null;
             bool hasLog = false;
+            _log.DebugFormat("Retreving Log File: {0}", logFile);
 
             FileUtilities.EnsureFileWriteable(logFile);
             HFM.Try("Retrieving EA extract log file",
