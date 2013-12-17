@@ -612,7 +612,9 @@ namespace HFMCmd
     /// </summary>
     public class ConsoleOutput : FixedWidthOutput
     {
-
+        // Reference to class logger
+        protected static readonly ILog _log = LogManager.GetLogger(
+            System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
         // Characters used to simulate a spinner
         private static readonly char[] _spinner = new char[] { '|', '/', '-', '\\' };
         // Size of the progress bar
@@ -731,7 +733,14 @@ namespace HFMCmd
         public override void EndProgress()
         {
             base.EndProgress();
-            _cui.ClearLine();
+            try
+            {
+                _cui.ClearLine();
+            }
+            catch (System.IO.IOException)
+            {
+                _log.Debug("Unable to render EndProgress(): Console unavailable");
+            }
         }
 
 
@@ -773,9 +782,14 @@ namespace HFMCmd
             }
             sb.Remove(barMid, pctStr.Length);
             sb.Insert(barMid, pctStr);
-
-            _cui.ClearLine();
-            _cui.Write(sb.ToString());
+            try
+            {
+                _cui.ClearLine();
+                _cui.Write(sb.ToString());
+            }
+            catch (System.IO.IOException) {
+                _log.Debug("Unable to render RenderProgressBar(): Console unavailable");
+            }
         }
 
     }
