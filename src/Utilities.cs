@@ -187,7 +187,9 @@ namespace Utilities
         {
             using (FileStream s = File.Open(path, FileMode.OpenOrCreate,
                                             FileAccess.Write, FileShare.None))
-            { }
+            {
+                _log.Debug("Log file is writeable.");
+            }
         }
 
 
