@@ -508,29 +508,71 @@ namespace Command
         private object ConvertSetting(object val, ISetting setting)
         {
             var type = setting.ParameterType;
-            if(type.IsAssignableFrom(val.GetType())) {
+            _log.Debug(type);
+            if (type.IsAssignableFrom(val.GetType()))
+            {
                 return val;
             }
             else if(val is string) {
                 return _registry.TypeConverter.ConvertTo(val as string, type);
             }
-            else if(val is IEnumerable<object> && type.IsGenericType &&
-                    type.GetGenericTypeDefinition() == typeof(IEnumerable<>)) {
-                var elType = type.GetGenericArguments()[0];
-                if(_registry.TypeConverter.CanConvert(elType)) {
-                    _log.DebugFormat("Converting {0} to {1}[]", val.GetType(), elType);
-                    var vals = ((IEnumerable<object>)val).ToArray();
-                    var ary = Array.CreateInstance(elType, vals.Length);
-                    for(int i = 0; i < vals.Length; ++i) {
-                        ary.SetValue(_registry.TypeConverter.ConvertTo(vals[i].ToString(), elType), i);
+            else if(val is IEnumerable<object>)
+                if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+                {
+                    var elType = type.GetGenericArguments()[0];
+                    if (_registry.TypeConverter.CanConvert(elType))
+                    {
+                        _log.DebugFormat("Converting {0} to {1}[]", val.GetType(), elType);
+                        var vals = ((IEnumerable<object>)val).ToArray();
+                        var ary = Array.CreateInstance(elType, vals.Length);
+                        for (int i = 0; i < vals.Length; ++i)
+                        {
+                            ary.SetValue(_registry.TypeConverter.ConvertTo(vals[i].ToString(), elType), i);
+                        }
+                        return ary;
+                    }
+                }
+                else if (IsInstanceOfGenericType(typeof(List<>), val)) //Hack to handle lists since apparently they 
+                {                                                      //dont identify as generic and I didnt
+                    var vals = ((IEnumerable<object>)val).ToArray();   //really understand the process above.
+                    var ary = Array.CreateInstance(typeof(String), vals.Length);
+                    for (int i = 0; i < vals.Length; ++i)
+                    {
+                        ary.SetValue(_registry.TypeConverter.ConvertTo(vals[i].ToString(), typeof(String)), i);
                     }
                     return ary;
-                }
-            }
+                } 
+            _log.DebugFormat("IsEnumerable: {0}\r\nIsGeneric: {1}\r\nIsAltGeneric: {2}",
+                val is IEnumerable<object>,
+                type.IsGenericType,
+                IsInstanceOfGenericType(typeof(List<>), val));
+            if (type.IsGenericType)
+                _log.DebugFormat("TypeOf IEnumerable: {0}", type.GetGenericTypeDefinition() == typeof(IEnumerable<>));
             throw new ArgumentException(string.Format("Unable to convert {0} to {1} for setting {2}",
                         val.GetType().Name, setting.ParameterType.Name, setting.Name));
         }
-
+        /// <summary>
+        /// Code to detect deeper generic types
+        /// </summary>
+        /// <param name="genericType"></param>
+        /// <param name="instance"></param>
+        /// <returns></returns>
+        /// <seealso cref="http://stackoverflow.com/questions/982487/testing-if-object-is-of-generic-type-in-c-sharp"/>
+        static bool IsInstanceOfGenericType(Type genericType, object instance)
+        {
+            Type type = instance.GetType();
+            while (type != null)
+            {
+                _log.Debug(type.ToString());
+                if (type.IsGenericType &&
+                    type.GetGenericTypeDefinition() == genericType)
+                {
+                    return true;
+                }
+                type = type.BaseType;
+            }
+            return false;
+        }
 
         private ISettingsCollection PrepareSettingsCollectionArg(Command cmd, CommandParameter param,
                 Dictionary<string, object> args, StringBuilder sb)
