@@ -1,5 +1,16 @@
+@ECHO OFF
+IF "%1"=="" (GOTO USAGE) ELSE (GOTO EXTRACT)
+
+
+:USAGE
+ECHO Usage: %~n0.bat *Version*, where *Version* is e.g. hfm-11.1.2.2, hfm-11.1.2.2-300, etc
+EXIT /B 99
+
+
+:EXTRACT
+
 SET HFM_HOME=%EPM_ORACLE_HOME%..\products\FinancialManagement
-SET OUTPUT_PATH=%~dp0\hfm-11.1.2.2
+SET OUTPUT_PATH=%~dp0\%1
 SET TLBIMP=%~dp0\..\tools\tlbimp
 
 MKDIR %OUTPUT_PATH%
