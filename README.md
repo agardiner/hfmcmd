@@ -58,6 +58,26 @@ of HFM that you are running.
 Pre-built binaries are available at https://github.com/agardiner/hfmcmd/releases.
 
 
+## Building HFMCmd
+
+As an alternative to downloading pre-built binaries, any machine on which .NET
+3.5 or later is installed ought to be able to build HFMCmd from source. This can
+be as simple as running the build.bat file, provided your version of HFM matches
+the version that build.bat has been configured for. Typically, this is the latest
+HFM release that is supported by HFMCmd; if this is NOT the version you are on,
+then building is slightly more complex.
+
+To build HFMCmd to support a different version of HFM, you will need a Ruby
+runtime installed. This is a free scripting language, and can be downloaded from
+http://ruby-lang.org. The Rake (Ruby Make) tool is used to manage dependencies
+and configure the build for different versions.
+
+Once a Ruby runtime is installed, building HFMCmd for a specific version of
+HFM is as simple as running:
+
+    rake HFM=<HFM version>
+
+
 ## Installation
 
 HFMCmd is built as a single standalone .EXE file; no installation is required,
