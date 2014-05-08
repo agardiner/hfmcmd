@@ -2,6 +2,7 @@
 using System.Runtime.InteropServices;
 
 using log4net;
+using Utilities;
 
 #if !LATE_BIND
 using HSVRESOURCEMANAGERLib;
@@ -27,7 +28,7 @@ namespace HFM
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
         // Constants for specific versions of HFM
-        public static Version HFM_11_1_2_2 = new Version("11.1.2.2");
+        public static Version HFM_11_1_2_2 = "11.1.2.2".ToVersion();
 
         /// Returns the current installed HFM version
         public static Version Version { get { return ResourceManager.Version; } }
@@ -40,15 +41,25 @@ namespace HFM
         }
 
 
+
+
+
         public static void CheckVersionCompatibility()
         {
 #if !LATE_BIND
 #if HFM_9_3_1
-            if(Version > new Version("9.3.3")) {
+            if(Version > "9.3.3".ToVersion()) {
 #elif HFM_11_1_2_1
-            if(Version < new Version("11.1") || Version > new Version("11.1.2.1")) {
+            if(Version < "11.1".ToVersion()) || Version > "11.1.2.1".ToVersion()) {
+#elif HFM_11_1_2_2_300
+            if(Version < "11.1.2.2.300".ToVersion()) {
 #elif HFM_11_1_2_2
-            if(Version < new Version("11.1.2.2")) {
+            if(Version < "11.1.2.2".ToVersion() || Version >= "11.1.2.2.300".ToVersion()) {
+#else
+#error No HFM_<version> #define found for early-bind build! When compiling, either LATE_BIND or HFM_<version> must be set.
+            // This line is here to stop the compiler complaining about syntax
+            // errors in this file due to the missing if statement
+            if(true) {
 #endif
                 ThrowIncompatibleLibraryEx();
             }

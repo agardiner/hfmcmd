@@ -17,6 +17,7 @@ namespace Utilities
     /// </summary>
     public static class StringUtilities
     {
+
         /// <summary>
         /// Capitalizes the first letter of a string
         /// </summary>
@@ -79,6 +80,29 @@ namespace Utilities
             var fields = Regex.Split(line, re);
             return fields.Select(f => f.Trim().Trim(new char[] { '"' })
                                        .Replace("\"\"", "\"")).ToArray();
+        }
+
+
+        /// <summary>
+        /// HFM version numbers don't follow the standard version numbering scheme,
+        /// with breaking changes regularly introduced in patch-level updates! To
+        /// handle this, we convert 5-part version specs to Version objects where
+        /// the 4th and 5th numbers are merged into a single Revision number. The
+        /// individual values can be returned using MajorRevision and MinorRevision
+        /// properties.
+        /// </summary>
+        public static Version ToVersion(this string version)
+        {
+                var re = new Regex(@"^(\d+\.\d+\.\d+.)(\d+).(\d+)$");
+                var match = re.Match(version);
+                if(match.Success) {
+                    var maj = Convert.ToInt32(match.Groups[2].Value);
+                    var min = Convert.ToInt32(match.Groups[3].Value);
+                    return new Version(match.Groups[1].Value + "." + ((maj << 16) | min));
+                }
+                else {
+                    return new Version(version);
+                }
         }
 
     }

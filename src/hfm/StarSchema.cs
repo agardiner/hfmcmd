@@ -198,6 +198,9 @@ namespace HFM
                 bool deleteExisting,
                 [Parameter("The type of star schema to produce.")]
                 EStarSchemaExtractType extractType,
+                [Parameter("Whether to include data",
+                           DefaultValue = true, Since = "11.1.2.2.300")]
+                bool includeData,
                 [Parameter("Whether to include dynamic accounts",
                            DefaultValue = false)]
                 bool includeDynamicAccounts,
@@ -214,8 +217,8 @@ namespace HFM
                 IOutput output)
         {
             DoEAExtract(DSN, tablePrefix, (SS_PUSH_OPTIONS)(deleteExisting ? EPushType.Create : EPushType.Update),
-                        (EA_EXTRACT_TYPE_FLAGS)extractType, includeDynamicAccounts, includeCalculatedData,
-                        includeDerivedData, false, false,
+                        (EA_EXTRACT_TYPE_FLAGS)extractType, includeData, includeDynamicAccounts,
+                        includeCalculatedData, includeDerivedData, false, false,
 #if HFM_11_1_2_2
                         (EA_LINEITEM_OPTIONS)ELineItems.Summary,
 #endif
@@ -237,6 +240,9 @@ namespace HFM
                            "are faster to create and smaller in size",
                            DefaultValue = true)]
                 bool decompress,
+                [Parameter("Whether to include data",
+                           DefaultValue = true, Since = "11.1.2.2.300")]
+                bool includeData,
                 [Parameter("Whether to include dynamic accounts",
                            DefaultValue = false)]
                 bool includeDynamicAccounts,
@@ -264,7 +270,7 @@ namespace HFM
             int taskId = DoEAExtract("", "EA_FILE", (SS_PUSH_OPTIONS)EPushType.Create,
                             (EA_EXTRACT_TYPE_FLAGS)(includeHeader ? EFileExtractType.FlatFile :
                                                                     EFileExtractType.FlatFileNoHeader),
-                            includeDynamicAccounts, includeCalculatedData, includeDerivedData,
+                            includeData, includeDynamicAccounts, includeCalculatedData, includeDerivedData,
                             false, false,
 #if HFM_11_1_2_2
                             (EA_LINEITEM_OPTIONS)lineItems,
@@ -459,8 +465,9 @@ namespace HFM
 
         // Performs an EA extract to a relational or flat file target
         private int DoEAExtract(string dsn, string prefix, SS_PUSH_OPTIONS pushType,
-                EA_EXTRACT_TYPE_FLAGS extractType, bool includeDynamicAccts, bool includeCalculatedData,
-                bool includeDerivedData, bool includeCellText, bool includePhasedSubmissionGroupData,
+                EA_EXTRACT_TYPE_FLAGS extractType, bool includeData, bool includeDynamicAccts,
+                bool includeCalculatedData, bool includeDerivedData, bool includeCellText,
+                bool includePhasedSubmissionGroupData,
 #if HFM_11_1_2_2
                 EA_LINEITEM_OPTIONS lineItems,
 #endif
@@ -478,7 +485,11 @@ namespace HFM
                 if(HFM.HasVariableCustoms) {
 #if HFM_11_1_2_2
                     HFM.Try(() => HsvStarSchemaACM.CreateStarSchemaExtDim(dsn, prefix, pushType,
-                                    extractType, includeDynamicAccts, includeCalculatedData, includeDerivedData,
+                                    extractType,
+#if HFM_11_1_2_2_300
+                                    includeData,
+#endif
+                                    includeDynamicAccts, includeCalculatedData, includeDerivedData,
                                     lineItems, includeCellText, includePhasedSubmissionGroupData, delimiter,
                                     slice.HfmSliceCOM, out taskId));
                     _log.DebugFormat("Task id: {0}", taskId);

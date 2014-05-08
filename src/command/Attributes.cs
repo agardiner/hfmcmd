@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Linq;
 
 using log4net;
+using Utilities;
 
 
 namespace Command
@@ -63,8 +64,8 @@ namespace Command
         {
             bool current = true;
             if(IsVersioned) {
-                var from = Since != null ? new Version(Since) : null;
-                var to = Deprecated != null ? new Version(Deprecated) : null;
+                var from = Since != null ? Since.ToVersion() : null;
+                var to = Deprecated != null ? Deprecated.ToVersion() : null;
                 current = (from == null || version >= from) && (to == null || version < to);
             }
             return current;
