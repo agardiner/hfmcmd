@@ -25,15 +25,15 @@ EXIT /B 99
 
 :DOTNET35
 ECHO Targeting .NET Framework 3.5...
-IF NOT EXIST gen\3.5 MKDIR gen\3.5
-IF NOT EXIST bin\3.5 MKDIR bin\3.5
+IF NOT EXIST gen\NET_3.5_HFM_11.1.2.2.300 MKDIR gen\NET_3.5_HFM_11.1.2.2.300
+IF NOT EXIST bin\NET_3.5_HFM_11.1.2.2.300 MKDIR bin\NET_3.5_HFM_11.1.2.2.300
 
 ECHO Compiling HFMCmd...
-C:\WINDOWS\Microsoft.NET\Framework\v3.5\csc.exe /nologo /target:exe /main:HFMCmd.Launcher /out:gen\3.5\HFMCmd.exe /debug /optimize+ /lib:lib\log4net-1.2.11\bin\net\3.5\release /reference:log4net.dll /lib:lib /reference:Interop.SCRIPTINGLib.dll /lib:lib/hfm-11.1.2.2 /reference:Interop.HFMCONSTANTSLib.dll /reference:Interop.HFMSLICECOMLib.dll /reference:Interop.HFMWAPPLICATIONSLib.dll /reference:Interop.HFMWDOCUMENTSLib.dll /reference:Interop.HFMWSESSIONLib.dll /reference:Interop.HSVCALCULATELib.dll /reference:Interop.HSVCDATALOADLib.dll /reference:Interop.HSVDATALib.dll /reference:Interop.HSVJOURNALLOADACVLib.dll /reference:Interop.HSVJOURNALSLib.dll /reference:Interop.HSVMETADATALib.dll /reference:Interop.HSVMETADATALOADACVLib.dll /reference:Interop.HSVPROCESSFLOWLib.dll /reference:Interop.HSVRESOURCEMANAGERLib.dll /reference:Interop.HSVRULESLOADACVLib.dll /reference:Interop.HSVSECURITYACCESSLib.dll /reference:Interop.HSVSECURITYLOADACVLib.dll /reference:Interop.HSVSESSIONLib.dll /reference:Interop.HSVSTARSCHEMAACMLib.dll /reference:Interop.HSVSYSTEMINFOLib.dll /reference:Interop.HSXCLIENTLib.dll /reference:Interop.HSXSERVERFILETRANSFERLib.dll /reference:Interop.HSXSERVERLib.dll /resource:gen\HFMCmd.Resource.Help.resources src\*.cs src\command\*.cs src\commandline\*.cs src\yaml\*.cs src\hfm\*.cs gen\*.cs
+C:\WINDOWS\Microsoft.NET\Framework\v3.5\csc.exe /nologo /target:exe /main:HFMCmd.Launcher /out:gen\NET_3.5_HFM_11.1.2.2.300\HFMCmd.exe /debug /optimize+ /define:HFM_11_1_2_2_300 /define:HFM_11_1_2_2 /lib:lib\log4net-1.2.11\bin\net\3.5\release /reference:log4net.dll /lib:lib /reference:Interop.SCRIPTINGLib.dll /lib:lib/hfm-11.1.2.2.300 /reference:Interop.HFMCONSTANTSLib.dll /reference:Interop.HFMSLICECOMLib.dll /reference:Interop.HFMWAPPLICATIONSLib.dll /reference:Interop.HFMWDOCUMENTSLib.dll /reference:Interop.HFMWSESSIONLib.dll /reference:Interop.HSVCALCULATELib.dll /reference:Interop.HSVCDATALOADLib.dll /reference:Interop.HSVDATALib.dll /reference:Interop.HSVJOURNALLOADACVLib.dll /reference:Interop.HSVJOURNALSLib.dll /reference:Interop.HSVMETADATALib.dll /reference:Interop.HSVMETADATALOADACVLib.dll /reference:Interop.HSVPROCESSFLOWLib.dll /reference:Interop.HSVRESOURCEMANAGERLib.dll /reference:Interop.HSVRULESLOADACVLib.dll /reference:Interop.HSVSECURITYACCESSLib.dll /reference:Interop.HSVSECURITYLOADACVLib.dll /reference:Interop.HSVSESSIONLib.dll /reference:Interop.HSVSTARSCHEMAACMLib.dll /reference:Interop.HSVSYSTEMINFOLib.dll /reference:Interop.HSXCLIENTLib.dll /reference:Interop.HSXSERVERFILETRANSFERLib.dll /reference:Interop.HSXSERVERLib.dll /resource:gen\HFMCmd.Resource.Help.resources src\*.cs src\command\*.cs src\commandline\*.cs src\yaml\*.cs src\hfm\*.cs gen\*.cs
 IF ERRORLEVEL 1 EXIT /B %ERRORLEVEL%
 
 ECHO Bundling HFMCmd and libraries into HFMCmd.exe...
-tools\ILMerge\ILMerge.exe  /wildcards /lib:C:\WINDOWS\Microsoft.NET\Framework\v3.5 /out:bin\3.5\HFMCmd.exe gen\3.5\HFMCmd.exe lib/hfm-11.1.2.2\*.dll lib\log4net-1.2.11\bin\net\3.5\release\log4net.dll lib\Interop.SCRIPTINGLib.dll
+tools\ILMerge\ILMerge.exe  /wildcards /lib:C:\WINDOWS\Microsoft.NET\Framework\v3.5 /out:bin\NET_3.5_HFM_11.1.2.2.300\HFMCmd.exe gen\NET_3.5_HFM_11.1.2.2.300\HFMCmd.exe lib/hfm-11.1.2.2.300\*.dll lib\log4net-1.2.11\bin\net\3.5\release\log4net.dll lib\Interop.SCRIPTINGLib.dll
 
 GOTO END
 
@@ -41,15 +41,15 @@ GOTO END
 
 :DOTNET40
 ECHO Targeting .NET Framework 4.0...
-IF NOT EXIST gen\4.0 MKDIR gen\4.0
-IF NOT EXIST bin\4.0 MKDIR bin\4.0
+IF NOT EXIST gen\NET_4.0 MKDIR gen\NET_4.0
+IF NOT EXIST bin\NET_4.0 MKDIR bin\NET_4.0
 
 ECHO Compiling HFMCmd...
-C:\WINDOWS\Microsoft.NET\Framework\v4.0.30319\csc.exe /nologo /target:exe /main:HFMCmd.Launcher /out:gen\4.0\HFMCmd.exe /debug /optimize+ /lib:lib\log4net-1.2.11\bin\net\4.0\release /reference:log4net.dll /lib:lib /reference:Interop.SCRIPTINGLib.dll /lib:lib/hfm-11.1.2.2 /link:Interop.HFMCONSTANTSLib.dll /link:Interop.HFMSLICECOMLib.dll /link:Interop.HFMWAPPLICATIONSLib.dll /link:Interop.HFMWDOCUMENTSLib.dll /link:Interop.HFMWSESSIONLib.dll /link:Interop.HSVCALCULATELib.dll /link:Interop.HSVCDATALOADLib.dll /link:Interop.HSVDATALib.dll /link:Interop.HSVJOURNALLOADACVLib.dll /link:Interop.HSVJOURNALSLib.dll /link:Interop.HSVMETADATALib.dll /link:Interop.HSVMETADATALOADACVLib.dll /link:Interop.HSVPROCESSFLOWLib.dll /link:Interop.HSVRESOURCEMANAGERLib.dll /link:Interop.HSVRULESLOADACVLib.dll /link:Interop.HSVSECURITYACCESSLib.dll /link:Interop.HSVSECURITYLOADACVLib.dll /link:Interop.HSVSESSIONLib.dll /link:Interop.HSVSTARSCHEMAACMLib.dll /link:Interop.HSVSYSTEMINFOLib.dll /link:Interop.HSXCLIENTLib.dll /link:Interop.HSXSERVERFILETRANSFERLib.dll /link:Interop.HSXSERVERLib.dll /resource:gen\HFMCmd.Resource.Help.resources src\*.cs src\command\*.cs src\commandline\*.cs src\yaml\*.cs src\hfm\*.cs gen\*.cs
+C:\WINDOWS\Microsoft.NET\Framework\v4.0.30319\csc.exe /nologo /target:exe /main:HFMCmd.Launcher /out:gen\NET_4.0\HFMCmd.exe /debug /optimize+ /define:HFM_11_1_2_2_300 /define:HFM_11_1_2_2 /define:LATE_BIND /lib:lib\log4net-1.2.11\bin\net\4.0\release /reference:log4net.dll  /lib:lib/hfm-11.1.2.2.300 /link:Interop.HFMCONSTANTSLib.dll /link:Interop.HSVSECURITYACCESSLib.dll /link:Interop.HSVSTARSCHEMAACMLib.dll /link:Interop.HSVCDATALOADLib.dll /link:Interop.HSVJOURNALLOADACVLib.dll /link:Interop.HSVMETADATALOADACVLib.dll /link:Interop.HSVSECURITYLOADACVLib.dll /resource:gen\HFMCmd.Resource.Help.resources src\*.cs src\command\*.cs src\commandline\*.cs src\yaml\*.cs src\hfm\*.cs gen\*.cs
 IF ERRORLEVEL 1 EXIT /B %ERRORLEVEL%
 
 ECHO Bundling HFMCmd and libraries into HFMCmd.exe...
-tools\ILMerge\ILMerge.exe /targetplatform:v4,C:\WINDOWS\Microsoft.NET\Framework\v4.0.30319 /wildcards /lib:C:\WINDOWS\Microsoft.NET\Framework\v4.0.30319 /out:bin\4.0\HFMCmd.exe gen\4.0\HFMCmd.exe  lib\log4net-1.2.11\bin\net\4.0\release\log4net.dll lib\Interop.SCRIPTINGLib.dll
+tools\ILMerge\ILMerge.exe /targetplatform:v4,C:\WINDOWS\Microsoft.NET\Framework\v4.0.30319 /wildcards /lib:C:\WINDOWS\Microsoft.NET\Framework\v4.0.30319 /out:bin\NET_4.0\HFMCmd.exe gen\NET_4.0\HFMCmd.exe  lib\log4net-1.2.11\bin\net\4.0\release\log4net.dll lib\Interop.SCRIPTINGLib.dll
 
 GOTO END
 

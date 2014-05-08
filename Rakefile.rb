@@ -62,7 +62,7 @@ def increment_build(version)
   if version == "3.5"
     @platform += " / HFM #{HFM_VER}"
   end
-  template = File.read('properties\AssemblyInfo.cs.erb')
+  template = File.read('properties/AssemblyInfo.cs.erb')
   erb = ERB.new(template)
   File.open('gen\AssemblyInfo.cs', "w") do |f|
     f.puts erb.result
@@ -72,7 +72,7 @@ end
 
 
 def get_version
-  f = File.new('properties\AssemblyInfo.cs.erb', 'r')
+  f = File.new('properties/AssemblyInfo.cs.erb', 'r')
   begin
     f.each_line do |line|
       if line =~ /AssemblyVersion\("(\d+\.\d+\.\d+)/
@@ -96,6 +96,7 @@ def compile(version)
   late_bind = version == "4.0"
   s = settings_for_version(version)
   options = "/nologo /target:exe /main:HFMCmd.Launcher /out:#{s[:exe]} /debug /optimize+ /define:HFM_#{HFM_VER.gsub('.', '_')}"
+  options += " /define:HFM_11_1_2_2" if HFM_VER =~ /11\.1\.2\.2\.\d+/
   options += " /define:LATE_BIND" if late_bind
   log4net_ref = "/lib:#{s[:log4net]} /reference:log4net.dll"
   hfm = ["/lib:#{HFM_LIB}"]
