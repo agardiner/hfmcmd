@@ -1,0 +1,10 @@
+%if-undef opened
+%include 0_Open_App.yaml
+%end-if
+
+
+# Load the Security definition file
+LoadSecurity:
+    SecurityFile: %sample_path%/%sample_security%
+    SecurityClasses: true
+

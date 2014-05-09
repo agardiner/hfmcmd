@@ -1,0 +1,10 @@
+%if-undef opened
+%include 0_Open_App.yaml
+%end-if
+
+
+# Load the metadata definition file
+LoadMetadata:
+    MetadataFile: %sample_path%/%sample_metadata%
+    Delimiter: ;
+

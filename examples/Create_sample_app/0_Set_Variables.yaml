@@ -1,0 +1,31 @@
+#
+# First, set defaults for variables not passed on the command-line
+#
+# Note the use of environment variables such as EPM_ORACLE_HOME and COMPUTERNAME
+#
+
+# Names of sample app files - based on Simple4, but can be changed here
+# to work with other samples.
+%set sample_app Simple4Dim_11.1.2.2.300
+# Note: Assumes the sample app has been unzipped where it was installed
+%set sample_path %EPM_ORACLE_HOME%/products/FinancialManagement/Sample Apps and Starter Kits/Sample Apps/%sample_app%
+%set sample_profile 01 Profile/DemoCalendar_HFM11_1_2.per
+%set sample_security 02 Security/DemoSecurity.sec
+%set sample_metadata 03 Metadata/Simple.app
+
+# Name of the sample app we will create/populate
+%set app Simple
+
+
+# Set the HFM server variable to the current machine name if not specified
+%set-if-undef server %COMPUTERNAME%
+
+# Set logon credentials
+SetLogonInfo:
+    UserName: %user%        # Expect a userid on the command-line, e.g. user:epm_admin
+    Password: %password%    # Expect a password on the command-line
+
+# Set a variable to indicate that we've initialized variables so subsequent
+# steps don't needlessly repeat this process
+%set initialized true
+

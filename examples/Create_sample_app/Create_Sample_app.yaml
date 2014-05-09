@@ -1,0 +1,27 @@
+###############################################################################
+# This example shows how HFMCmd can be used to create a new application.
+#
+# To run this example, specify the following command-line (assumes all files are
+# in the current directory):
+#
+#   HFMCmd Create_sample_app.yaml user:<Admin user> password:<Admin password>
+#             cluster:<HFM cluster name> [server:<HFM web server>]
+#
+# Alternatively, each step can be run on its own:
+#   HFMCmd 1_Create_App.yaml user:<Admin user> password:<Admin password>
+#             cluster:<HFM cluster name> [server:<HFM web server>]
+#   HFMCmd 2_Load_Security.yaml user:<Admin user> password:<Admin password>
+#             cluster:<HFM cluster name>
+#   HFMCmd 2_Load_Metadata.yaml user:<Admin user> password:<Admin password>
+#             cluster:<HFM cluster name>
+#   etc
+#
+###############################################################################
+
+# Each step is defined in its own file, so we just include each file
+# The pre-requisite step 0 files are loaded as necessary by each step file
+%include 1_Create_App.yaml
+
+%include 2_Load_Security.yaml
+
+%include 3_Load_Metadata.yaml

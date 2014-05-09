@@ -1,0 +1,14 @@
+%if-undef initialized
+%include 0_Set_Variables.yaml
+%end-if
+
+
+# Create the sample application as a classic app
+CreateApplication:
+    Cluster: %cluster%      # Expect a cluster to be passed on the command-line
+    Application: %app%
+    Description: %app% sample application
+    ProfilePath: %sample_path%/%sample_profile%
+    SharedServicesProject: Default Application Group
+    AppWebServerURL: http://%server%:80/hfm
+

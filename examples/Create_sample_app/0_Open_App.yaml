@@ -1,0 +1,12 @@
+# Make sure variables have been initialized
+%if-undef initialized
+%include 0_Set_Variables.yaml
+%end-if
+
+
+OpenApplication:
+    Cluster: %cluster%
+    Application: %app%
+
+# Set a marker so we don't re-open app on each step
+%set opened true
