@@ -370,15 +370,22 @@ namespace CommandLine
         /// </summary>
         public void ClearLine()
         {
-            while(ConsoleWidth > -1 && _lineLength > 0) {
-                var buf = new char[ConsoleWidth];
-                System.Console.CursorLeft = 0;
-                System.Console.Write(buf);
-                System.Console.CursorLeft = 0;
-                System.Console.CursorTop = System.Console.CursorTop - 2;
-                _lineLength = _lineLength - ConsoleWidth;
+            if(!UI.IsRedirected) {
+                try {
+                    while(ConsoleWidth > -1 && _lineLength > 0) {
+                        var buf = new char[ConsoleWidth];
+                        System.Console.CursorLeft = 0;
+                        System.Console.Write(buf);
+                        System.Console.CursorLeft = 0;
+                        System.Console.CursorTop = System.Console.CursorTop - 2;
+                        _lineLength = _lineLength - ConsoleWidth;
+                    }
+                    System.Console.CursorTop = System.Console.CursorTop + 1;
+                }
+                catch(IOException) {
+                    UI.IsRedirected = true;
+                }
             }
-            System.Console.CursorTop = System.Console.CursorTop + 1;
             _lineLength = 0;
         }
 

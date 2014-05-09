@@ -266,7 +266,7 @@ namespace HFMCmd
     /// it ignores output sent to it. Use this when no output is desired, since
     /// a valid IOutput (non-null) IOutput instance must be supplied to many
     /// methods. Use of this class prevents methods that take an IOutput from
-    /// having to check it it is non-null.
+    /// having to check if it is non-null.
     /// </summary>
     public class NullOutput : IOutput
     {
@@ -737,45 +737,47 @@ namespace HFMCmd
 
         protected void RenderProgressBar()
         {
-            // Determine which character to display next to simulate spinning
-            char spin = _spinner[_spin++ % _spinner.Length];
+            if(!CommandLine.UI.IsRedirected) {
+                // Determine which character to display next to simulate spinning
+                char spin = _spinner[_spin++ % _spinner.Length];
 
-            // Make sure percentage is within range of 0 to 100
-            int pct = CompletionPct();
+                // Make sure percentage is within range of 0 to 100
+                int pct = CompletionPct();
 
-            // Build up the progress bar
-            var sb = new StringBuilder(Operation.Length + BAR_SIZE + 20);
-            sb.Append(Operation);
-            sb.Append(' ');
-            sb.Append(spin);
-            sb.Append("  [");
-            var barMid = sb.Length + (BAR_SIZE / 2);
-            for(int i = 1; i <= BAR_SIZE; ++i) {
-                if (i * 100 / BAR_SIZE <= pct) {
-                    sb.Append('=');
+                // Build up the progress bar
+                var sb = new StringBuilder(Operation.Length + BAR_SIZE + 20);
+                sb.Append(Operation);
+                sb.Append(' ');
+                sb.Append(spin);
+                sb.Append("  [");
+                var barMid = sb.Length + (BAR_SIZE / 2);
+                for(int i = 1; i <= BAR_SIZE; ++i) {
+                    if (i * 100 / BAR_SIZE <= pct) {
+                        sb.Append('=');
+                    }
+                    else {
+                        sb.Append(' ');
+                    }
+                }
+                sb.Append("]  ");
+                if(_cancelled) {
+                    sb.Append("Cancelling...");
                 }
                 else {
-                    sb.Append(' ');
+                    sb.Append("(Esc to cancel)");
                 }
-            }
-            sb.Append("]  ");
-            if(_cancelled) {
-                sb.Append("Cancelling...");
-            }
-            else {
-                sb.Append("(Esc to cancel)");
-            }
 
-            // Now place the percentage complete inside the bar
-            var pctStr = pct.ToString() + "%";
-            if (pctStr.Length > 2) {
-                barMid--;
-            }
-            sb.Remove(barMid, pctStr.Length);
-            sb.Insert(barMid, pctStr);
+                // Now place the percentage complete inside the bar
+                var pctStr = pct.ToString() + "%";
+                if (pctStr.Length > 2) {
+                    barMid--;
+                }
+                sb.Remove(barMid, pctStr.Length);
+                sb.Insert(barMid, pctStr);
 
-            _cui.ClearLine();
-            _cui.Write(sb.ToString());
+                _cui.ClearLine();
+                _cui.Write(sb.ToString());
+            }
         }
 
     }
