@@ -54,7 +54,6 @@ namespace HFM
 
         /// Returns the current installed HFM version
         public static Version Version { get { return ResourceManager.Version; } }
-        public static string VersionString { get { return ResourceManager.VersionString; } }
         /// Returns true if the current HFM instance supports variable number of customs
         public static bool HasVariableCustoms
         {
@@ -91,7 +90,8 @@ namespace HFM
             else if(Version > VER_LAST_TESTED) {
                 _log.WarnFormat("Your version of HFM ({0}) may not be compatible " +
                         "with the version of HFM for which HFMCmd was built ({1})",
-                        Version, BuildVersion);
+                        StringUtilities.FromVersion(Version),
+                        StringUtilities.FromVersion(BuildVersion));
             }
 #endif
         }
@@ -125,7 +125,7 @@ namespace HFM
             throw new Exception("The installed version of HFM on this machine supports features " +
                                 "that were not available in the library with which HFMCmd was " +
                                 "compiled. Please download the correct version of HFMCmd for " +
-                                "HFM version " + VersionString);
+                                "HFM version " + StringUtilities.FromVersion(Version));
         }
 
 

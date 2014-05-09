@@ -108,6 +108,13 @@ namespace Utilities
             return ver;
         }
 
+
+        public static String FromVersion(Version ver)
+        {
+            return ver.Major + "." + ver.Minor + "." + ver.Build + "." +
+                ver.MajorRevision + "." + ver.MinorRevision;
+        }
+
     }
 
 
