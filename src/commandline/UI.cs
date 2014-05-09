@@ -61,6 +61,9 @@ namespace CommandLine
         /// </summary>
         public static bool Interrupted = false;
 
+        /// Flag indicating whether console output is redirected
+        public static bool IsRedirected = false;
+
         /// <summary>
         /// Returns true if escape has been pressed.
         /// </summary>
@@ -69,11 +72,16 @@ namespace CommandLine
             get {
                 bool esc = false;
 
-                if(System.Console.KeyAvailable) {
-                    var keyInfo = System.Console.ReadKey();
-                    if(keyInfo.Key == System.ConsoleKey.Escape) {
-                        esc = true;
+                try {
+                    if(!UI.IsRedirected && System.Console.KeyAvailable) {
+                        var keyInfo = System.Console.ReadKey();
+                        if(keyInfo.Key == System.ConsoleKey.Escape) {
+                            esc = true;
+                        }
                     }
+                }
+                catch(InvalidOperationException) {
+                    UI.IsRedirected = true;
                 }
                 return esc;
             }
@@ -111,8 +119,6 @@ namespace CommandLine
         }
 
 
-        /// Flag indicating whether console output is redirected
-        private bool _isRedirected = false;
         /// Length of content on last incomplete line
         private int _lineLength;
 
@@ -122,12 +128,12 @@ namespace CommandLine
         /// Returns the console width, or -1 if the console is redirected
         public int ConsoleWidth {
             get {
-                if(_isRedirected) { return -1; }
+                if(UI.IsRedirected) { return -1; }
                 try {
                     return System.Console.BufferWidth;
                 }
                 catch(IOException) {
-                    _isRedirected = true;
+                    UI.IsRedirected = true;
                     return -1;
                 }
             }
