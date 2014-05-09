@@ -93,16 +93,19 @@ namespace Utilities
         /// </summary>
         public static Version ToVersion(this string version)
         {
-                var re = new Regex(@"^(\d+\.\d+\.\d+.)(\d+).(\d+)$");
-                var match = re.Match(version);
-                if(match.Success) {
-                    var maj = Convert.ToInt32(match.Groups[2].Value);
-                    var min = Convert.ToInt32(match.Groups[3].Value);
-                    return new Version(match.Groups[1].Value + "." + ((maj << 16) | min));
-                }
-                else {
-                    return new Version(version);
-                }
+            Version ver = null;
+            var re = new Regex(@"^(\d+\.\d+\.\d+).(\d+).?(\d+)?$");
+            var match = re.Match(version);
+            if(match.Success) {
+                var major = Convert.ToInt32(match.Groups[2].Value);
+                var minor = match.Groups[3].Value != "" ?
+                    Convert.ToInt32(match.Groups[3].Value) : 0;
+                ver = new Version(match.Groups[1].Value + "." + ((major << 16) | minor));
+            }
+            else {
+                ver = new Version(version);
+            }
+            return ver;
         }
 
     }

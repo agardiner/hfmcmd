@@ -34,6 +34,8 @@ namespace HFM
         private static bool _loggedErrorMessagesUnavailable = false;
 
         /// The current version of HFM that is installed on this machine
+        public static readonly string VersionString;
+        /// The current version of HFM that is installed on this machine
         public static readonly Version Version;
 
 
@@ -48,8 +50,8 @@ namespace HFM
 #endif
                 _resourceManager.Initialize((short)tagHFM_TIERS.HFM_TIER1);
 
-                var ver = (string)_resourceManager.GetCurrentVersionInUserDisplayFormat();
-                Version = ver.ToVersion();
+                VersionString = (string)_resourceManager.GetCurrentVersionInUserDisplayFormat();
+                Version = VersionString.ToVersion();
             }
             catch (COMException ex) {
                 unchecked {

@@ -28,40 +28,70 @@ namespace HFM
             System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
         // Constants for specific versions of HFM
-        public static Version HFM_11_1_2_2 = "11.1.2.2".ToVersion();
+        public static Version VER_9_3_1 = "9.3.1".ToVersion();
+        public static Version VER_11_1 = "11.1".ToVersion();
+        public static Version VER_11_1_2_1 = "11.1.2.1".ToVersion();
+        public static Version VER_11_1_2_2 = "11.1.2.2".ToVersion();
+        public static Version VER_11_1_2_2_300 = "11.1.2.2.300".ToVersion();
+
+        public static Version VER_LAST_TESTED = VER_11_1_2_2_300;
+
+        /// Returns the version against which HFMCmd was built
+        public static Version BuildVersion
+        {
+            get {
+#if HFM_11_1_2_2_300
+                return VER_11_1_2_2_300;
+#elif HFM_11_1_2_2
+                return VER_11_1_2_2;
+#elif HFM_11_1_2_1
+                return VER_11_1_2_1;
+#elif HFM_9_3_1
+                return VER_9_3_1;
+#endif
+            }
+        }
 
         /// Returns the current installed HFM version
         public static Version Version { get { return ResourceManager.Version; } }
+        public static string VersionString { get { return ResourceManager.VersionString; } }
         /// Returns true if the current HFM instance supports variable number of customs
         public static bool HasVariableCustoms
         {
             get {
-                return Version >= HFM_11_1_2_2;
+                return Version >= VER_11_1_2_2;
             }
         }
 
 
-
-
-
+        /// <summary>
+        /// Check that HFMCmd has been built against the right library for this
+        /// version of HFM.
+        /// </summary>
         public static void CheckVersionCompatibility()
         {
 #if !LATE_BIND
-#if HFM_9_3_1
-            if(Version > "9.3.3".ToVersion()) {
-#elif HFM_11_1_2_1
-            if(Version < "11.1".ToVersion()) || Version > "11.1.2.1".ToVersion()) {
-#elif HFM_11_1_2_2_300
-            if(Version < "11.1.2.2.300".ToVersion()) {
+#if HFM_11_1_2_2_300
+            if(Version < VER_11_1_2_2_300) {
 #elif HFM_11_1_2_2
-            if(Version < "11.1.2.2".ToVersion() || Version >= "11.1.2.2.300".ToVersion()) {
+            if(Version < VER_11_1_2_2 || Version >= VER_11_1_2_2_300) {
+#elif HFM_11_1_2_1
+            if(Version < VER_11_1 || Version > VER_11_1_2_1) {
+#elif HFM_9_3_1
+            if(Version < VER_9_3_1 || Version >= VER_11_1) {
 #else
 #error No HFM_<version> #define found for early-bind build! When compiling, either LATE_BIND or HFM_<version> must be set.
             // This line is here to stop the compiler complaining about syntax
-            // errors in this file due to the missing if statement
+            // errors in this file due to the missing if statement. If we get
+            // here, it means no HFM__<VERSION> #define was specified at build
             if(true) {
 #endif
                 ThrowIncompatibleLibraryEx();
+            }
+            else if(Version > VER_LAST_TESTED) {
+                _log.WarnFormat("Your version of HFM ({0}) may not be compatible " +
+                        "with the version of HFM for which HFMCmd was built ({1})",
+                        Version, BuildVersion);
             }
 #endif
         }
@@ -95,7 +125,7 @@ namespace HFM
             throw new Exception("The installed version of HFM on this machine supports features " +
                                 "that were not available in the library with which HFMCmd was " +
                                 "compiled. Please download the correct version of HFMCmd for " +
-                                "HFM version " + Version);
+                                "HFM version " + VersionString);
         }
 
 
