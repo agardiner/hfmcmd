@@ -141,27 +141,40 @@ def package(package_name, *files)
   "tools\\7za.exe a #{PACKAGE_DIR}/#{package_name}.zip #{file_list}"
 end
 
+MethodInfo = Struct.new(:version, :library, :class, :method_name, :slot, :args)
 
 def compare_hfm_versions
   versions = []
-  methods = Hash.new { |h,k| h[k] = {}}
+  methods = Hash.new{ |h, k| h[k] = {} }
   FileList['lib/hfm-*'].each do |hfm_dir|
     hfm_dir =~ /([\d.]+)$/
     versions << $1
-    dump_vtable hfm_dir, $1, methods
+    dump_vtable(hfm_dir, $1, methods)
   end
 
-  count = 0
-  f = File.new('hfm_vtable_changes.txt', 'w')
-  f.puts "Library\tClass\tMethod\t#{versions.join("\t")}"
-  methods.sort.each do |method, slots|
-    if slots.values.uniq.size > 1
-      f.puts "#{method}\t#{versions.map { |ver| slots[ver] || '-'}.join("\t")}"
-      count += 1
+  slot_count = 0
+  arg_count = 0
+  f1 = File.new('hfm_vtable_changes.txt', 'w')
+  f2 = File.new('hfm_arg_changes.txt', 'w')
+  f1.puts "Library\tClass\tMethod\t#{versions.join("\t")}"
+  f2.puts "Library\tClass\tMethod\tVersion\tArguments"
+  methods.sort.each do |key, vers|
+    slots = vers.map{ |ver, mi| mi.slot }
+    args = vers.map{ |ver, mi| mi.args.join(', ') }
+    if slots.uniq.size > 1
+      f1.puts "#{key}\t#{versions.map{ |ver| vers[ver] && vers[ver].slot || '-' }.join("\t")}"
+      slot_count += 1
+    end
+    if args.map(&:upcase).uniq.size > 1
+      versions.map do |ver|
+        f2.puts "#{key}\t#{ver}\t#{vers[ver].args.join(', ')}" if vers[ver]
+      end
+      arg_count += 1
     end
   end
-  f.close
-  puts "Found #{count} vtable layout changes"
+  f1.close
+  f2.close
+  puts "Found #{slot_count} vtable layout changes and #{arg_count} argument changes"
 end
 
 
@@ -175,23 +188,31 @@ def dump_vtable(dir, ver, methods)
     out = `tools\\ILDasm.exe /tokens /text /noca /pubonly #{dll}`.split("\n")
     is_class = false
     get_name = false
+    mthd = nil
     slot = nil
     out.each do |line|
       if line =~ /^\.class/
         puts "  #{mod} #{cls_or_ifc}... #{count}" if count > 0
+        mthd = nil
         is_class = !line.match(/\binterface\b/)
         cls_or_ifc = line.match(/(\w+)$/)[1]
         count = 0
         next
       end
-      if is_class && line =~ /^\s+\.method \/\*([0-9A-F]+)/
-        get_name = true
-        slot = $1
-      elsif get_name
-        if line =~ /(\w+)(?:\(\)|\(\[)/
-          methods["#{mod}\t#{cls_or_ifc}\t#{$1}"][ver] = slot
-          count += 1
-          get_name = false
+      if is_class
+        if line =~ /^\s+\.method \/\*([0-9A-F]+)/
+          get_name = true
+          slot = $1
+        elsif get_name
+          if line =~ /(\w+)(?:\(\)|\(\[(?:in|out)\])/
+            mthd = MethodInfo.new(ver, mod, cls_or_ifc, $1, slot, [])
+            methods["#{mod}\t#{cls_or_ifc}\t#{$1}"][ver] = mthd
+            count += 1
+            get_name = false
+          end
+        end
+        if line =~ /(\[(?:in|out)\]) (\w+)(?:.*) (\w+)(?:,|(?:\)[^\)]*))/
+          mthd.args << "#{$1} #{$2} #{$3}"
         end
       end
     end
@@ -287,6 +308,7 @@ task :clean do
 end
 
 
+desc 'Compare HFM versions'
 task :compare_hfm_versions do
   compare_hfm_versions
 end
