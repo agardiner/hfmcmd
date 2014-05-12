@@ -47,7 +47,7 @@ namespace HFM
                  Deprecated = "11.1.2.2"),
          Setting("ClearScenarios", "Clear Scenario dimension",
                  Deprecated = "11.1.2.2"),
-         Setting("Currencies", "Clear Currencies dimension"),
+         Setting("Currencies", "Load Currencies dimension"),
          Setting("Custom1", "Load Custom1 dimension",
                  Deprecated = "11.1.2.2"),
          Setting("Custom2", "Load Custom2 dimension",

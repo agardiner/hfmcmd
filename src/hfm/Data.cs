@@ -85,24 +85,24 @@ namespace HFM
                  "dimension setting takes precedence.",
                  ParameterType = typeof(string), Order = 0),
          Setting("Scenario", "Scenario member(s) to include in the slice definition",
-                 Alias = "Scenarios", ParameterType = typeof(string), Order = 2),
+                 Alias = "Scenarios", ParameterType = typeof(IEnumerable<string>), Order = 1),
          Setting("Year", "Year member(s) to include in the slice definition",
-                 Alias = "Years", ParameterType = typeof(string), Order = 3),
+                 Alias = "Years", ParameterType = typeof(IEnumerable<string>), Order = 2),
          Setting("Period", "Period member(s) to include in the slice definition",
-                 Alias = "Periods", ParameterType = typeof(string), Order = 4),
+                 Alias = "Periods", ParameterType = typeof(IEnumerable<string>), Order = 3),
          Setting("View", "View member(s) to include in the slice definition",
-                 Alias = "Views", ParameterType = typeof(string), Order = 5,
+                 Alias = "Views", ParameterType = typeof(IEnumerable<string>), Order = 4,
                  DefaultValue = "<Scenario View>"),
          Setting("Entity", "Entity member(s) to include in the slice definition",
-                 Alias = "Entities", ParameterType = typeof(string), Order = 6),
+                 Alias = "Entities", ParameterType = typeof(IEnumerable<string>), Order = 5),
          Setting("Value", "Value member(s) to include in the slice definition",
-                 Alias = "Values", ParameterType = typeof(string), Order = 7),
+                 Alias = "Values", ParameterType = typeof(IEnumerable<string>), Order = 6),
          Setting("Account", "Account member(s) to include in the slice definition",
-                 Alias = "Accounts", ParameterType = typeof(string), Order = 8),
+                 Alias = "Accounts", ParameterType = typeof(IEnumerable<string>), Order = 7),
          Setting("ICP", "ICP member(s) to include in the slice definition",
-                 Alias = "ICPs", ParameterType = typeof(string), Order = 9),
+                 Alias = "ICPs", ParameterType = typeof(IEnumerable<string>), Order = 8),
          DynamicSetting("CustomDimName", "<CustomDimName> member(s) to include in the slice definition",
-                 ParameterType = typeof(string), Order = 10)]
+                 ParameterType = typeof(IEnumerable<string>), Order = 9)]
         public class Cells : Slice, IDynamicSettingsCollection
         {
             [Factory(SingleUse = true)]
