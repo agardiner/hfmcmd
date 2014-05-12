@@ -51,9 +51,10 @@ def settings_for_version(version)
 end
 
 
-def increment_build(version)
+def increment_build(version, build_dir)
   require 'erb'
 
+  FileUtils.mkdir_p build_dir
   commits = `git log --oneline`
   commits = commits.split("\n")
   @build_num = commits.size
@@ -64,7 +65,7 @@ def increment_build(version)
   end
   template = File.read('properties/AssemblyInfo.cs.erb')
   erb = ERB.new(template)
-  File.open('gen\AssemblyInfo.cs', "w") do |f|
+  File.open("#{build_dir}/AssemblyInfo.cs", "w") do |f|
     f.puts erb.result
   end
   puts "Build is now: #{@build_num}"
@@ -92,8 +93,9 @@ end
 
 
 def compile(version)
-  increment_build(version)
+  build_dir = version == "3.5" ? BUILD35_DIR : BUILD40_DIR
   late_bind = version == "4.0"
+  increment_build(version, build_dir)
   s = settings_for_version(version)
   options = "/nologo /target:exe /main:HFMCmd.Launcher /out:#{s[:exe]} /debug /optimize+ /define:HFM_#{HFM_VER.gsub('.', '_')}"
   options += " /define:HFM_11_1_2_2" if HFM_VER =~ /11\.1\.2\.2\.\d+/
@@ -116,7 +118,7 @@ def compile(version)
     fso_ref = "/lib:lib /reference:Interop.SCRIPTINGLib.dll"
   end
   resources = FileList['gen/*.resources'].map{ |f| "/resource:#{f.gsub('/', '\\')}" }
-  source = "src\\*.cs src\\command\\*.cs src\\commandline\\*.cs src\\yaml\\*.cs src\\hfm\\*.cs gen\\*.cs"
+  source = "src\\*.cs src\\command\\*.cs src\\commandline\\*.cs src\\yaml\\*.cs src\\hfm\\*.cs gen\\*.cs #{build_dir}\\*.cs"
 
   "#{s[:dotnet]}\\csc.exe #{options} #{log4net_ref} #{fso_ref} #{hfm.join(' ')} #{resources.join(' ')} #{source}"
 end
@@ -199,6 +201,8 @@ end
 # ---------
 
 directory BUILD_DIR
+directory BUILD35_DIR
+directory BUILD40_DIR
 
 
 # Define a rule for converting .resx files into .resources
@@ -218,7 +222,6 @@ end
 
 namespace :dotnet35 do
 
-  directory BUILD35_DIR
   directory RELEASE35_DIR
 
   # Define .exe dependencies on source files
@@ -249,7 +252,6 @@ end
 
 namespace :dotnet40 do
 
-  directory BUILD40_DIR
   directory RELEASE40_DIR
 
   # Define .exe dependencies on source files
@@ -300,7 +302,7 @@ task "build.bat" do |t|
   @bundle_35 = bundle("3.5")
   @bundle_40 = bundle("4.0")
   erb = ERB.new(template)
-  File.open(t.name, "w") do |f|
+  File.open("build_for_#{HFM_VER}.bat", "w") do |f|
     f.puts erb.result
   end
 end

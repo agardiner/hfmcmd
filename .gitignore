@@ -1,3 +1,5 @@
 bin/*
-gen/*
+gen/*/*.exe
+gen/*/*.pdb
+gen/*Resource*
 package/*
