@@ -220,7 +220,7 @@ namespace HFM
             DoEAExtract(DSN, tablePrefix, (SS_PUSH_OPTIONS)(deleteExisting ? EPushType.Create : EPushType.Update),
                         (EA_EXTRACT_TYPE_FLAGS)extractType, includeData, includeDynamicAccounts,
                         includeCalculatedData, includeDerivedData, false, false,
-#if HFM_11_1_2_2
+#if LATE_BIND || HFM_11_1_2_2
                         (EA_LINEITEM_OPTIONS)ELineItems.Summary,
 #endif
                         "", logFile, slice, output);
@@ -253,9 +253,9 @@ namespace HFM
                 [Parameter("Whether to include derived data",
                            DefaultValue = true)]
                 bool includeDerivedData,
-#if HFM_11_1_2_2
+#if LATE_BIND || HFM_11_1_2_2
                 [Parameter("Level of detail to be extracted for line item detail accounts",
-                           DefaultValue = ELineItems.Summary)]
+                           DefaultValue = ELineItems.Summary, Since = "11.1.2.2")]
                 ELineItems lineItems,
 #endif
                 [Parameter("The field delimiter to use",
@@ -273,7 +273,7 @@ namespace HFM
                                                                     EFileExtractType.FlatFileNoHeader),
                             includeData, includeDynamicAccounts, includeCalculatedData, includeDerivedData,
                             false, false,
-#if HFM_11_1_2_2
+#if LATE_BIND || HFM_11_1_2_2
                             (EA_LINEITEM_OPTIONS)lineItems,
 #endif
                             delimiter, logFile, slice,
@@ -371,9 +371,9 @@ namespace HFM
                 [Parameter("Whether to include derived data",
                            DefaultValue = true)]
                 bool includeDerivedData,
-#if HFM_11_1_2_2
+#if LATE_BIND || HFM_11_1_2_2
                 [Parameter("Level of detail to be extracted for line item detail accounts",
-                           DefaultValue = ELineItems.Summary)]
+                           DefaultValue = ELineItems.Summary, Since = "11.1.2.2")]
                 ELineItems lineItems,
 #endif
                 [Parameter("The field delimiter to use",
@@ -469,7 +469,7 @@ namespace HFM
                 EA_EXTRACT_TYPE_FLAGS extractType, bool includeData, bool includeDynamicAccts,
                 bool includeCalculatedData, bool includeDerivedData, bool includeCellText,
                 bool includePhasedSubmissionGroupData,
-#if HFM_11_1_2_2
+#if LATE_BIND || HFM_11_1_2_2
                 EA_LINEITEM_OPTIONS lineItems,
 #endif
                 string delimiter, string logFile,
@@ -484,7 +484,21 @@ namespace HFM
             _log.InfoFormat("Extracting data for {0}", slice);
             try {
                 if(HFM.HasVariableCustoms) {
-#if HFM_11_1_2_2
+#if LATE_BIND
+                    if(HFM.Version > HFM.VER_11_1_2_2_300) {
+                        HFM.Try(() => HsvStarSchemaACM.CreateStarSchemaExtDim(dsn, prefix, pushType, extractType,
+                                        includeData, includeDynamicAccts, includeCalculatedData, includeDerivedData,
+                                        lineItems, includeCellText, includePhasedSubmissionGroupData, delimiter,
+                                        slice.HfmSliceCOM, out taskId));
+                    }
+                    else {
+                        HFM.Try(() => HsvStarSchemaACM.CreateStarSchemaExtDim(dsn, prefix, pushType, extractType,
+                                        includeDynamicAccts, includeCalculatedData, includeDerivedData,
+                                        lineItems, includeCellText, includePhasedSubmissionGroupData, delimiter,
+                                        slice.HfmSliceCOM, out taskId));
+                    }
+                    _log.DebugFormat("Task id: {0}", taskId);
+#elif HFM_11_1_2_2
                     HFM.Try(() => HsvStarSchemaACM.CreateStarSchemaExtDim(dsn, prefix, pushType,
                                     extractType,
 #if HFM_11_1_2_2_300
