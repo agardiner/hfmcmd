@@ -1,0 +1,15 @@
+%if-undef opened
+%include 0_Open_App.yaml
+%end-if
+
+# Create a TaskLists folder
+CreateFolder:
+    Path: \TaskLists
+    Description: Sample Task Lists
+
+# Load the grids
+LoadDocuments:
+    SourceDir: %sample_path%\%sample_tasklists%
+    TargetFolder: \TaskLists
+
+

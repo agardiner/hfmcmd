@@ -1,0 +1,9 @@
+%if-undef opened
+%include 0_Open_App.yaml
+%end-if
+
+
+# Load the rules file
+LoadRules:
+    RulesFile: %sample_path%/%sample_rules%
+

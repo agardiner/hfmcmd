@@ -1,0 +1,10 @@
+%if-undef opened
+%include 0_Open_App.yaml
+%end-if
+
+
+# Load the data file
+LoadData:
+    DataFile: %sample_path%/%sample_data%
+    Delimiter: ;
+

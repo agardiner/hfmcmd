@@ -12,7 +12,7 @@
 #             cluster:<HFM cluster name> [server:<HFM web server>]
 #   HFMCmd 2_Load_Security.yaml user:<Admin user> password:<Admin password>
 #             cluster:<HFM cluster name>
-#   HFMCmd 2_Load_Metadata.yaml user:<Admin user> password:<Admin password>
+#   HFMCmd 3_Load_Metadata.yaml user:<Admin user> password:<Admin password>
 #             cluster:<HFM cluster name>
 #   etc
 #
@@ -25,3 +25,17 @@
 %include 2_Load_Security.yaml
 
 %include 3_Load_Metadata.yaml
+
+%include 4_Load_MemberLists.yaml
+
+%include 5_Load_Rules.yaml
+
+%include 6_Load_DataEntryForms.yaml
+
+%include 7_Load_Grids.yaml
+
+%include 8_Load_Reports.yaml
+
+%include 9_Load_TaskLists.yaml
+
+%include 10_Load_Data.yaml

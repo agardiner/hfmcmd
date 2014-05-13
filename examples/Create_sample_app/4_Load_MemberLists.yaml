@@ -1,0 +1,9 @@
+%if-undef opened
+%include 0_Open_App.yaml
+%end-if
+
+
+# Load the member list file
+LoadMemberLists:
+    MemberListFile: %sample_path%/%sample_memberlists%
+

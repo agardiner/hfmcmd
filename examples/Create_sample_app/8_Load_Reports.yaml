@@ -1,0 +1,15 @@
+%if-undef opened
+%include 0_Open_App.yaml
+%end-if
+
+# Create a Reports folder
+CreateFolder:
+    Path: \Reports
+    Description: Sample Reports
+
+# Load the grids
+LoadDocuments:
+    SourceDir: %sample_path%\%sample_reports%
+    TargetFolder: \Reports
+
+

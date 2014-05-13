@@ -12,6 +12,13 @@
 %set sample_profile 01 Profile/DemoCalendar_HFM11_1_2.per
 %set sample_security 02 Security/DemoSecurity.sec
 %set sample_metadata 03 Metadata/Simple.app
+%set sample_memberlists 04 MemberLists/DemoMemberLists.lst
+%set sample_rules 05 Rules/Simple.rle
+%set sample_forms 06 DataEntryForms
+%set sample_grids 07 Grids
+%set sample_reports 08 SystemReports
+%set sample_tasklists 09 TaskLists
+%set sample_data 10 Data/AllData.dat
 
 # Name of the sample app we will create/populate
 %set app Simple

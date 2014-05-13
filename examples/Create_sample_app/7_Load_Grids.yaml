@@ -1,0 +1,15 @@
+%if-undef opened
+%include 0_Open_App.yaml
+%end-if
+
+# Create a Grids folder
+CreateFolder:
+    Path: \Grids
+    Description: Grids
+
+# Load the grids
+LoadDocuments:
+    SourceDir: %sample_path%\%sample_grids%
+    TargetFolder: \Grids
+
+

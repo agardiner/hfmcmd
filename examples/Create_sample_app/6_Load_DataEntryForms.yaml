@@ -1,0 +1,16 @@
+%if-undef opened
+%include 0_Open_App.yaml
+%end-if
+
+# Create a Forms folder
+CreateFolder:
+    Path: \Forms
+    Description: Data Entry Forms
+
+# Load the data entry forms
+LoadDocuments:
+    SourceDir: %sample_path%\%sample_forms%
+    Name: *.wdf
+    TargetFolder: \Forms
+
+
