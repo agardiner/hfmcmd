@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Linq;
 using System.Xml;
@@ -262,6 +263,23 @@ namespace HFM
 
 
 
+        /// <summary>
+        /// Convenience method for extending a path with another folder.
+        /// Handles the corner case of the root folder.
+        /// </summary>
+        public static string AddFolderToPath(string path, string folder)
+        {
+            var sb = new StringBuilder();
+            sb.Append('\\');
+            if(path != null) { sb.Append(path.TrimStart('\\').TrimEnd('\\')); }
+            if(sb.Length > 1) { sb.Append('\\'); }
+            if(folder != null) { sb.Append(folder.TrimStart('\\').TrimEnd('\\')); }
+            if(sb.Length > 1 && sb[sb.Length-1] == '\\') { sb.Length--; }
+            return sb.ToString();
+        }
+
+
+
         [Factory]
         public Documents(Session session)
         {
@@ -274,25 +292,6 @@ namespace HFM
             _documents.SetWebSession(session.HFMwSession);
             _documentCache = new Dictionary<string, List<DocumentInfo>>(StringComparer.OrdinalIgnoreCase);
             LoadCache(@"\", true);
-        }
-
-
-        /// <summary>
-        /// Convenience method for extendin a path with another folder.
-        /// Handles the corner case of the root folder.
-        /// </summary>
-        public static string AddFolderToPath(string path, string folder)
-        {
-            if(path == null || path.Length == 0) {
-                path = @"\";
-            }
-
-            if(folder != null && folder.Length > 0) {
-                return path.Length > 1 ? path + @"\" + folder : @"\" + folder;
-            }
-            else {
-                return path;
-            }
         }
 
 
@@ -649,6 +648,7 @@ namespace HFM
             var folders = path.Split('\\');
             var parent = @"\";
             for(var i = 1; i < folders.Length; ++i) {
+                _log.InfoFormat("folder[{0}]: {1}", i, folders[i]);
                 if(!DoesDocumentExist(parent, folders[i], EDocumentType.Folder) ||
                    (overwrite && i == folders.Length - 1)) {
                     HFM.Try("Creating new folder",
@@ -699,14 +699,16 @@ namespace HFM
             output.InitProgress("Loading documents", files.Count);
 
             foreach(var filePath in files) {
+                var folder = Path.GetDirectoryName(filePath);
                 var file = Path.GetFileName(filePath);
-                var tgtFolder = Path.Combine(targetFolder, FileUtilities.PathDifference(sourceDir, filePath));
+                var subFolders = FileUtilities.PathDifference(sourceDir, folder);
+                var tgtFolder = Documents.AddFolderToPath(targetFolder, subFolders);
                 CreateFolder(tgtFolder, null, securityClass, isPrivate, EDocumentType.All, false);
                 if(overwrite || !DoesDocumentExist(tgtFolder, file, EDocumentType.All)) {
                     var doc = new DocumentInfo(filePath);
                     if(doc.IsDocumentType(documentType)) {
-                        _log.FineFormat("Loading {0} to {1}", file, targetFolder);
-                        SaveDocument(targetFolder, doc.Name, doc.Description,
+                        _log.FineFormat("Loading {0} to {1}", file, tgtFolder);
+                        SaveDocument(tgtFolder, doc.Name, doc.Description,
                                      doc.DocumentType, doc.DocumentFileType,
                                      doc.Content, securityClass, isPrivate, overwrite);
                         loaded++;

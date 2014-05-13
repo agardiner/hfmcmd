@@ -177,6 +177,9 @@ namespace HFM
                     // TODO:  Should we show the warnings here?
                     didError = true;
                 }
+                else {
+                    _log.Info("Data load completed successfully");
+                }
             }
             output.EndProgress();
 

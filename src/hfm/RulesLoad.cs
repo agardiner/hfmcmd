@@ -90,6 +90,9 @@ namespace HFM
                 _log.Warn("Rules load resulted in warnings; check log file for details");
                 // TODO:  Should we show the warnings here?
             }
+            else {
+                _log.Info("Rules load completed successfully");
+            }
         }
 
 
@@ -157,6 +160,9 @@ namespace HFM
             if(warnings) {
                 _log.Warn("Member List Rules load resulted in warnings; check log file for details");
                 // TODO:  Should we show the warnings here?
+            }
+            else {
+                _log.Info("Member Lists load completed successfully");
             }
         }
 
