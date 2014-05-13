@@ -135,7 +135,7 @@ HFMCmd supports the following modes of operation:
         Scenario: Actual
         Year:%Year%
         Periods: May-July
-        Entity: GROUP
+        Entity: [GROUP,{LE064.[Base]}]
     ```
 	
 	In the above example %Year% would be replaced with 2012.
