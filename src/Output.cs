@@ -623,6 +623,9 @@ namespace HFMCmd
         // Counter used to cause spinner to animate
         private int _spin;
 
+        public CommandLine.UI CUI {
+            get { return _cui; }
+        }
 
         public ConsoleOutput(CommandLine.UI cui)
         {
@@ -667,41 +670,47 @@ namespace HFMCmd
         {
             base.SetHeader(fields);
 
-            _cui.WriteLine();
-            if(fields.Length > 1) {
-                _cui.WriteLine(string.Format(_format, _fieldNames));
-                _cui.WriteLine(string.Format(_format, _fieldNames.Select(
-                            (field, i) => new String('-', _widths[i])).ToArray()));
-            }
+            _cui.WithColor(ConsoleColor.Cyan, () => {
+                _cui.WriteLine();
+                if(fields.Length > 1) {
+                    _cui.WriteLine(string.Format(_format, _fieldNames));
+                    _cui.WriteLine(string.Format(_format, _fieldNames.Select(
+                                (field, i) => new String('-', _widths[i])).ToArray()));
+                }
+            });
         }
 
 
         public override void WriteRecord(params object[] values)
         {
-            if(_format != null) {
-                foreach(var line in Wrap(values)) {
-                    _cui.WriteLine(line);
+            _cui.WithColor(ConsoleColor.Cyan, () => {
+                if(_format != null) {
+                    foreach(var line in Wrap(values)) {
+                        _cui.WriteLine(line);
+                    }
                 }
-            }
-            else if(values.Length > 0) {
-                foreach(var line in values) {
-                    _cui.WriteLine(IndentString + line.ToString());
+                else if(values.Length > 0) {
+                    foreach(var line in values) {
+                        _cui.WriteLine(IndentString + line.ToString());
+                    }
                 }
-            }
-            else {
-                _cui.WriteLine("");
-            }
-            ++_records;
+                else {
+                    _cui.WriteLine("");
+                }
+                ++_records;
+            });
         }
 
 
         public override void End(bool suppress)
         {
-            _cui.WriteLine();
-            if(!suppress && _widths != null && _widths.Length > 0 && _records > 5) {
-                _cui.WriteLine(IndentString + string.Format("{0} records output", _records));
+            _cui.WithColor(ConsoleColor.Cyan, () => {
                 _cui.WriteLine();
-            }
+                if(!suppress && _widths != null && _widths.Length > 0 && _records > 5) {
+                    _cui.WriteLine(IndentString + string.Format("{0} records output", _records));
+                    _cui.WriteLine();
+                }
+            });
         }
 
 
@@ -775,8 +784,12 @@ namespace HFMCmd
                 sb.Remove(barMid, pctStr.Length);
                 sb.Insert(barMid, pctStr);
 
-                _cui.ClearLine();
-                _cui.Write(sb.ToString());
+                _cui.WithColor(ConsoleColor.Green, () => {
+                    _cui.ClearLine();   // We may only detect we are redirected at this point
+                    if(!CommandLine.UI.IsRedirected) {
+                        _cui.Write(sb.ToString());
+                    }
+                });
             }
         }
 
@@ -800,7 +813,23 @@ namespace HFMCmd
 
         protected override void Append(LoggingEvent logEvent)
         {
-            _console.Write(RenderLoggingEvent(logEvent));
+            var newColor = _console.CUI.ForegroundColor;
+            switch(logEvent.Level.ToString().ToUpperInvariant()) {
+                case "FATAL":
+                case "ERROR":
+                    newColor = ConsoleColor.Red;
+                    break;
+                case "WARN":
+                    newColor = ConsoleColor.Yellow;
+                    break;
+                case "TRACE":
+                case "DEBUG":
+                    newColor = ConsoleColor.DarkGray;
+                    break;
+                default:
+                    break;
+            }
+            _console.CUI.WithColor(newColor, () => _console.Write(RenderLoggingEvent(logEvent)));
         }
     }
 

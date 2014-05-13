@@ -140,6 +140,50 @@ namespace CommandLine
         }
 
 
+        /// Get/set the console foreground color
+        public ConsoleColor ForegroundColor {
+            get {
+                if(UI.IsRedirected) {
+                    return ConsoleColor.White;
+                }
+                try {
+                    return System.Console.ForegroundColor;
+                }
+                catch(IOException) {
+                    UI.IsRedirected = true;
+                    return ConsoleColor.White;
+                }
+            }
+            set {
+                if(!UI.IsRedirected) {
+                    System.Console.ForegroundColor = value;
+                }
+            }
+        }
+
+
+        /// Get/set the console background color
+        public ConsoleColor BackgroundColor {
+            get {
+                if(UI.IsRedirected) {
+                    return ConsoleColor.Black;
+                }
+                try {
+                    return System.Console.BackgroundColor;
+                }
+                catch(IOException) {
+                    UI.IsRedirected = true;
+                    return ConsoleColor.Black;
+                }
+            }
+            set {
+                if(!UI.IsRedirected) {
+                    System.Console.BackgroundColor = value;
+                }
+            }
+        }
+
+
         /// <summary>
         /// Constructor; requires a purpose for the program whose args we are
         /// parsing.
@@ -428,6 +472,24 @@ namespace CommandLine
             System.Console.WriteLine();
 
             return pwd.ToString();
+        }
+
+
+        /// <summary>
+        /// Performs the specified operation +op+ with the console color
+        /// temporarily changed to +color+. On completion of the operation,
+        /// the color is reset to the original color.
+        /// </summary>
+        public void WithColor(ConsoleColor color, Action op)
+        {
+            var oldColor = ForegroundColor;
+            if(color != oldColor) { ForegroundColor = color; }
+            try {
+                op();
+            }
+            finally {
+                if(color != oldColor) { ForegroundColor = oldColor; }
+            }
         }
 
     }
