@@ -133,7 +133,7 @@ HFMCmd supports the following modes of operation:
 
       Consolidate:
         Scenario: Actual
-        Year: %Year%
+        Year:%Year%
         Periods: May-July
         Entity: GROUP
     ```
