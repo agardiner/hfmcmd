@@ -110,7 +110,9 @@ HFMCmd supports the following modes of operation:
         Scenario: Actual
         Year: 2008
         Periods: May-July
-        Entity: GROUP
+        Entity:
+          - GROUP
+          - {LE064.[Base]}
     ```
 	
 	Alternatively runtime variables can be passed in command line for specified
@@ -122,7 +124,7 @@ HFMCmd supports the following modes of operation:
 	
 	Contents of consolidate.hfm:
 
-    ```yaml
+    ```
       SetLogonInfo:
         UserName: admin
         Password: password
@@ -133,12 +135,14 @@ HFMCmd supports the following modes of operation:
 
       Consolidate:
         Scenario: Actual
-        Year:%Year%
+        Year: %Year%
         Periods: May-July
-        Entity: [GROUP,{LE064.[Base]}]
+        Entity: 
+          - GROUP
+          - {LE064.[Base]}
     ```
 	
-	In the above example %Year% would be replaced with 2012.
+	In the above example `%Year%` would be replaced with `2012`.
 	
 
 3. An interactive shell can be started, where commands can be entered at an hfm>
@@ -152,8 +156,8 @@ HFMCmd supports the following modes of operation:
 ## Supported Versions of HFM
 
 HFMCmd has been designed to work with multiple different versions of HFM, and
-should work with versions 9.3 through to 11.1.2.2, including support for the new
-extended dimensionality in 11.1.2.2.
+should work with versions 9.3 through to 11.1.2.3, including support for the new
+extended dimensionality introduced in 11.1.2.2.
 
 
 ## Licence
