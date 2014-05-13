@@ -99,6 +99,8 @@ def compile(version)
   s = settings_for_version(version)
   options = "/nologo /target:exe /main:HFMCmd.Launcher /out:#{s[:exe]} /debug /optimize+ /define:HFM_#{HFM_VER.gsub('.', '_')}"
   options += " /define:HFM_11_1_2_2" if HFM_VER =~ /11\.1\.2\.2\.\d+/
+  options += " /define:HFM_11_1_2_2" if HFM_VER =~ /11\.1\.2\.3(\.\d+)?/
+  options += " /define:HFM_11_1_2_2_300" if HFM_VER =~ /11\.1\.2\.3(\.\d+)?/
   options += " /define:LATE_BIND" if late_bind
   log4net_ref = "/lib:#{s[:log4net]} /reference:log4net.dll"
   hfm = ["/lib:#{HFM_LIB}"]
@@ -140,6 +142,7 @@ def package(package_name, *files)
   file_list = files.flatten.map { |f| %Q{"#{Dir.pwd}/#{f}"} }.join(' ')
   "tools\\7za.exe a #{PACKAGE_DIR}/#{package_name}.zip #{file_list}"
 end
+
 
 MethodInfo = Struct.new(:version, :library, :class, :method_name, :slot, :args)
 
@@ -308,7 +311,7 @@ task :clean do
 end
 
 
-desc 'Compare HFM versions'
+desc "Compare HFM libraries for breaking changes"
 task :compare_hfm_versions do
   compare_hfm_versions
 end

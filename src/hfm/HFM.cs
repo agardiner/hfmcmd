@@ -33,14 +33,17 @@ namespace HFM
         public static Version VER_11_1_2_1 = "11.1.2.1".ToVersion();
         public static Version VER_11_1_2_2 = "11.1.2.2".ToVersion();
         public static Version VER_11_1_2_2_300 = "11.1.2.2.300".ToVersion();
+        public static Version VER_11_1_2_3 = "11.1.2.3".ToVersion();
 
-        public static Version VER_LAST_TESTED = VER_11_1_2_2_300;
+        public static Version VER_LAST_TESTED = VER_11_1_2_3;
 
         /// Returns the version against which HFMCmd was built
         public static Version BuildVersion
         {
             get {
-#if HFM_11_1_2_2_300
+#if HFM_11_1_2_3
+                return VER_11_1_2_3;
+#elif HFM_11_1_2_2_300
                 return VER_11_1_2_2_300;
 #elif HFM_11_1_2_2
                 return VER_11_1_2_2;
@@ -70,8 +73,10 @@ namespace HFM
         public static void CheckVersionCompatibility()
         {
 #if !LATE_BIND
-#if HFM_11_1_2_2_300
-            if(Version < VER_11_1_2_2_300) {
+#if HFM_11_1_2_3
+            if(Version < VER_11_1_2_3) {
+#elif HFM_11_1_2_2_300
+            if(Version < VER_11_1_2_2_300 || Version >= VER_11_1_2_3) {
 #elif HFM_11_1_2_2
             if(Version < VER_11_1_2_2 || Version >= VER_11_1_2_2_300) {
 #elif HFM_11_1_2_1
