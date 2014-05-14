@@ -504,6 +504,10 @@ namespace HFMCmd
                 if(!desc.EndsWith(".")) {
                     desc = desc + ".";
                 }
+                if(setting.ParameterType.IsEnum) {
+                    desc += "\n[Possible values: " + StringUtilities.Join(
+                        Enum.GetValues(setting.ParameterType), ", ") + "]";
+                }
                 output.WriteRecord(name, def, desc);
             }
         }

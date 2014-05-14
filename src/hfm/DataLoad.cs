@@ -89,7 +89,7 @@ namespace HFM
                  InternalName = "Extract Calculated"),
          Setting("IncludePhasedGroups", "If true, includes phased groups in data extract",
                  InternalName = "Extract Phased Groups"),
-         Setting("View", "The view of data (i.e. Periodic, YTD, or ScenarioDefault) to extract",
+         Setting("View", "The view of data to extract",
                  ParameterType = typeof(EDataView))]
         public class ExtractOptions : LoadExtractOptions
         {
