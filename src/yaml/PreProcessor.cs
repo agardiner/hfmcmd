@@ -97,7 +97,7 @@ namespace YAML
             }
 
             // Use Regex to make sure we only match directives, not variables
-            if(Regex.Match(line, @"\s*%[a-zA-z\-]").Success) {
+            if(Regex.Match(line, @"^\s*%[a-zA-z\-]").Success) {
                 HandleDirective(line.Trim());
                 line = "";
             }

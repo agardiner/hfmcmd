@@ -361,20 +361,26 @@ namespace HFMCmd
             bool ok = true;
             _log.InfoFormat("Processing command file {0}", fileName);
             YAML.Parser parser = new YAML.Parser();
-            YAML.Node root = parser.ParseFile(fileName, args);
-            foreach(var cmdNode in root) {
-                if(_commands.Contains(cmdNode.Key)) {
-                    var cmdArgs = cmdNode.ToDictionary();
-                    DecryptValues(cmdArgs);
-                    ok = ok && InvokeCommand(cmdNode.Key, cmdArgs);
+            try {
+                YAML.Node root = parser.ParseFile(fileName, args);
+                foreach(var cmdNode in root) {
+                    if(_commands.Contains(cmdNode.Key)) {
+                        var cmdArgs = cmdNode.ToDictionary();
+                        DecryptValues(cmdArgs);
+                        ok = ok && InvokeCommand(cmdNode.Key, cmdArgs);
+                    }
+                    else {
+                        throw new ArgumentException(string.Format("Unknown command '{0}' encountered in command file {1}",
+                                    cmdNode.Key, fileName));
+                    }
+                    if(!ok) {
+                        break;
+                    }
                 }
-                else {
-                    throw new ArgumentException(string.Format("Unknown command '{0}' encountered in command file {1}",
-                                cmdNode.Key, fileName));
-                }
-                if(!ok) {
-                    break;
-                }
+            }
+            catch(YAML.ParseException ex) {
+                _log.Error("An error occurred while processing the command file:", ex);
+                ok = false;
             }
             return ok;
         }
