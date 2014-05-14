@@ -1,0 +1,13 @@
+%if-undef opened
+%include 0_Open_App.yaml
+%end-if
+
+
+# Consolidate the application
+Consolidate:
+    Scenarios: Actual, Budget
+    Years: 2004-2006
+    Periods: {Months}
+    Entities: {[Hierarchy]}
+    ConsolidationType: Impacted
+

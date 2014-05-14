@@ -39,3 +39,7 @@
 %include 9_Load_TaskLists.yaml
 
 %include 10_Load_Data.yaml
+
+%include 11_Load_Journals.yaml
+
+%include 12_Consolidate.yaml

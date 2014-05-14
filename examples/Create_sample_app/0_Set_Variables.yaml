@@ -19,6 +19,7 @@
 %set sample_reports 08 SystemReports
 %set sample_tasklists 09 TaskLists
 %set sample_data 10 Data/AllData.dat
+%set sample_journals 11 Journals/DemoJournals.jlf
 
 # Name of the sample app we will create/populate
 %set app Simple

@@ -1,0 +1,10 @@
+%if-undef opened
+%include 0_Open_App.yaml
+%end-if
+
+
+# Load the journals file
+LoadJournals:
+    JournalFile: %sample_path%/%sample_journals%
+    Delimiter: ;
+
