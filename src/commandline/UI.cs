@@ -64,26 +64,29 @@ namespace CommandLine
         /// Flag indicating whether console output is redirected
         public static bool IsRedirected = false;
 
+        private static bool _escPressed = false;
+
         /// <summary>
         /// Returns true if escape has been pressed.
         /// </summary>
         public static bool EscPressed
         {
             get {
-                bool esc = false;
-
                 try {
-                    if(!UI.IsRedirected && System.Console.KeyAvailable) {
+                    if(!_escPressed && !UI.IsRedirected && System.Console.KeyAvailable) {
                         var keyInfo = System.Console.ReadKey();
                         if(keyInfo.Key == System.ConsoleKey.Escape) {
-                            esc = true;
+                            _escPressed = true;
                         }
                     }
                 }
                 catch(InvalidOperationException) {
                     UI.IsRedirected = true;
                 }
-                return esc;
+                return _escPressed;
+            }
+            set {
+                _escPressed = value;
             }
         }
 

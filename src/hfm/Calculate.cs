@@ -176,7 +176,7 @@ namespace HFM
             var POVs = slice.Combos;
             output.InitProgress("Consolidating", POVs.Length);
             foreach(var pov in POVs) {
-                if(CommandLine.UI.Interrupted) {
+                if(output.Cancelled) {
                     break;
                 }
                 if(ConsolidatePOV(pov, consolidationType, output)) { consols++; }

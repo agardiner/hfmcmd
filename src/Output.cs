@@ -24,6 +24,8 @@ namespace HFMCmd
         /// </summary>
         string Operation { get; set; }
 
+        bool Cancelled { get; }
+
         /// <summary>
         /// Write a line of text, using string.Format to combine multiple
         /// values into a line of text.
@@ -272,16 +274,27 @@ namespace HFMCmd
     {
         public static NullOutput Instance = new NullOutput();
 
+        private bool _cancelled = false;
+
         public string Operation { get; set; }
+        public bool Cancelled { get { return _cancelled; } }
 
         public void WriteLine(string format, params object[] values) { }
         public void SetHeader(params object[] fields) { }
         public void WriteRecord(params object[] values) { }
         public void End(bool suppress) { }
-        public void InitProgress(string operation, int iterations) { }
-        public void InitProgress(string operation, int iterations, int total) { }
-        public bool SetProgress(int progress) { return OutputHelper.ShouldCancel(); }
-        public bool IterationComplete() { return OutputHelper.ShouldCancel(); }
+        public void InitProgress(string operation, int iterations) { _cancelled = false; }
+        public void InitProgress(string operation, int iterations, int total) { _cancelled = false; }
+        public bool SetProgress(int progress)
+        {
+            _cancelled = _cancelled || OutputHelper.ShouldCancel();
+            return _cancelled;
+        }
+        public bool IterationComplete()
+        {
+            _cancelled = _cancelled || OutputHelper.ShouldCancel();
+            return _cancelled;
+        }
         public void EndProgress() { }
     }
 
@@ -300,6 +313,8 @@ namespace HFMCmd
 
         /// Current operation
         public string Operation { get; set; }
+        /// Whether operation was cancelled
+        public bool Cancelled { get { return _cancelled; } }
         /// Level of indentation to use
         public int IndentWidth
         {
