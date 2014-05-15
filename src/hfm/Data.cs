@@ -10,6 +10,7 @@ using HFMCONSTANTSLib;
 
 using Command;
 using HFMCmd;
+using Utilities;
 
 
 namespace HFM
@@ -242,6 +243,45 @@ namespace HFM
                     break;
                 }
             }
+            output.EndProgress();
+        }
+
+
+        [Command("Clears ALL data and journals in the application.")]
+        public void ClearAllData(
+                SystemInfo si,
+                IOutput output)
+        {
+            output.InitProgress("Clear Data");
+            HFM.Try("Clearing all data", () => {
+                si.MonitorBlockingTask(output);
+                _hsvData.ClearAllData();
+                si.BlockingTaskComplete();
+            });
+            _log.Info("Application data cleared");
+            output.EndProgress();
+        }
+
+
+        [Command("Clears invalid data in the application.")]
+        public void ClearInvalidData(
+                [Parameter("Path to the log file to receive details of invalid data cleared")]
+                string logFile,
+                [Parameter("Flag indicating whether to scan for invalid records only",
+                           DefaultValue = false)]
+                bool scanOnly,
+                SystemInfo si,
+                IOutput output)
+        {
+            FileUtilities.EnsureFileWriteable(logFile);
+
+            output.InitProgress("Clear Invalid Data");
+            HFM.Try("Clearing invalid data", () => {
+                si.MonitorBlockingTask(output);
+                _hsvData.ClearInvalidData(scanOnly, 0, logFile);
+                si.BlockingTaskComplete();
+            });
+            _log.Info("Invalid data cleared");
             output.EndProgress();
         }
 
