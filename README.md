@@ -62,7 +62,8 @@ Pre-built binaries are available at https://github.com/agardiner/hfmcmd/releases
 
 As an alternative to downloading pre-built binaries, any machine on which .NET
 3.5 or later is installed ought to be able to build HFMCmd from source. This is
-as simple as running the appropriate `build_for_<HFM version>.bat` file.
+as simple as downloading the source code from Github, unzipping it, and running
+the appropriate `build_for_<HFM version>.bat` file.
 
 
 ## Installation
@@ -97,7 +98,7 @@ HFMCmd supports the following modes of operation:
 
     Contents of consolidate.hfm:
 
-    ```yaml
+    ```
       SetLogonInfo:
         UserName: admin
         Password: password
@@ -114,15 +115,15 @@ HFMCmd supports the following modes of operation:
           - GROUP
           - {LE064.[Base]}
     ```
-	
-	Alternatively runtime variables can be passed in command line for specified
-	settings.
-	
-	```
-	HFMCmd.exe consolidate.hfm Year:2012
-	```
-	
-	Contents of consolidate.hfm:
+
+    Alternatively runtime variables can be passed in command line for specified
+    settings.
+
+    ```
+    HFMCmd.exe consolidate.hfm Year:2012
+    ```
+
+    Contents of consolidate.hfm:
 
     ```
       SetLogonInfo:
@@ -137,20 +138,40 @@ HFMCmd supports the following modes of operation:
         Scenario: Actual
         Year: %Year%
         Periods: May-July
-        Entity: 
+        Entity:
           - GROUP
           - {LE064.[Base]}
     ```
-	
-	In the above example `%Year%` would be replaced with `2012`.
-	
+
+    In the above example `%Year%` would be replaced with `2012`.
+
 
 3. An interactive shell can be started, where commands can be entered at an hfm>
    prompt. To enter the shell, start HFMCmd with no arguments, i.e.
 
     ```
-      HFMCmd.exe
+    HFMCmd
     ```
+
+## Documentation
+
+HFMCmd provides extensive online help capabilities, via the Help command.
+* Basic instructions on running HFMCmd can be obtained by running:
+    ```
+    HFMCmd Help
+    ```
+* Help on the available commands can be obtained by running:
+    ```
+    HFMCmd Help Commands
+    ```
+* Help on a specific command can be obtained by running:
+    ```
+    HFMCmd Help <Command>
+    ```
+
+Additionally, there is a Wiki containing further documentation. It can be found
+at [HFMCmd Wiki](https://github.com/agardiner/hfmcmd/wiki). This is in the early
+stages of development, but will be added to over time.
 
 
 ## Supported Versions of HFM
