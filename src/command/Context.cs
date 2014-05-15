@@ -478,11 +478,11 @@ namespace Command
             if(setting.IsSensitive) {
                 val = "******";
             }
-            LogSettingNameValue(sb, setting.Name, val);
+            LogSettingNameValue(sb, setting.Name, setting, val);
         }
 
 
-        private void LogSettingNameValue(StringBuilder sb, string name, object val)
+        private void LogSettingNameValue(StringBuilder sb, string name, ISetting setting, object val)
         {
             if(val != null) {
                 sb.AppendLine();
@@ -496,6 +496,9 @@ namespace Command
                                         string.Format("\"{0}\"", o.ToString().Replace("\"", "\"\"")) :
                                         o.ToString()
                               ).ToArray()));
+                }
+                else if(setting.ParameterType.IsEnum) {
+                    sb.Append(Enum.GetName(setting.ParameterType, val));
                 }
                 else {
                     sb.Append(val);
@@ -550,7 +553,7 @@ namespace Command
                         if(args.ContainsKey(dynset)) {
                             _log.DebugFormat("Processing dynamic setting {0}", dynset);
                             coll[dynset] = ConvertSetting(args[dynset], setting);
-                            LogSettingNameValue(sb, dynset, coll[dynset]);
+                            LogSettingNameValue(sb, dynset, setting, coll[dynset]);
                         }
                     }
                 }
@@ -560,6 +563,12 @@ namespace Command
                 }
                 else if(setting.HasAlias && args.ContainsKey(setting.Alias)) {
                     coll[setting.InternalName] = ConvertSetting(args[setting.Alias], setting);
+                    LogSettingValue(sb, setting, coll[setting.InternalName]);
+                }
+                else if(setting.HasDefaultValue && setting.DefaultValue != null) {
+                    _log.DebugFormat("No value supplied for {0}; using default value '{1}'",
+                            setting.Name, setting.DefaultValue);
+                    coll[setting.InternalName] = setting.DefaultValue;
                     LogSettingValue(sb, setting, coll[setting.InternalName]);
                 }
             }
