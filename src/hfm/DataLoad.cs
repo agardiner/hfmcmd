@@ -25,6 +25,13 @@ namespace HFM
     }
 
 
+    public enum EDataLoadMode
+    {
+        Load = HSV_DATALOAD_MODES.HSV_DATALOAD_LOAD,
+        ScanOnly = HSV_DATALOAD_MODES.HSV_DATALOAD_SCAN
+    }
+
+
     public enum EDataView
     {
         Periodic = HSV_DATA_VIEW.HSV_DATA_VIEW_PERIODIC,
@@ -62,9 +69,10 @@ namespace HFM
                  InternalName = "Duplicates",
                  ParameterType = typeof(EDataLoadUpdateMode),
                  DefaultValue = EDataLoadUpdateMode.Merge),
-         // TODO: Work out how to map a bool to an enum value
-         Setting("ScanOnly", "Scan data file for syntax errors (instead of loading it)",
-                 InternalName = "Mode")]
+         Setting("Mode", "Specifies how the data load should be processed. ScanOnly checks data files " +
+                 "for syntax errors, but does not load them.",
+                 ParameterType = typeof(EDataLoadMode),
+                 DefaultValue = EDataLoadMode.Load)]
         public class LoadOptions : LoadExtractOptions
         {
             [Factory]
