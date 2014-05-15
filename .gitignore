@@ -2,4 +2,7 @@ bin/*
 gen/*/*.exe
 gen/*/*.pdb
 gen/*Resource*
+lib/*/*.txt
 package/*
+.DS_Store
+*/.DS_Store

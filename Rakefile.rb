@@ -152,7 +152,7 @@ def compare_hfm_versions
   FileList['lib/hfm-*'].each do |hfm_dir|
     hfm_dir =~ /([\d.]+)$/
     versions << $1
-    dump_vtable(hfm_dir, $1, methods)
+    process_dlls(hfm_dir, $1, methods)
   end
 
   slot_count = 0
@@ -181,14 +181,14 @@ def compare_hfm_versions
 end
 
 
-def dump_vtable(dir, ver, methods)
+def process_dlls(dir, ver, methods)
   puts "Processing #{dir}..."
   FileList["#{dir}/*.dll"].each do |dll|
+    out = dump_vtable(dll)
     dll =~ /Interop\.(\w+)\.dll/
     mod = $1
     cls_or_ifc = nil
     count = 0
-    out = `tools\\ILDasm.exe /tokens /text /noca /pubonly #{dll}`.split("\n")
     is_class = false
     get_name = false
     mthd = nil
@@ -221,6 +221,12 @@ def dump_vtable(dir, ver, methods)
     end
   end
 end
+
+
+def dump_vtable(dll)
+    `tools\\ILDasm.exe /tokens /text /noca /pubonly #{dll}`.split("\n")
+end
+
 
 # ---------
 
@@ -271,6 +277,7 @@ namespace :dotnet35 do
     ver = get_version
     sh package "HFMCmd_#{ver}_for_.NET_3.5_HFM_#{HFM_VER}", HFMCMD35_BUNDLE, PACKAGE_FILES
   end
+
 end
 
 
@@ -301,6 +308,7 @@ namespace :dotnet40 do
     ver = get_version
     sh package "HFMCmd_#{ver}_for_.NET_4.0", HFMCMD40_BUNDLE, PACKAGE_FILES
   end
+
 end
 
 
@@ -308,6 +316,15 @@ desc "Remove all generated files"
 task :clean do
   FileUtils.rm_rf BUILD_DIR
   FileUtils.rm_rf RELEASE_DIR
+end
+
+
+desc "Dump intreop assembly details to a text file"
+task :dump_vtables do
+  FileList["#{HFM_LIB}/*.dll"].each do |dll|
+    out = dump_vtable(dll)
+    File.open("#{HFM_LIB}/#{File.basename(dll, '.dll')}.txt", "w") { |f| f.puts out }
+  end
 end
 
 
