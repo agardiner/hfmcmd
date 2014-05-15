@@ -60,12 +60,19 @@ namespace Encryption
 
         /// Number of bits to use for encryption
         private static int KeySize = 256;
-
+        /// Path to the master encryption key file
+        private static string _keyPath;
         /// Path to the encryption key file
         public static string EncryptionKeyFile
         {
             get {
-                return Path.ChangeExtension(Assembly.GetExecutingAssembly().Location, ".key");
+                if(_keyPath == null) {
+                    _keyPath = Path.ChangeExtension(Assembly.GetExecutingAssembly().Location, ".key");
+                 }
+                return _keyPath;
+            }
+            set {
+                _keyPath = value;
             }
         }
 
