@@ -30,3 +30,21 @@
 - Added an interactive shell mode of operation; to access, just start HFMCmd
   without any parameters. This will drop you at a hfm> prompt, where you can
   then enter commands interactively.
+
+
+[0.5.0] Bug fixes, HFM 11.1.2.2.300 and HFM 11.1.2.3 compatibility  15-May-2014
+- Fixes for all reported issues. Many of these were related to compatibility
+  with HFM 11.1.2.2.300, which broke backwards compatibility in a new way, by
+  changing the number of arguments to the function CreateStarSchemaExtDim.
+  This change is even worse than changing the vtable ordering, since even a
+  recompile against the new libraries was insufficient to allow HFMCmd to work!
+- Introduced new compile-time and run-time version checks. This should at least
+  make it more obvious when HFMCmd is being used with an incompatible version of
+  HFM.
+- Fixed bug with passing a list of member specifications to commands that accept
+  a list of members.
+- Add colour to HFMCmd console output. Helps to draw attention to warnings and
+  errors.
+- Add examples directory, and include a series of examples showing how a sample
+  application can be created from scratch using HFMCmd.
+
