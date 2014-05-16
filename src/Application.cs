@@ -433,7 +433,8 @@ namespace HFMCmd
             if(command == null) {
                 // Display general help
                 output.WriteLine(string.Format(HFMCmd.Resource.Help.General,
-                           _inREPL ? "" : ApplicationInfo.ExeName));
+                            ApplicationInfo.ExeName,
+                            _inREPL ? "" : ApplicationInfo.ExeName));
             }
             else if(string.Equals(command, "Commands", StringComparison.OrdinalIgnoreCase)) {
                 // Display a list of commands in two columns

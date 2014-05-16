@@ -132,9 +132,11 @@
         command file, or interactively.
 
         To obtain a list of available commands, use:
-          {0} Help Commands
 
-        More help can be found on-line, at http://agardiner.github.com/hfmcmd/
+            {1} Help Commands
+
+        More help can be found on-line, at http://agardiner.github.com/hfmcmd/wiki
+
     </value>
   </data>
 
