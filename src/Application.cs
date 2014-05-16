@@ -412,7 +412,7 @@ namespace HFMCmd
                     break;
                 }
 
-                _cmdLine.Definition.Clear();
+                _cmdLine.ClearArguments();
                 SetupCommandLine();
                 ProcessCommandLine(("hfm " + input).SplitSpaces());
             }

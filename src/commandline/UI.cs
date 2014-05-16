@@ -294,6 +294,15 @@ namespace CommandLine
 
 
         /// <summary>
+        /// Clear existing arguments from the definition.
+        /// </summary>
+        public void ClearArguments()
+        {
+            Definition.Clear();
+        }
+
+
+        /// <summary>
         /// Convenience method for defining a new positional argument.
         /// </summary>
         public PositionalArgument AddPositionalArgument(string key, string desc)

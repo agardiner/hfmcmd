@@ -111,9 +111,13 @@ namespace CommandLine
         }
 
 
+        /// <summary>
+        /// Clears the definition of existing arguments.
+        /// </summary>
         public void Clear()
         {
             Arguments.Clear();
+            _positionalArgumentOrder.Clear();
         }
 
     }
