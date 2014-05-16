@@ -1118,7 +1118,7 @@ namespace HFM
         /// Regular expression for matching a member range specification.
         protected static Regex MEMBER_RANGE_RE = new Regex(@"^(" + Member.NAME_RE_CLASS +
                 @")\s*(\-|\:)\s*(" + Member.NAME_RE_CLASS + ")$");
-        /// Regular expression for matching a member list specification.
+        /// Regular expression for matching a member specification.
         protected static Regex MEMBER_RE = new Regex(@"^(?:(" + Member.NAME_RE_CLASS +
                 @")\.)?(" + Member.NAME_RE_CLASS + ")$");
 

@@ -60,6 +60,11 @@ namespace HFM
         // Reference to a SystemInfo object
         private SystemInfo _systemInfo;
 
+        /// Returns the name of the application to which this session belongs
+        public string Application { get { return _application; } }
+        /// Returns the name of the cluster on which this session exists
+        public string Cluster { get { return _cluster; } }
+
 
         public Session(Connection conn, string cluster, string application)
         {

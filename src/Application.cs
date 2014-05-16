@@ -404,7 +404,9 @@ namespace HFMCmd
 
             _inREPL = true;
             while(true) {
-                input = _cmdLine.ReadLine("hfm> ");
+                HFM.Session sess = (HFM.Session)_context[typeof(HFM.Session)];
+                input = _cmdLine.ReadLine(string.Format("{0}hfm> ",
+                            sess == null ? "" : "[" + sess.Application + "] "));
 
                 if(UI.Interrupted ||
                    String.Compare(input, "exit", StringComparison.OrdinalIgnoreCase) == 0 ||
