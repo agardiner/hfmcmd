@@ -191,7 +191,7 @@ namespace Command
             for(int i = 0; i < _context.Count; ++i) {
                 if(type.IsInstanceOfType(_context[i])) {
                     result = _context[i];
-                    _context.Remove(i);
+                    _context.RemoveAt(i);
                     break;
                 }
             }
@@ -581,7 +581,7 @@ namespace Command
         private void PurgeSingleUseObjects()
         {
             foreach(var purgeObj in _purgeList) {
-                _log.DebugFormat("Removing {0} single-use object from context", purgeObj.GetType().Name);
+                _log.DebugFormat("Removing single-use {0} object from context", purgeObj.GetType().Name);
                 _context.Remove(purgeObj);
             }
             _purgeList.Clear();
