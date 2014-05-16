@@ -1,4 +1,5 @@
 bin/*
+diff/*
 gen/*/*.exe
 gen/*/*.pdb
 gen/*Resource*

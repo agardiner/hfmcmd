@@ -157,8 +157,9 @@ def compare_hfm_versions
 
   slot_count = 0
   arg_count = 0
-  f1 = File.new('hfm_vtable_changes.txt', 'w')
-  f2 = File.new('hfm_arg_changes.txt', 'w')
+  FileUtils.mkdir_p('diff')
+  f1 = File.new('diff/hfm_vtable_changes.txt', 'w')
+  f2 = File.new('diff/hfm_arg_changes.txt', 'w')
   f1.puts "Library\tClass\tMethod\t#{versions.join("\t")}"
   f2.puts "Library\tClass\tMethod\tVersion\tArguments"
   methods.sort.each do |key, vers|
@@ -178,6 +179,7 @@ def compare_hfm_versions
   f1.close
   f2.close
   puts "Found #{slot_count} vtable layout changes and #{arg_count} argument changes"
+  puts "Results can be found in the diff directory"
 end
 
 
@@ -321,10 +323,14 @@ end
 
 desc "Dump intreop assembly details to a text file"
 task :dump_vtables do
+  puts "Dumping interop details as text to #{HFM_LIB}..."
+  count = 0
   FileList["#{HFM_LIB}/*.dll"].each do |dll|
     out = dump_vtable(dll)
     File.open("#{HFM_LIB}/#{File.basename(dll, '.dll')}.txt", "w") { |f| f.puts out }
+    count += 1
   end
+  puts "  Output #{count} assembly dumps"
 end
 
 
