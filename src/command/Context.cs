@@ -22,6 +22,9 @@ namespace Command
     }
 
 
+    /// <summary>
+    /// Thrown when an error occurs while attempting to invoke a command.
+    /// </summary>
     public class CommandException : Exception
     {
         public CommandException(string format, string arg, Exception ex)
@@ -91,6 +94,9 @@ namespace Command
         // When a command is invoked, it is invoked on an object that is in this
         // list.
         protected List<object> _context = new List<object>();
+        /// A dictionary of dependant objects that should be purged when the current
+        /// command completes.
+        protected Dictionary<object, List<object>> _dependencyList = new Dictionary<object, List<object>>();
         /// A list of single-use objects that should be purged when the current
         /// command completes.
         protected List<object> _purgeList = new List<object>();
@@ -150,21 +156,42 @@ namespace Command
         /// </summary>
         public void Set(object value)
         {
-            var valType = value.GetType();
-            for(var i = 0; i < _context.Count; ++i) {
-                var type = _context[i].GetType();
-                if(type.IsAssignableFrom(valType)) {
-                    if(_context[i] != value) {
-                        _log.TraceFormat("Replacing object of type {0} in context", type);
-                        _context[i] = value;
-                    }
-                    value = null;
-                    break;
-                }
+            Set(value, null);
+        }
+
+
+        /// <summary>
+        /// Sets an object in the context. Only a single object of a given type
+        /// is permitted, so any existing object of this type is replaced.
+        /// </summary>
+        public void Set(object value, object dependency)
+        {
+            if(value == null) {
+                throw new ArgumentException("Cannot set a null object in the context");
             }
-            if(value != null) {
+            var valType = value.GetType();
+            var exist = _context.FirstOrDefault(o => o.GetType().IsAssignableFrom(valType));
+            if(exist == value) {
+                // Object already exists in context - nothing to do
+              return;
+            }
+            if(exist != null) {
+                // Replace existing object of this type
+                _log.TraceFormat("Replacing object of type {0} in context", valType);
+                RemoveDependencies(exist);
+                _context.Remove(exist);
+            }
+            else {
+                // No existing object of this type
                 _log.TraceFormat("Adding object of type {0} to context", valType);
-                _context.Add(value);
+            }
+            _context.Add(value);
+            if(dependency != null) {
+                _log.TraceFormat("Adding object of type {0} as dependency", dependency.GetType());
+                if(!_dependencyList.ContainsKey(dependency)) {
+                    _dependencyList.Add(dependency, new List<object>());
+                }
+                _dependencyList[dependency].Add(value);
             }
         }
 
@@ -192,10 +219,26 @@ namespace Command
                 if(type.IsInstanceOfType(_context[i])) {
                     result = _context[i];
                     _context.RemoveAt(i);
+                    RemoveDependencies(result);
                     break;
                 }
             }
             return result;
+        }
+
+
+        /// Remove any dependencies of the supplied object.
+        protected void RemoveDependencies(object val)
+        {
+            if(_dependencyList.ContainsKey(val)) {
+                foreach(var dep in _dependencyList[val]) {
+                    _log.TraceFormat("Removing {0} dependent of {1}", dep.GetType(),
+                        val.GetType());
+                    _context.Remove(dep);
+                    RemoveDependencies(dep);
+                }
+                _dependencyList.Remove(val);
+            }
         }
 
 
@@ -286,13 +329,15 @@ namespace Command
         private object Instantiate(Factory step, Dictionary<string, object> args)
         {
             object ctxt = null;
+            object source = null;
 
             _log.TraceFormat("Attempting to create an instance of {0} via {1}", step.ReturnType, step);
             if(step.IsConstructor) {
                 ctxt = InvokeConstructor(step.Constructor);
             }
             else if(step.IsProperty) {
-                ctxt = step.Property.GetValue(this[step.DeclaringType], new object[] {});
+                source = this[step.DeclaringType];
+                ctxt = step.Property.GetValue(source, new object[] {});
             }
             else if(step.IsCommand) {
                 if(args.ContainsRequiredValuesForCommand(step.Command)) {
@@ -325,7 +370,7 @@ namespace Command
             }
 
             if(ctxt != null) {
-                Set(ctxt);
+                Set(ctxt, source);
                 if(step.IsSingleUse) {
                     _purgeList.Add(ctxt);
                 }
@@ -397,7 +442,7 @@ namespace Command
 
             // If the method is a factory method, set the returned object in the context
             if(result != null && cmd.IsFactory) {
-                Set(result);
+                Set(result, ctxt);
             }
 
             return result;
