@@ -81,9 +81,12 @@ namespace CommandLine
         }
 
 
+        /// <summary>
         /// Determine the kind of each argument value that has been supplied on
         /// the command line, based on whether it has a flag prefix, keyword etc.
-        protected void ClassifyArguments(List<string> args)
+        /// Returns the number of positional arguments found.
+        /// </summary>
+        public int ClassifyArguments(List<string> args)
         {
             string key = null;
             int pos;
@@ -132,6 +135,7 @@ namespace CommandLine
             if(key != null) {
                 KeywordValues.Add(key, null);
             }
+            return PositionalValues.Count;
         }
 
 

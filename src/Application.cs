@@ -104,7 +104,7 @@ namespace HFMCmd
             _context.Set(_console);
             _context.Verify();
 
-            if(cmdLineArgs.Length > 1) {
+            if(_cmdLine.ClassifyArguments(cmdLineArgs) > 0) {
                 SetupCommandLine();
                 rc = ProcessCommandLine(cmdLineArgs);
             }
@@ -146,6 +146,8 @@ namespace HFMCmd
             // Set default log level
             if(cmdLineArgs.Contains("--debugStartup")) {
                 _logHierarchy.Root.Level = _logRepository.LevelMap["DEBUG"];
+                // TODO: Remove --debugStartup flag
+                //cmdLineArgs.Remove("--debugStartup");
             }
             else {
                 _logHierarchy.Root.Level = _logRepository.LevelMap["INFO"];
@@ -389,6 +391,7 @@ namespace HFMCmd
         /// Launches in REPL mode
         protected void StartREPL()
         {
+            // TODO: Process any options passed on command-line
             string input = null;
             ValueArgument cmdArg = new PositionalArgument() {
                 Key = "Command",

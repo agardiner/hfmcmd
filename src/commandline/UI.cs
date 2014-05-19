@@ -362,6 +362,17 @@ namespace CommandLine
 
 
         /// <summary>
+        /// Classifies the supplied list of arguments, returning a count of the
+        /// number of positional arguments found.
+        /// </summary>
+        public int ClassifyArguments(IEnumerable<string> args)
+        {
+            var parser = new Parser(Definition);
+            return parser.ClassifyArguments(new List<string>(args));
+        }
+
+
+        /// <summary>
         /// Parses the supplied set of arg strings using the list of Argument
         // definitions maintained by this command-line UI instance.
         /// </summary>
