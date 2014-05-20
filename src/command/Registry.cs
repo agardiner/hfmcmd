@@ -74,12 +74,16 @@ namespace Command
         /// </summary>
         public void RegisterNamespace(Assembly asm, string ns)
         {
-            _log.DebugFormat("Searching for commands under namespace '{0}'...", ns);
+            _log.TraceFormat("Searching for commands under namespace '{0}'...", ns);
+            var cmdCount = _commands.Count;
+            var factCount = _factories.Count;
             foreach(var t in asm.GetExportedTypes()) {
                 if(t.Namespace == ns && t.IsClass) {
                     RegisterClass(t);
                 }
             }
+            _log.TraceFormat("Found {0} commands and {1} factories under namespace {2}",
+                    _commands.Count - cmdCount, _factories.Count - factCount, ns);
         }
 
 

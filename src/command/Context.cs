@@ -133,16 +133,39 @@ namespace Command
         /// </summary>
         public void Verify()
         {
+            _log.Trace("Verifying all commands and parameters are reachable...");
             foreach(var cmd in _registry.Commands()) {
                 _log.TraceFormat("Validating command {0}", cmd.Name);
+                if(!HasObject(cmd.Type)) {
+                    // Check that a factory exists for the command class
+                    if(_registry.Contains(cmd.Type)) {
+                        // Check that path exists to factory
+                        FindPathToType(cmd.Type, cmd);
+                    }
+                    else {
+                        // No factory is registered for type
+                        throw new ContextException(string.Format(
+                                "No factory is registered for type " +
+                                "{0} (defines the {1} command)",
+                                cmd.Type, cmd.Name));
+                    }
+                }
                 foreach(var parm in cmd.Parameters) {
-                    _log.TraceFormat("Validating command parameter {0}", parm.Name);
-                    if(!parm.HasParameterAttribute) {
+                    _log.DebugFormat("Validating command parameter {0}", parm.Name);
+                    if(!parm.HasParameterAttribute &&
+                       !parm.IsSettingsCollection &&
+                       !HasObject(parm.ParameterType)) {
                         // Check that a factory exists for the param type
-                        if(!HasObject(parm.ParameterType) && !parm.IsSettingsCollection &&
-                           !_registry.Contains(parm.ParameterType)) {
-                            _log.ErrorFormat("No factory is registered for type {0} (used in the {1} command parameter {2})",
-                                    parm.ParameterType, cmd.Name, parm.Name);
+                        if(_registry.Contains(parm.ParameterType)) {
+                            // Check that path exists to factory
+                            FindPathToType(parm.ParameterType, cmd);
+                        }
+                        else {
+                            // No factory is registered for type
+                            throw new ContextException(string.Format(
+                                    "No factory is registered for type " +
+                                    "{0} (used in the {1} command parameter {2})",
+                                    parm.ParameterType, cmd.Name, parm.Name));
                         }
                     }
                 }
