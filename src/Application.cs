@@ -279,8 +279,13 @@ namespace HFMCmd
         {
             var prompt = string.Format("Enter a value for {0} ({1}): ",
                     setting.Name.Capitalize(), setting.Description);
-            return setting.IsSensitive ? _cmdLine.ReadPassword(prompt) :
-                                   _cmdLine.ReadLine(prompt);
+            string val = null;
+            _cmdLine.WithColor(ConsoleColor.White, () => {
+                val = setting.IsSensitive ?
+                    _cmdLine.ReadPassword(prompt) :
+                    _cmdLine.ReadLine(prompt);
+            });
+            return val;
         }
 
 
@@ -408,8 +413,8 @@ namespace HFMCmd
             _inREPL = true;
             while(true) {
                 HFM.Session sess = (HFM.Session)_context[typeof(HFM.Session)];
-                input = _cmdLine.ReadLine(string.Format("{0}hfm> ",
-                            sess == null ? "" : "[" + sess.Application + "] "));
+                input = _cmdLine.ReadLine(string.Format("{0}hfm> ", sess == null ? "" :
+                            "[" + sess.Cluster + ':' + sess.Application + "] "));
 
                 if(UI.Interrupted ||
                    String.Compare(input, "exit", StringComparison.OrdinalIgnoreCase) == 0 ||
@@ -417,9 +422,11 @@ namespace HFMCmd
                     break;
                 }
 
-                _cmdLine.ClearArguments();
-                SetupCommandLine();
-                ProcessCommandLine(("hfm " + input).SplitSpaces());
+                if(input.Trim().Length > 0) {
+                    _cmdLine.ClearArguments();
+                    SetupCommandLine();
+                    ProcessCommandLine(("hfm " + input).SplitSpaces());
+                }
             }
             _inREPL = false;
         }
@@ -469,6 +476,20 @@ namespace HFMCmd
                     }
                     output.End(true);
                 }
+            }
+        }
+
+
+        [Command("Closes the currently open application")]
+        public void CloseApplication(
+                IOutput output)
+        {
+            HFM.Session sess = (HFM.Session)_context.Remove(typeof(HFM.Session));
+            if(sess != null) {
+                _log.InfoFormat("Closed session to {0}", sess.Application);
+            }
+            else {
+                _log.Warn("No application is open");
             }
         }
 
