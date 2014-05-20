@@ -125,7 +125,7 @@ namespace HFMCmd
         /// <summary>
         /// Configures logging.
         /// </summary>
-        protected void ConfigureLogging(IEnumerable<string> cmdLineArgs)
+        protected void ConfigureLogging(string[] cmdLineArgs)
         {
             // Get repository, define custom levels
             _logRepository = LogManager.GetRepository();
@@ -144,10 +144,11 @@ namespace HFMCmd
             _logHierarchy.RendererMap.Put(typeof(Exception), new ExceptionMessageRenderer());
 
             // Set default log level
-            if(cmdLineArgs.Contains("--debugStartup")) {
+            var idx = Array.FindIndex(cmdLineArgs, p => p.Equals("--debugStartup",
+                        StringComparison.InvariantCultureIgnoreCase));
+            if(idx >= 0) {
                 _logHierarchy.Root.Level = _logRepository.LevelMap["DEBUG"];
-                // TODO: Remove --debugStartup flag
-                //cmdLineArgs.Remove("--debugStartup");
+                cmdLineArgs[idx] = null;
             }
             else {
                 _logHierarchy.Root.Level = _logRepository.LevelMap["INFO"];
@@ -164,12 +165,12 @@ namespace HFMCmd
             arg.Validate = ValidateCommand;
 
             arg = _cmdLine.AddKeywordArgument("LogLevel", "Set logging to the specified log level",
-                    (_, val) => Log(val, null));
+                    (_, val) => Log(val, null, null));
             arg.AddValidator(new ListValidator("NONE", "SEVERE", "ERROR", "WARN",
                     "INFO", "FINE", "TRACE", "DEBUG"));
 
             _cmdLine.AddFlagArgument("Debug", "Enable debug logging",
-                    (_, val) => Log("DEBUG", null));
+                    (_, val) => Log("DEBUG", null, null));
         }
 
 
@@ -207,7 +208,7 @@ namespace HFMCmd
                 ok = File.Exists(argVal);
                 if(ok) {
                     var logArg = _cmdLine.AddPositionalArgument("LogFile", "Path to log file",
-                                    (_, logFile) => Log(null, logFile));
+                                    (_, logFile) => Log(null, logFile, null));
                     logArg.IsRequired = false;
                     // Instruct parser to include unrecognised args, since these
                     // will be treated as variable assignments
@@ -551,8 +552,22 @@ namespace HFMCmd
                 [Parameter("Level at which to log; unchanged if not specified", DefaultValue = null)]
                 string level,
                 [Parameter("Path to log file; unchanged if not specified", DefaultValue = null)]
-                string logFile)
+                string logFile,
+                IOutput output)
         {
+            if(level == null && logFile == null) {
+                // Output current log settings
+                output.SetHeader("Setting", "Value");
+                output.WriteRecord("Log Level", _logHierarchy.Root.Level);
+                FileAppender fa = (FileAppender)Array.Find<IAppender>(_logRepository.GetAppenders(),
+                    (appender) => appender is FileAppender);
+                if(fa != null) {
+                    output.WriteRecord("Log File", fa.File);
+                }
+                output.End(true);
+                return;
+            }
+
             // Set the log level
             if(level != null) {
                 _log.FineFormat("Setting log level to {0}", level.ToUpper());

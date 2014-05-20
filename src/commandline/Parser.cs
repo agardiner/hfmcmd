@@ -96,6 +96,7 @@ namespace CommandLine
             FlagValues = new List<string>();
 
             foreach(var arg in args.Skip(1)) {
+                if(arg == null) { continue; }
                 if(arg == "/?" || arg.ToLower() == "--help") {
                     ShowUsage = true;
                     if(key != null) {
@@ -114,7 +115,7 @@ namespace CommandLine
                     }
                     key = null;
                 }
-                else {
+                else if(arg.Trim().Length > 0) {
                     if(arg.StartsWith("--")) {
                         FlagValues.Add(arg.Substring(2));
                     }

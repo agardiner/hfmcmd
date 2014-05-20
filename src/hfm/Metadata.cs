@@ -492,7 +492,7 @@ namespace HFM
                        "should be enclosed in { and }, e.g. {[Base]}, {Sports Equipment}, etc. " +
                        "If no member lists are specified, all members in the dimension are returned.",
                        Alias = "MemberList",
-                       DefaultValue = new string[] { "{[Hierarchy]}" })]
+                       DefaultValue = "{[Hierarchy]}")]
             IEnumerable<string> memberLists,
             IOutput output)
         {
@@ -1202,7 +1202,7 @@ namespace HFM
                 }
             }
             if(_ids == null || _ids.Length == 0) {
-                throw new ArgumentException("No members were added to the member list");
+                _log.Warn("Member list returned no members");
             }
         }
 
@@ -1349,9 +1349,11 @@ namespace HFM
 
         protected IEnumerable<Member> IterateMembers(int[] members, int[] parents)
         {
-            for(var i = 0; i < members.Length; ++i) {
-                yield return _dimension.GetMember(members[i],
-                        parents != null ? parents[i] : Member.NOT_USED);
+            if(members != null) {
+                for(var i = 0; i < members.Length; ++i) {
+                    yield return _dimension.GetMember(members[i],
+                            parents != null ? parents[i] : Member.NOT_USED);
+                }
             }
         }
 
