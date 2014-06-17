@@ -29,6 +29,7 @@ The available commands are continuously being added to, but already there are
 commands available for performing most operations associated with:
 * Metadata management (e.g. loading / extracting metadata, rules, etc)
 * Calculation, consolidation, translation, etc
+* Data loads and extracts
 * Process management (starting, promoting, rejecting, submitting, approving etc)
 * Document management (e.g. loading / extracting web forms, reports, etc)
 
@@ -43,17 +44,14 @@ To get detailed help for a specific command, use:
 
 ## Downloading Pre-Built Binaries
 
-HFMCmd supports 2 different builds, one for .NET 3.5 and one for .NET 4.0.
-Functionally, the two builds are identical; however, the .NET 3.5 builds only
-support early binding, which means they must be compiled for a specific version
-of HFM. The .NET 4.0 build, on the other hand, utilises the new dynamic
-functionality in .NET 4.0, which provides late-binding and allows a single
-HFMCmd executable to work with different versions of HFM.
+HFMCmd currently builds with .NET 3.5 and later. However, the builds only
+support early binding, and because the HFM API seems to change method signatures
+and/or dispatch ids with every release, HFMCmd binaries will only work properly with
+a single version of HFM - the one they were compiled against.
 
-The .NET 4.0 build is the preferred version, but unfortunately .NET 4.0 is not
-as widely deployed, and may not be installed on the machine on which you want to
-run HFMCmd. In this case, you should choose the .NET 3.5 build for the version
-of HFM that you are running.
+As a result, you should choose the correct HFMCmd pre-built binary for the version
+of HFM that you are running. If you attempt to use HFMCmd against a different version
+of HFM, you will likely get a version compatibility error.
 
 Pre-built binaries are available at https://github.com/agardiner/hfmcmd/releases.
 
