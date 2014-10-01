@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.InteropServices;
 
 using log4net;
@@ -80,7 +80,7 @@ namespace HFM
 #elif HFM_11_1_2_2
             if(Version < VER_11_1_2_2 || Version >= VER_11_1_2_2_300) {
 #elif HFM_11_1_2_1
-            if(Version < VER_11_1 || Version > VER_11_1_2_1) {
+            if(Version < VER_11_1 || Version >= VER_11_1_2_2) {
 #elif HFM_9_3_1
             if(Version < VER_9_3_1 || Version >= VER_11_1) {
 #else
