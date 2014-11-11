@@ -49,6 +49,26 @@ namespace HFM
     }
 
 
+    // Cell Metadata statuses
+    public enum ECellStatus
+    {
+        OK = 0,
+        Derived = tagCALCSTATUSLOWBITS.CELLSTATUS_DERIVED,
+        NoData = tagCALCSTATUSLOWBITS.CELLSTATUS_NODATA,
+        Invalid = tagCALCSTATUSMIDDLEBITS.CELLSTATUS_INVALID,
+        CanWrite = tagCALCSTATUSMIDDLEBITS.CELLSTATUS_CANWRITE,
+        NoReadAccess = tagCALCSTATUSMIDDLEBITS.CELLSTATUS_NOREADACCESS,
+        NoWriteAccess = tagCALCSTATUSMIDDLEBITS.CELLSTATUS_NOWRITEACCESS,
+        Error = tagCALCSTATUSHIGHBITS.CELLSTATUS_ERROR,
+        InUse = tagCALCSTATUSHIGHBITS.CELLSTATUS_INUSE,
+        Locked = tagCALCSTATUSHIGHBITS.CELLSTATUS_LOCKED,
+        NoDataInTable = tagCALCSTATUSHIGHBITS.CELLSTATUS_NODATAINTABLE,
+        ValueMemberNeedsCalc = tagCALCSTATUSHIGHBITS.CELLSTATUS_VALUEMEMBER_NEEDS_CALC,
+        ValueMemberNoDataInTable = tagCALCSTATUSHIGHBITS.CELLSTATUS_VALUEMEMBER_NODATAINTABLE
+    }
+
+
+
     public static class ECalcStatusExtensions
     {
         public static bool IsSet(this ECalcStatus status, int cellStatus)
@@ -58,7 +78,7 @@ namespace HFM
                 return cellStatus == (int)ECalcStatus.OK;
             }
             else {
-                return (cellStatus & (int)status) == (int)status;
+                return cellStatus != 0 && (cellStatus & (int)status) == (int)status;
             }
         }
 
@@ -66,8 +86,30 @@ namespace HFM
         public static IEnumerable<ECalcStatus> GetCellStatuses(int cellStatus)
         {
             var allStatuses = (ECalcStatus[])Enum.GetValues(typeof(ECalcStatus));
-            return allStatuses.Where(cs => (cellStatus == 0 && cs == ECalcStatus.OK) ||
-                                           (cellStatus != 0 && (cellStatus & (int)cs) == (int)cs));
+            return allStatuses.Where(cs => cs.IsSet(cellStatus)).Distinct();
+        }
+    }
+
+
+
+    public static class ECellStatusExtensions
+    {
+        public static bool IsSet(this ECellStatus status, int cellStatus)
+        {
+            if(status == ECellStatus.OK) {
+                // OK is 0, cell status must be 0 as well to match
+                return cellStatus == (int)ECellStatus.OK;
+            }
+            else {
+                return cellStatus != 0 && (cellStatus & (int)status) == (int)status;
+            }
+        }
+
+
+        public static IEnumerable<ECellStatus> GetCellStatuses(int cellStatus)
+        {
+            var allStatuses = (ECellStatus[])Enum.GetValues(typeof(ECellStatus));
+            return allStatuses.Where(cs => cs.IsSet(cellStatus)).Distinct();
         }
     }
 
@@ -294,7 +336,15 @@ namespace HFM
                 if(HFM.HasVariableCustoms) {
 #if HFM_11_1_2_2
                     HFM.Try("Setting cell",
-                            () => _hsvData.SetCellExtDim(pov.HfmPovCOM, amount, clear));
+                        () => _hsvData.SetCellExtDim(pov.HfmPovCOM, amount, clear),
+                        (ex) => {
+                            _log.ErrorFormat("Unable to set value for cell: {0}", pov);
+                            int status = GetCellStatus(pov);
+                            var cs = StringUtilities.Join(ECellStatusExtensions.GetCellStatuses(status), ", ");
+                            _log.ErrorFormat("Cell status is: {0}", cs);
+                            throw ex;
+                        }
+                    );
 #else
                     HFM.ThrowIncompatibleLibraryEx();
 #endif
@@ -312,6 +362,34 @@ namespace HFM
                 }
             }
             output.EndProgress();
+        }
+
+
+        /// Returns a bit-field representing the cell metadata etc status
+        internal int GetCellStatus(POV pov)
+        {
+            int status = -1;
+            int extStatus = -1;
+            int valueId = pov.IsSpecified(EDimension.Value) ? pov.Value.Id :
+                                                              pov.Entity.DefaultCurrencyId;
+            if(HFM.HasVariableCustoms) {
+#if HFM_11_1_2_2
+                HFM.Try("Retrieving cell status for {0}", pov,
+                        () => _hsvData.GetStatusExExtDim(pov.HfmPovCOM, false,
+                                                         out status, out extStatus));
+#else
+                    HFM.ThrowIncompatibleLibraryEx();
+#endif
+            }
+            else {
+                HFM.Try("Retrieving cell status for {0}", pov,
+                        () => _hsvData.GetStatusEx(pov.Scenario.Id, pov.Year.Id, pov.Period.Id, pov.View.Id,
+                                                   pov.Entity.Id, pov.Entity.ParentId, valueId, pov.Account.Id,
+                                                   pov.ICP.Id, pov.Custom1.Id, pov.Custom2.Id,
+                                                   pov.Custom3.Id, pov.Custom4.Id, false,
+                                                   out status, out extStatus));
+            }
+            return status;
         }
 
 
