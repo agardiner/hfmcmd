@@ -48,3 +48,11 @@
 - Add examples directory, and include a series of examples showing how a sample
   application can be created from scratch using HFMCmd.
 
+[0.5.1] Bug fix for version compatibility checks for 11.1.2.1 patches 1-Oct-2014
+
+[0.5.2] Add check for cell status when ClearCell/SetCell fails      11-Nov-2014
+- HFM throws an exception when a call to SetCell or ClearCell fails, but the
+  exception does not indicate why the call failed. HFMCmd now checks the cell
+  status when set or clear fails, and includes the status information in the
+  log. This should help identify the reason (e.g. invalid intersection, cell
+  locked, etc).
