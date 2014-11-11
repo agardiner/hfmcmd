@@ -45,13 +45,24 @@ To get detailed help for a specific command, use:
 ## Downloading Pre-Built Binaries
 
 HFMCmd currently builds with .NET 3.5 and later. However, the builds only
-support early binding, and because the HFM API seems to change method signatures
-and/or dispatch ids with every release, HFMCmd binaries will only work properly with
-a single version of HFM - the one they were compiled against.
+support early binding, which means the order of methods and the argument signature
+of methods in the DLLs of your HFM installation *must* match the order of methods
+and argument signature of the DLLs that HFMCmd was built against.
+
+With most software, this wouldn't be a problem; new functionality would always be
+added via new methods added at the end of the COM virtual dispatch table, which would
+mean that software compiled against older versions would continue to work with newer
+releases. However, the HFM API is very poor at maintaining backwards compatibility;
+with every new release, and even some patch updates, the public API methods end up in
+new locations in the virtual dispatch table, and occasioally, the signature of existing
+methods is changed.
 
 As a result, you should choose the correct HFMCmd pre-built binary for the version
-of HFM that you are running. If you attempt to use HFMCmd against a different version
-of HFM, you will likely get a version compatibility error.
+of HFM that you are running. The correct version will be the HFMCmd built for the version
+and patch level you are running; or, if no build is available for your specific release,
+the nearest build below your version of HFM. For example, if you are running HFM version
+11.1.2.2.500, you should select the build for 11.1.2.2.300. If you attempt to use HFMCmd
+against a different version of HFM, you will likely get a version compatibility error.
 
 Pre-built binaries are available at https://github.com/agardiner/hfmcmd/releases.
 
