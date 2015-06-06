@@ -22,6 +22,14 @@ application, but it provides more than just a thin wrapper over the HFM API:
 In this manner, bulk operations can be performed quickly and easily on large
 numbers of scenarios, entities, etc.
 
+## * Important Note Regarding HFM 11.1.2.4 and later *
+
+Oracle recently released version 11.1.2.4 of HFM, which has been completely rearchitected to use the Java technology stack. While this makes strategic sense for Oracle and HFM, it comes at a heavy cost - the new version of HFM has a totally different API, which is not backwards compatible.
+
+This means that HFMCmd cannot be updated to work with the new version of HFM.
+
+Instead, a complete rewrite in Java would be necessary to provide the same functionality for all versions of HFM from 11.1.2.4 and going forward. HFMCmd will continue to work with versions of HFM up to 11.1.2.3, __but will not ever support HFM version 11.1.2.4 (or later)__.
+
 
 ## Available Commands
 
